@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply antialiased text-gray-900 bg-[#FAFAFA];
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', sans-serif;
+    @apply tracking-tight;
+  }
+}
+
+@layer components {
+  .premium-card {
+    @apply bg-white border border-gray-100 rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-black/5 hover:-translate-y-1 overflow-hidden;
+  }
+
+  .premium-button {
+    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-300 active:scale-95 flex items-center justify-center;
+  }
+
+  .glass-effect {
+    @apply bg-white/80 backdrop-blur-md border-b border-white/20;
+  }
+
+  .nav-link {
+    @apply relative py-2 px-1 text-sm font-medium text-gray-600 transition-colors hover:text-green-600 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-green-600 after:transition-all hover:after:w-full;
+  }
+}
+
+/* Custom transitions */
+.page-transition {
+  @apply transition-opacity duration-500 ease-in-out;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-50;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full border-4 border-transparent bg-clip-content hover:bg-gray-400;
+}
