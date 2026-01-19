@@ -1,10 +1,4 @@
 import {
-  Percent,
-  RefreshCw,
-  BookOpen,
-  FileText,
-  DollarSign,
-  Globe,
   Settings,
   Tag,
   Mail,
@@ -14,11 +8,13 @@ import {
   Package,
   ShoppingCart,
   Truck,
-  FileCheck
+  FileCheck,
+  FileText
 } from 'lucide-react';
 import { AdminPage } from './AdminPage';
 
 export { PaymentGateways } from './PaymentGateways';
+export { LogisticManagement } from './LogisticManagement';
 export { VATManagement } from './VATManagement';
 export { RefundManagement } from './RefundManagement';
 export { TransactionLedger as ImmutableLedger } from './TransactionLedger';

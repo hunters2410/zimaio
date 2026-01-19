@@ -95,13 +95,18 @@ export function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="mt-6 text-center space-y-4">
           <p className="text-gray-600">
             Don't have an account?{' '}
             <Link to="/signup" className="text-cyan-600 hover:text-cyan-700 font-semibold">
               Sign up
             </Link>
           </p>
+          <div className="pt-4 border-t border-gray-100">
+            <Link to="/logistic-signup" className="text-sm text-green-600 hover:text-green-700 font-bold flex items-center justify-center gap-2">
+              <Package className="h-4 w-4" /> Sign In As Logistic
+            </Link>
+          </div>
         </div>
       </div>
     </div>

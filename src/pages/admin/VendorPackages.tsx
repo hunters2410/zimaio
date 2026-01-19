@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Package, Plus, Edit2, Trash2, X, Check, AlertCircle } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Package, Plus, Edit2, Trash2, X, Check, AlertCircle, MoreVertical, Shield, Star, Crown, Zap } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../contexts/ThemeContext';
 import { AdminLayout } from '../../components/AdminLayout';
@@ -42,6 +42,8 @@ export default function VendorPackages() {
   const [showModal, setShowModal] = useState(false);
   const [editingPackage, setEditingPackage] = useState<VendorPackage | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -73,6 +75,16 @@ export default function VendorPackages() {
 
   useEffect(() => {
     fetchPackages();
+    // Close menu when clicking outside
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   useEffect(() => {
@@ -161,6 +173,7 @@ export default function VendorPackages() {
       sort_order: pkg.sort_order,
     });
     setShowModal(true);
+    setOpenMenuId(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -181,6 +194,7 @@ export default function VendorPackages() {
       console.error('Error deleting package:', error);
       setMessage({ type: 'error', text: error.message || 'Failed to delete package' });
     }
+    setOpenMenuId(null);
   };
 
   const toggleActive = async (pkg: VendorPackage) => {
@@ -197,6 +211,7 @@ export default function VendorPackages() {
       console.error('Error toggling package status:', error);
       setMessage({ type: 'error', text: error.message || 'Failed to update package status' });
     }
+    setOpenMenuId(null);
   };
 
   const handleCloseModal = () => {
@@ -231,18 +246,26 @@ export default function VendorPackages() {
     });
   };
 
-  const cardBg = isDark ? 'bg-gray-800' : 'bg-white';
-  const borderColor = isDark ? 'border-gray-700' : 'border-gray-200';
-  const textPrimary = isDark ? 'text-gray-100' : 'text-gray-800';
-  const textSecondary = isDark ? 'text-gray-400' : 'text-gray-600';
+  const cardBg = isDark ? 'white-glass' : 'bg-white';
+  const borderColor = isDark ? 'border-gray-700' : 'border-gray-100';
+  const textPrimary = isDark ? 'text-gray-100' : 'text-gray-900';
+  const textSecondary = isDark ? 'text-gray-400' : 'text-gray-500';
+
+  const getPackageIcon = (name: string) => {
+    const lower = name.toLowerCase();
+    if (lower.includes('gold') || lower.includes('pro') || lower.includes('premium')) return <Crown className="h-6 w-6 text-yellow-500" />;
+    if (lower.includes('silver') || lower.includes('standard')) return <Star className="h-6 w-6 text-slate-400" />;
+    if (lower.includes('basic') || lower.includes('starter')) return <Shield className="h-6 w-6 text-emerald-500" />;
+    return <Zap className="h-6 w-6 text-cyan-500" />;
+  };
 
   if (loading && packages.length === 0) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center h-64">
+        <div className="flex items-center justify-center h-screen">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
-            <p className={`mt-4 ${textSecondary}`}>Loading packages...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto"></div>
+            <p className={`mt-4 ${textSecondary} font-medium tracking-wide`}>Loading packages...</p>
           </div>
         </div>
       </AdminLayout>
@@ -251,273 +274,218 @@ export default function VendorPackages() {
 
   return (
     <AdminLayout>
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center space-x-3">
-            <Package className={`h-8 w-8 ${textPrimary}`} />
-            <h1 className={`text-3xl font-bold ${textPrimary}`}>Vendor Packages</h1>
+      <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <div className="flex items-center space-x-3 mb-2">
+            <div className="p-2 bg-gradient-to-br from-cyan-500 to-emerald-500 rounded-lg shadow-lg">
+              <Package className="h-8 w-8 text-white" />
+            </div>
+            <h1 className={`text-4xl font-extrabold tracking-tight ${textPrimary}`}>
+              Vendor Packages
+            </h1>
           </div>
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cyan-600 to-green-600 text-white rounded-lg hover:from-cyan-700 hover:to-green-700 transition"
-          >
-            <Plus className="h-5 w-5" />
-            <span>Add Package</span>
-          </button>
+          <p className={`${textSecondary} text-lg max-w-2xl`}>
+            Create and manage subscription tiers to monetize your platform efficiently.
+          </p>
         </div>
-        <p className={textSecondary}>
-          Manage subscription packages for vendors with customizable features and pricing
-        </p>
+        <button
+          onClick={() => setShowModal(true)}
+          className="group flex items-center space-x-2 px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all shadow-xl hover:shadow-2xl active:scale-95"
+        >
+          <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition">
+            <Plus className="h-4 w-4" />
+          </div>
+          <span className="font-semibold">Create Package</span>
+        </button>
       </div>
 
       {message && (
-        <div className={`mb-6 p-4 rounded-lg flex items-start space-x-3 ${
-          message.type === 'success'
-            ? 'bg-green-50 border border-green-200 text-green-800'
-            : 'bg-red-50 border border-red-200 text-red-800'
-        }`}>
-          <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-          <span>{message.text}</span>
+        <div className={`mb-8 p-4 rounded-xl flex items-center shadow-lg transform transition-all animate-in slide-in-from-top-4 ${message.type === 'success'
+          ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600'
+          : 'bg-red-500/10 border border-red-500/20 text-red-600'
+          }`}>
+          {message.type === 'success' ? <Check className="h-5 w-5 mr-3" /> : <AlertCircle className="h-5 w-5 mr-3" />}
+          <span className="font-medium">{message.text}</span>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
         {packages.map((pkg) => (
           <div
             key={pkg.id}
-            className={`${cardBg} border ${borderColor} rounded-lg p-6 relative ${
-              !pkg.is_active ? 'opacity-60' : ''
-            }`}
+            className={`group relative rounded-3xl p-8 transition-all duration-300 hover:-translate-y-2 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'
+              } border shadow-sm hover:shadow-2xl ${!pkg.is_active ? 'opacity-75 grayscale-[0.5]' : ''
+              }`}
           >
-            <div className="absolute top-4 right-4 flex space-x-2">
-              <button
-                onClick={() => handleEdit(pkg)}
-                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
-                title="Edit Package"
-              >
-                <Edit2 className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => handleDelete(pkg.id)}
-                className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
-                title="Delete Package"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
+            {/* Top Pattern Decoration */}
+            <div className={`absolute top-0 right-0 w-32 h-32 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500 ${!pkg.is_active
+              ? 'bg-gradient-to-br from-red-500/10 to-orange-500/10'
+              : 'bg-gradient-to-br from-cyan-500/5 to-emerald-500/5'
+              }`}></div>
 
-            <div className="mb-4">
-              <div className="flex items-center space-x-2 mb-2">
-                <h3 className={`text-xl font-bold ${textPrimary}`}>{pkg.name}</h3>
-                {pkg.is_default && (
-                  <span className="px-2 py-0.5 text-xs bg-cyan-100 text-cyan-700 rounded-full">
-                    Default
-                  </span>
+            {/* Header */}
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex items-center gap-3">
+                <div className={`p-3 rounded-2xl ${!pkg.is_active
+                  ? (isDark ? 'bg-red-900/20' : 'bg-red-100')
+                  : (isDark ? 'bg-slate-700' : 'bg-slate-50')
+                  }`}>
+                  {getPackageIcon(pkg.name)}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className={`text-xl font-bold ${textPrimary} tracking-tight`}>{pkg.name}</h3>
+                    {!pkg.is_active && (
+                      <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold uppercase tracking-wider">
+                        Inactive
+                      </span>
+                    )}
+                  </div>
+                  {pkg.is_default && (
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded-full mt-1 inline-block">Default Choice</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Kebab Menu */}
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenMenuId(openMenuId === pkg.id ? null : pkg.id);
+                  }}
+                  className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+                    }`}
+                >
+                  <MoreVertical className="h-5 w-5" />
+                </button>
+
+                {/* Menu Dropdown */}
+                {openMenuId === pkg.id && (
+                  <div
+                    ref={menuRef}
+                    className={`absolute right-0 top-full mt-2 w-48 rounded-2xl shadow-2xl border overflow-hidden z-20 animate-in fade-in zoom-in-95 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'
+                      }`}
+                  >
+                    <button
+                      onClick={() => handleEdit(pkg)}
+                      className={`w-full flex items-center px-4 py-3 text-sm font-medium transition-colors ${isDark ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-slate-50 text-slate-600'
+                        }`}
+                    >
+                      <Edit2 className="h-4 w-4 mr-2" />
+                      Edit Details
+                    </button>
+                    <button
+                      onClick={() => toggleActive(pkg)}
+                      className={`w-full flex items-center px-4 py-3 text-sm font-medium transition-colors ${isDark ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-slate-50 text-slate-600'
+                        }`}
+                    >
+                      <Check className="h-4 w-4 mr-2" />
+                      {pkg.is_active ? 'Deactivate' : 'Activate'}
+                    </button>
+                    <div className={`h-px mx-4 ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`}></div>
+                    <button
+                      onClick={() => handleDelete(pkg.id)}
+                      className={`w-full flex items-center px-4 py-3 text-sm font-medium transition-colors text-red-500 ${isDark ? 'hover:bg-red-900/20' : 'hover:bg-red-50'
+                        }`}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </button>
+                  </div>
                 )}
               </div>
-              <p className={`text-sm ${textSecondary}`}>{pkg.description}</p>
             </div>
 
-            <div className="mb-4">
-              <div className="flex items-baseline space-x-2">
-                <span className={`text-3xl font-bold ${textPrimary}`}>
+            <p className={`text-sm ${textSecondary} mb-8 leading-relaxed h-10 line-clamp-2`}>
+              {pkg.description}
+            </p>
+
+            {/* Pricing */}
+            <div className="mb-8">
+              <div className="flex items-baseline">
+                <span className={`text-4xl font-extrabold ${textPrimary} tracking-tight`}>
                   ${pkg.price_monthly}
                 </span>
-                <span className={textSecondary}>/month</span>
+                <span className={`ml-1 text-sm font-medium ${textSecondary}`}>/mo</span>
               </div>
               {pkg.price_yearly > 0 && (
-                <div className={`text-sm ${textSecondary} mt-1`}>
-                  ${pkg.price_yearly}/year (save ${((pkg.price_monthly * 12) - pkg.price_yearly).toFixed(2)})
-                </div>
+                <p className="text-xs font-semibold text-emerald-600 mt-1">
+                  or ${pkg.price_yearly}/yr <span className="text-emerald-500/70 font-normal ml-1">• Save {Math.round((1 - pkg.price_yearly / (pkg.price_monthly * 12)) * 100)}%</span>
+                </p>
               )}
             </div>
 
-            <div className={`border-t ${borderColor} pt-4 space-y-2`}>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${textSecondary}`}>Products</span>
-                <span className={`text-sm font-semibold ${textPrimary}`}>
-                  {pkg.product_limit === 999999 ? 'Unlimited' : pkg.product_limit}
+            {/* Features List with Modern Styling */}
+            <div className={`space-y-4 border-t ${isDark ? 'border-slate-700' : 'border-slate-100'} pt-6`}>
+              <div className="flex items-center justify-between group/feature">
+                <span className={`text-sm font-medium ${textSecondary} group-hover/feature:text-cyan-600 transition-colors`}>Products allowed</span>
+                <span className={`bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-bold ${isDark ? 'bg-slate-700 text-slate-300' : ''}`}>
+                  {pkg.product_limit > 9999 ? 'Unlimited' : pkg.product_limit}
                 </span>
               </div>
 
-              <div className={`text-xs font-semibold ${textPrimary} pt-2`}>Core Features</div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${textSecondary}`}>Catalog Management</span>
-                {pkg.has_catalog_management ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <X className="h-4 w-4 text-red-600" />
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${textSecondary}`}>Stock Management</span>
-                {pkg.has_stock_management ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <X className="h-4 w-4 text-red-600" />
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${textSecondary}`}>Orders Management</span>
-                {pkg.has_orders_management ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <X className="h-4 w-4 text-red-600" />
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${textSecondary}`}>Shop Configurations</span>
-                {pkg.has_shop_configurations ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <X className="h-4 w-4 text-red-600" />
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${textSecondary}`}>Notifications</span>
-                {pkg.has_notifications ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <X className="h-4 w-4 text-red-600" />
-                )}
-              </div>
-
-              <div className={`text-xs font-semibold ${textPrimary} pt-2`}>Advanced Features</div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${textSecondary}`}>POS Access</span>
-                {pkg.has_pos_access ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <X className="h-4 w-4 text-red-600" />
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${textSecondary}`}>Wallet Management</span>
-                {pkg.has_wallet_management ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <X className="h-4 w-4 text-red-600" />
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${textSecondary}`}>Shipping Management</span>
-                {pkg.has_shipping_management ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <X className="h-4 w-4 text-red-600" />
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${textSecondary}`}>Withdraw Management</span>
-                {pkg.has_withdraw_management ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <X className="h-4 w-4 text-red-600" />
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${textSecondary}`}>Reports Management</span>
-                {pkg.has_reports_management ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <X className="h-4 w-4 text-red-600" />
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${textSecondary}`}>Customer Support</span>
-                {pkg.has_customer_support ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <X className="h-4 w-4 text-red-600" />
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${textSecondary}`}>Refund Management</span>
-                {pkg.has_refund_management ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <X className="h-4 w-4 text-red-600" />
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${textSecondary}`}>KYC Verification</span>
-                {pkg.has_kyc_verification ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <X className="h-4 w-4 text-red-600" />
-                )}
-              </div>
-
-              <div className={`text-xs font-semibold ${textPrimary} pt-2`}>Marketing Features</div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${textSecondary}`}>Ads Access</span>
-                {pkg.has_ads_access ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <X className="h-4 w-4 text-red-600" />
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${textSecondary}`}>Promotions</span>
-                {pkg.has_promotion_access ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <X className="h-4 w-4 text-red-600" />
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${textSecondary}`}>Analytics</span>
-                {pkg.has_analytics_access ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <X className="h-4 w-4 text-red-600" />
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm ${textSecondary}`}>Priority Support</span>
-                {pkg.has_priority_support ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <X className="h-4 w-4 text-red-600" />
-                )}
+              {/* Compact Key Features */}
+              <div className="space-y-3 pt-2">
+                {[
+                  { label: 'POS System', has: pkg.has_pos_access },
+                  { label: 'Online Store', has: pkg.has_shop_configurations },
+                  { label: 'Analytics', has: pkg.has_analytics_access },
+                  { label: 'Support', has: pkg.has_customer_support },
+                ].map((feat, i) => (
+                  <div key={i} className="flex items-center text-sm">
+                    {feat.has ? (
+                      <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center mr-3 shrink-0">
+                        <Check className="h-3 w-3 text-emerald-600" />
+                      </div>
+                    ) : (
+                      <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center mr-3 shrink-0">
+                        <X className="h-3 w-3 text-slate-400" />
+                      </div>
+                    )}
+                    <span className={feat.has ? textPrimary : textSecondary}>{feat.label}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => toggleActive(pkg)}
-                className={`w-full px-4 py-2 rounded-lg font-medium transition ${
-                  pkg.is_active
-                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {pkg.is_active ? 'Active' : 'Inactive'}
-              </button>
+            {/* Status Indicator */}
+            <div className="mt-8">
+              <div className={`w-full py-2 rounded-xl text-center text-xs font-bold uppercase tracking-wider ${pkg.is_active
+                ? 'bg-emerald-50 text-emerald-600'
+                : 'bg-slate-100 text-slate-500'
+                }`}>
+                {pkg.is_active ? 'Active Plan' : 'Archived'}
+              </div>
             </div>
+
           </div>
         ))}
       </div>
 
+      {/* Modal Code remains largely the same logic but structurally kept for CRUD */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className={`${cardBg} rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto`}>
-            <div className={`p-6 border-b ${borderColor} flex items-center justify-between`}>
-              <h2 className={`text-2xl font-bold ${textPrimary}`}>
-                {editingPackage ? 'Edit Package' : 'Create New Package'}
-              </h2>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className={`${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white'} rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto transform transition-all border`}>
+            <div className={`p-8 border-b ${borderColor} flex items-center justify-between sticky top-0 ${isDark ? 'bg-slate-800/95' : 'bg-white/95'} backdrop-blur-md z-10`}>
+              <div>
+                <h2 className={`text-2xl font-bold ${textPrimary}`}>
+                  {editingPackage ? 'Edit Package' : 'Create New Package'}
+                </h2>
+                <p className={textSecondary}>Configure features and pricing limits.</p>
+              </div>
               <button
                 onClick={handleCloseModal}
-                className={`${textSecondary} hover:text-gray-600 transition`}
+                className={`p-2 rounded-full ${isDark ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'} transition`}
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <form onSubmit={handleSubmit} className="p-8 space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className={`block text-sm font-medium ${textPrimary} mb-1`}>
+                  <label className={`block text-xs font-bold uppercase tracking-wider ${textSecondary} mb-2`}>
                     Package Name *
                   </label>
                   <input
@@ -525,300 +493,168 @@ export default function VendorPackages() {
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'}`}
-                    placeholder="e.g., Free, Basic, Pro"
+                    className={`w-full px-4 py-3 border ${borderColor} rounded-xl focus:outline-none focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all ${isDark ? 'bg-slate-900 text-gray-100 placeholder-slate-600' : 'bg-slate-50 text-slate-900'}`}
+                    placeholder="e.g., Gold Tier"
                   />
                 </div>
 
                 <div>
-                  <label className={`block text-sm font-medium ${textPrimary} mb-1`}>
+                  <label className={`block text-xs font-bold uppercase tracking-wider ${textSecondary} mb-2`}>
                     Sort Order
                   </label>
                   <input
                     type="number"
                     value={formData.sort_order}
                     onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) })}
-                    className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'}`}
+                    className={`w-full px-4 py-3 border ${borderColor} rounded-xl focus:outline-none focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all ${isDark ? 'bg-slate-900 text-gray-100 placeholder-slate-600' : 'bg-slate-50 text-slate-900'}`}
                   />
                 </div>
               </div>
 
-              <div className="mb-4">
-                <label className={`block text-sm font-medium ${textPrimary} mb-1`}>
+              <div>
+                <label className={`block text-xs font-bold uppercase tracking-wider ${textSecondary} mb-2`}>
                   Description
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={2}
-                  className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'}`}
-                  placeholder="Brief description of the package"
+                  className={`w-full px-4 py-3 border ${borderColor} rounded-xl focus:outline-none focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all ${isDark ? 'bg-slate-900 text-gray-100 placeholder-slate-600' : 'bg-slate-50 text-slate-900'}`}
+                  placeholder="Briefly describe who this package is for..."
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div>
-                  <label className={`block text-sm font-medium ${textPrimary} mb-1`}>
-                    Monthly Price ($) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={formData.price_monthly}
-                    onChange={(e) => setFormData({ ...formData, price_monthly: parseFloat(e.target.value) })}
-                    className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'}`}
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-sm font-medium ${textPrimary} mb-1`}>
-                    Yearly Price ($)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.price_yearly}
-                    onChange={(e) => setFormData({ ...formData, price_yearly: parseFloat(e.target.value) })}
-                    className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'}`}
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-sm font-medium ${textPrimary} mb-1`}>
-                    Product Limit *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    value={formData.product_limit}
-                    onChange={(e) => setFormData({ ...formData, product_limit: parseInt(e.target.value) })}
-                    className={`w-full px-3 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'}`}
-                    placeholder="999999 for unlimited"
-                  />
-                </div>
-              </div>
-
-              <div className={`p-4 border ${borderColor} rounded-lg mb-4`}>
-                <h3 className={`text-sm font-semibold ${textPrimary} mb-3`}>Core Vendor Features</h3>
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <label className="flex items-center space-x-2 cursor-pointer">
+              <div className={`p-6 rounded-2xl border ${borderColor} ${isDark ? 'bg-slate-900/50' : 'bg-slate-50'}`}>
+                <h3 className={`text-sm font-bold ${textPrimary} mb-4 flex items-center gap-2`}>
+                  <Zap className="h-4 w-4 text-cyan-500" /> Pricing & Limits
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className={`block text-xs font-bold uppercase tracking-wider ${textSecondary} mb-2`}>
+                      Monthly ($) *
+                    </label>
                     <input
-                      type="checkbox"
-                      checked={formData.has_catalog_management}
-                      onChange={(e) => setFormData({ ...formData, has_catalog_management: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
+                      type="number"
+                      step="0.01"
+                      required
+                      value={formData.price_monthly}
+                      onChange={(e) => setFormData({ ...formData, price_monthly: parseFloat(e.target.value) })}
+                      className={`w-full px-4 py-3 border ${borderColor} rounded-xl focus:outline-none focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all ${isDark ? 'bg-slate-800 text-gray-100' : 'bg-white'}`}
                     />
-                    <span className={`text-sm ${textPrimary}`}>Catalog Management</span>
-                  </label>
-
-                  <label className="flex items-center space-x-2 cursor-pointer">
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-bold uppercase tracking-wider ${textSecondary} mb-2`}>
+                      Yearly ($)
+                    </label>
                     <input
-                      type="checkbox"
-                      checked={formData.has_stock_management}
-                      onChange={(e) => setFormData({ ...formData, has_stock_management: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
+                      type="number"
+                      step="0.01"
+                      value={formData.price_yearly}
+                      onChange={(e) => setFormData({ ...formData, price_yearly: parseFloat(e.target.value) })}
+                      className={`w-full px-4 py-3 border ${borderColor} rounded-xl focus:outline-none focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all ${isDark ? 'bg-slate-800 text-gray-100' : 'bg-white'}`}
                     />
-                    <span className={`text-sm ${textPrimary}`}>Stock Management</span>
-                  </label>
-
-                  <label className="flex items-center space-x-2 cursor-pointer">
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-bold uppercase tracking-wider ${textSecondary} mb-2`}>
+                      Product Limit *
+                    </label>
                     <input
-                      type="checkbox"
-                      checked={formData.has_orders_management}
-                      onChange={(e) => setFormData({ ...formData, has_orders_management: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
+                      type="number"
+                      required
+                      value={formData.product_limit}
+                      onChange={(e) => setFormData({ ...formData, product_limit: parseInt(e.target.value) })}
+                      className={`w-full px-4 py-3 border ${borderColor} rounded-xl focus:outline-none focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all ${isDark ? 'bg-slate-800 text-gray-100' : 'bg-white'}`}
+                      placeholder="Max products"
                     />
-                    <span className={`text-sm ${textPrimary}`}>Orders Management</span>
-                  </label>
-
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.has_shop_configurations}
-                      onChange={(e) => setFormData({ ...formData, has_shop_configurations: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
-                    />
-                    <span className={`text-sm ${textPrimary}`}>Shop Configurations</span>
-                  </label>
-
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.has_notifications}
-                      onChange={(e) => setFormData({ ...formData, has_notifications: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
-                    />
-                    <span className={`text-sm ${textPrimary}`}>Notifications</span>
-                  </label>
-                </div>
-
-                <h3 className={`text-sm font-semibold ${textPrimary} mb-3 mt-4`}>Advanced Features</h3>
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.has_pos_access}
-                      onChange={(e) => setFormData({ ...formData, has_pos_access: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
-                    />
-                    <span className={`text-sm ${textPrimary}`}>POS Access</span>
-                  </label>
-
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.has_wallet_management}
-                      onChange={(e) => setFormData({ ...formData, has_wallet_management: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
-                    />
-                    <span className={`text-sm ${textPrimary}`}>Wallet Management</span>
-                  </label>
-
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.has_shipping_management}
-                      onChange={(e) => setFormData({ ...formData, has_shipping_management: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
-                    />
-                    <span className={`text-sm ${textPrimary}`}>Shipping Management</span>
-                  </label>
-
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.has_withdraw_management}
-                      onChange={(e) => setFormData({ ...formData, has_withdraw_management: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
-                    />
-                    <span className={`text-sm ${textPrimary}`}>Withdraw Management</span>
-                  </label>
-
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.has_reports_management}
-                      onChange={(e) => setFormData({ ...formData, has_reports_management: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
-                    />
-                    <span className={`text-sm ${textPrimary}`}>Reports Management</span>
-                  </label>
-
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.has_customer_support}
-                      onChange={(e) => setFormData({ ...formData, has_customer_support: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
-                    />
-                    <span className={`text-sm ${textPrimary}`}>Customer Support</span>
-                  </label>
-
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.has_refund_management}
-                      onChange={(e) => setFormData({ ...formData, has_refund_management: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
-                    />
-                    <span className={`text-sm ${textPrimary}`}>Refund Management</span>
-                  </label>
-
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.has_kyc_verification}
-                      onChange={(e) => setFormData({ ...formData, has_kyc_verification: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
-                    />
-                    <span className={`text-sm ${textPrimary}`}>KYC Verification</span>
-                  </label>
-                </div>
-
-                <h3 className={`text-sm font-semibold ${textPrimary} mb-3 mt-4`}>Marketing Features</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.has_ads_access}
-                      onChange={(e) => setFormData({ ...formData, has_ads_access: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
-                    />
-                    <span className={`text-sm ${textPrimary}`}>Ads Access</span>
-                  </label>
-
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.has_promotion_access}
-                      onChange={(e) => setFormData({ ...formData, has_promotion_access: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
-                    />
-                    <span className={`text-sm ${textPrimary}`}>Promotion Access</span>
-                  </label>
-
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.has_analytics_access}
-                      onChange={(e) => setFormData({ ...formData, has_analytics_access: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
-                    />
-                    <span className={`text-sm ${textPrimary}`}>Analytics Access</span>
-                  </label>
-
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.has_priority_support}
-                      onChange={(e) => setFormData({ ...formData, has_priority_support: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
-                    />
-                    <span className={`text-sm ${textPrimary}`}>Priority Support</span>
-                  </label>
+                  </div>
                 </div>
               </div>
 
-              <div className={`p-4 border ${borderColor} rounded-lg mb-6`}>
-                <h3 className={`text-sm font-semibold ${textPrimary} mb-3`}>Package Status</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.is_active}
-                      onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
-                    />
-                    <span className={`text-sm ${textPrimary}`}>Active</span>
-                  </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <h3 className={`text-sm font-bold ${textPrimary} mb-4 pb-2 border-b ${borderColor}`}>Core Features</h3>
+                  <div className="space-y-3">
+                    {[
+                      ['has_catalog_management', 'Catalog Management'],
+                      ['has_stock_management', 'Stock Management'],
+                      ['has_orders_management', 'Orders Management'],
+                      ['has_shop_configurations', 'Shop Configurations'],
+                      ['has_notifications', 'Notifications'],
+                    ].map(([key, label]) => (
+                      <label key={key} className="flex items-center space-x-3 cursor-pointer group">
+                        <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                          // @ts-ignore
+                          formData[key] ? 'bg-cyan-500 border-cyan-500' : `${borderColor} bg-transparent`
+                          }`}>
+                          {/* @ts-ignore */}
+                          {formData[key] && <Check className="h-3 w-3 text-white" />}
+                        </div>
+                        {/* @ts-ignore */}
+                        <input type="checkbox" className="hidden" checked={formData[key]} onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })} />
+                        <span className={`text-sm ${textSecondary} group-hover:${textPrimary} transition-colors`}>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.is_default}
-                      onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
-                      className="rounded text-cyan-600 focus:ring-cyan-500"
-                    />
-                    <span className={`text-sm ${textPrimary}`}>Default Package</span>
-                  </label>
+                <div>
+                  <h3 className={`text-sm font-bold ${textPrimary} mb-4 pb-2 border-b ${borderColor}`}>Advanced Features</h3>
+                  <div className="space-y-3">
+                    {[
+                      ['has_pos_access', 'POS Access'],
+                      ['has_wallet_management', 'Wallet Management'],
+                      ['has_shipping_management', 'Shipping Management'],
+                      ['has_withdraw_management', 'Withdraw Management'],
+                      ['has_reports_management', 'Reports & Analytics'],
+                      ['has_customer_support', 'Customer Support'],
+                      ['has_refund_management', 'Refund Management'],
+                      ['has_kyc_verification', 'KYC Verification'],
+                      ['has_ads_access', 'Ads Access'],
+                      ['has_promotion_access', 'Promotions'],
+                      ['has_analytics_access', 'Deep Analytics'],
+                      ['has_priority_support', 'Priority Support'],
+                    ].map(([key, label]) => (
+                      <label key={key} className="flex items-center space-x-3 cursor-pointer group">
+                        <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                          // @ts-ignore
+                          formData[key] ? 'bg-emerald-500 border-emerald-500' : `${borderColor} bg-transparent`
+                          }`}>
+                          {/* @ts-ignore */}
+                          {formData[key] && <Check className="h-3 w-3 text-white" />}
+                        </div>
+                        {/* @ts-ignore */}
+                        <input type="checkbox" className="hidden" checked={formData[key]} onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })} />
+                        <span className={`text-sm ${textSecondary} group-hover:${textPrimary} transition-colors`}>{label}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className={`px-6 py-2 border ${borderColor} rounded-lg ${textPrimary} hover:bg-gray-50 transition`}
-                >
-                  Cancel
-                </button>
+              <div className="flex items-center gap-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <div className={`w-10 h-6 rounded-full transition-colors relative ${formData.is_active ? 'bg-cyan-500' : 'bg-slate-300'}`}>
+                    <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${formData.is_active ? 'translate-x-4' : ''}`} />
+                  </div>
+                  <input type="checkbox" className="hidden" checked={formData.is_active} onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })} />
+                  <span className={`text-sm font-medium ${textPrimary}`}>Active Package</span>
+                </label>
+
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <div className={`w-10 h-6 rounded-full transition-colors relative ${formData.is_default ? 'bg-cyan-500' : 'bg-slate-300'}`}>
+                    <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${formData.is_default ? 'translate-x-4' : ''}`} />
+                  </div>
+                  <input type="checkbox" className="hidden" checked={formData.is_default} onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })} />
+                  <span className={`text-sm font-medium ${textPrimary}`}>Default Choice</span>
+                </label>
+              </div>
+
+              <div className="flex justify-end pt-6">
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="px-6 py-2 bg-gradient-to-r from-cyan-600 to-green-600 text-white rounded-lg hover:from-cyan-700 hover:to-green-700 transition disabled:opacity-50"
+                  className="px-8 py-3 bg-gradient-to-r from-cyan-600 to-emerald-600 text-white font-bold rounded-xl hover:shadow-xl hover:scale-105 active:scale-95 transition-all text-sm"
                 >
-                  {loading ? 'Saving...' : editingPackage ? 'Update Package' : 'Create Package'}
+                  {loading ? 'Processing...' : (editingPackage ? 'Update Package' : 'Create Package')}
                 </button>
               </div>
             </form>

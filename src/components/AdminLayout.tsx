@@ -20,7 +20,6 @@ import {
   BookOpen,
   Globe,
   Percent,
-  UserCheck,
   BarChart3,
   AlertTriangle,
   ExternalLink,
@@ -54,6 +53,7 @@ const navItems: NavItem[] = [
   { path: '/admin/vendors', label: 'Vendor Management', icon: <Store className="h-5 w-5" />, section: 'Users & Vendors' },
   { path: '/admin/vendor-packages', label: 'Vendor Packages', icon: <Package className="h-5 w-5" />, section: 'Users & Vendors' },
   { path: '/admin/customers', label: 'Customer Management', icon: <Users className="h-5 w-5" />, section: 'Users & Vendors' },
+  { path: '/admin/logistics', label: 'Logistic Management', icon: <Truck className="h-5 w-5" />, section: 'Users & Vendors' },
   { path: '/admin/roles-permissions', label: 'Roles & Permissions', icon: <Shield className="h-5 w-5" />, section: 'Users & Vendors' },
   { path: '/admin/kyc-verification', label: 'KYC Verification', icon: <Shield className="h-5 w-5" />, section: 'Users & Vendors' },
   { path: '/admin/vendor-contracts', label: 'Vendor Contracts', icon: <FileCheck className="h-5 w-5" />, section: 'Users & Vendors' },
@@ -198,11 +198,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                         key={item.path}
                         to={item.path}
                         onClick={() => setSidebarOpen(false)}
-                        className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 rounded-lg transition ${
-                          isActive
-                            ? 'bg-gradient-to-r from-cyan-50 to-green-50 text-cyan-700 font-medium'
-                            : `${textSecondary} ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`
-                        }`}
+                        className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 rounded-lg transition ${isActive
+                          ? 'bg-gradient-to-r from-cyan-50 to-green-50 text-cyan-700 font-medium'
+                          : `${textSecondary} ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`
+                          }`}
                         title={sidebarCollapsed ? item.label : ''}
                       >
                         {item.icon}

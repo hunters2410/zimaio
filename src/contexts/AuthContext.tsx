@@ -7,7 +7,7 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, fullName: string, role: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName: string, role: string) => Promise<{ data: any; error: any }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -115,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    return { error };
+    return { data, error };
   };
 
   const signOut = async () => {
