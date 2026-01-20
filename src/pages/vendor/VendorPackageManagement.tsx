@@ -1,70 +1,62 @@
-import { useEffect, useState } from 'react';
-import { Package, Check, X, CreditCard, Zap, TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../contexts/AuthContext';
+import {
+  Check,
+  Zap,
+  XCircle
+} from 'lucide-react';
 
-interface VendorPackage {
-  id: string;
-  name: string;
-  description: string;
-  price_monthly: number;
-  price_yearly: number;
-  product_limit: number;
-  has_ads_access: boolean;
-  has_promotion_access: boolean;
-  has_analytics_access: boolean;
-  has_priority_support: boolean;
-}
-
-interface VendorSubscription {
-  id: string;
-  package_id: string;
-  status: string;
-  billing_cycle: string;
-  current_period_start: string;
-  current_period_end: string;
-  package: VendorPackage;
-}
-
-export default function VendorPackageManagement() {
-  const { user } = useAuth();
-  const [packages, setPackages] = useState<VendorPackage[]>([]);
-  const [currentSubscription, setCurrentSubscription] = useState<VendorSubscription | null>(null);
+export function VendorPackageManagement() {
+  const navigate = useNavigate();
+  const [packages, setPackages] = useState<any[]>([]);
+  const [currentPackageId, setCurrentPackageId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState<VendorPackage | null>(null);
-  const [selectedBillingCycle, setSelectedBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
-  const [selectedPaymentGateway, setSelectedPaymentGateway] = useState<'stripe' | 'paypal' | 'paynow'>('stripe');
+  const [updating, setUpdating] = useState<string | null>(null);
+  const [vendorId, setVendorId] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
-    if (user) {
-      fetchData();
-    }
-  }, [user]);
+    fetchData();
+  }, []);
 
   const fetchData = async () => {
+    setLoading(true);
     try {
-      const [packagesRes, subscriptionRes] = await Promise.all([
-        supabase
-          .from('vendor_packages')
-          .select('*')
-          .eq('is_active', true)
-          .order('sort_order', { ascending: true }),
-        supabase
+      // 1. Fetch Packages
+      const { data: pkgs, error: pkgError } = await supabase
+        .from('vendor_packages')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (pkgError) throw pkgError;
+      setPackages(pkgs || []);
+
+      // 2. Fetch User & Vendor
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: vendor } = await supabase
+        .from('vendor_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (vendor) {
+        setVendorId(user.id);
+
+        // 3. Fetch Subscription
+        const { data: subscription } = await supabase
           .from('vendor_subscriptions')
-          .select(`
-            *,
-            package:vendor_packages(*)
-          `)
-          .eq('vendor_id', user?.id)
-          .maybeSingle()
-      ]);
+          .select('package_id')
+          .eq('vendor_id', vendor.id)
+          .maybeSingle();
 
-      if (packagesRes.error) throw packagesRes.error;
-      if (subscriptionRes.error) throw subscriptionRes.error;
-
-      setPackages(packagesRes.data || []);
-      setCurrentSubscription(subscriptionRes.data as VendorSubscription);
+        if (subscription) {
+          setCurrentPackageId(subscription.package_id);
+        }
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -72,389 +64,170 @@ export default function VendorPackageManagement() {
     }
   };
 
-  const handleUpgrade = (pkg: VendorPackage) => {
-    setSelectedPackage(pkg);
-    setShowPaymentModal(true);
+  const getPackageColor = (name: string) => {
+    const lower = name.toLowerCase();
+    if (lower.includes('starter')) return 'emerald';
+    if (lower.includes('pro')) return 'blue';
+    if (lower.includes('elite')) return 'purple';
+    return 'gray';
   };
 
-  const handlePayment = async () => {
-    if (!selectedPackage || !user) return;
+  const getFeatures = (pkg: any) => {
+    const features = [];
+    if (pkg.product_limit >= 999999) features.push('Unlimited Products');
+    else features.push(`Up to ${pkg.product_limit} Products`);
 
+    if (pkg.has_priority_support) features.push('24/7 Dedicated Support');
+    else features.push('Standard Support');
+
+    if (pkg.has_analytics_access) features.push('Advanced Analytics');
+    if (pkg.has_ads_access) features.push('Ads Access');
+    if (pkg.has_pos_access) features.push('POS Access');
+    if (pkg.has_wallet_management) features.push('Wallet Management');
+    if (pkg.has_withdraw_management) features.push('Fast Withdrawals');
+    if (pkg.has_promotion_access) features.push('Product Promotions');
+
+    return features;
+  };
+
+  const handleUpgrade = async (packageId: string) => {
+    if (packageId === currentPackageId) return;
+
+    const selectedPkg = packages.find(p => p.id === packageId);
+    if (!selectedPkg) return;
+
+    // Check if Paid Package
+    if (selectedPkg.price_monthly > 0) {
+      navigate(`/vendor/payment?packageId=${packageId}&plan=${selectedPkg.name}`);
+      return;
+    }
+
+    // Free Package Logic
+    setUpdating(packageId);
     try {
-      setLoading(true);
+      const { error } = await supabase
+        .from('vendor_subscriptions')
+        .upsert({
+          vendor_id: vendorId!,
+          package_id: packageId,
+          status: 'active',
+          billing_cycle: 'monthly'
+        }, { onConflict: 'vendor_id' });
 
-      const amount = selectedBillingCycle === 'monthly' ? selectedPackage.price_monthly : selectedPackage.price_yearly;
+      if (error) throw error;
 
-      if (amount === 0) {
-        await handleFreePackage();
-        return;
-      }
-
-      const { data: transaction, error: transactionError } = await supabase
-        .from('vendor_transactions')
-        .insert([{
-          vendor_id: user.id,
-          subscription_id: currentSubscription?.id,
-          package_id: selectedPackage.id,
-          amount: amount,
-          currency: 'USD',
-          payment_gateway: selectedPaymentGateway,
-          status: 'pending',
-          transaction_type: currentSubscription ? 'upgrade' : 'subscription',
-        }])
-        .select()
-        .single();
-
-      if (transactionError) throw transactionError;
-
-      alert(`Payment initiated via ${selectedPaymentGateway.toUpperCase()}. Transaction ID: ${transaction.id}`);
-
-      setShowPaymentModal(false);
-      await fetchData();
+      setCurrentPackageId(packageId);
+      setMessage({ type: 'success', text: `Successfully switched to ${selectedPkg.name}.` });
     } catch (error: any) {
-      console.error('Error processing payment:', error);
-      alert('Payment failed: ' + error.message);
+      setMessage({ type: 'error', text: error.message });
     } finally {
-      setLoading(false);
+      setUpdating(null);
     }
   };
 
-  const handleFreePackage = async () => {
-    if (!selectedPackage || !user) return;
-
-    try {
-      const currentDate = new Date();
-      const periodEnd = new Date(currentDate);
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
-
-      if (currentSubscription) {
-        const { error } = await supabase
-          .from('vendor_subscriptions')
-          .update({
-            package_id: selectedPackage.id,
-            status: 'active',
-            billing_cycle: selectedBillingCycle,
-            current_period_start: currentDate.toISOString(),
-            current_period_end: periodEnd.toISOString(),
-          })
-          .eq('id', currentSubscription.id);
-
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('vendor_subscriptions')
-          .insert([{
-            vendor_id: user.id,
-            package_id: selectedPackage.id,
-            status: 'active',
-            billing_cycle: selectedBillingCycle,
-            current_period_start: currentDate.toISOString(),
-            current_period_end: periodEnd.toISOString(),
-          }]);
-
-        if (error) throw error;
-      }
-
-      alert('Package updated successfully!');
-      setShowPaymentModal(false);
-      await fetchData();
-    } catch (error: any) {
-      console.error('Error updating package:', error);
-      alert('Failed to update package: ' + error.message);
-    }
-  };
-
-  if (loading && !currentSubscription) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading packages...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center h-96 gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+        <p className="text-gray-500 text-sm font-medium">Syncing packages...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Subscription Management</h2>
-        <p className="text-gray-600">
-          Manage your subscription plan and upgrade to unlock more features
-        </p>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Vendor Packages</h2>
+          <p className="text-xs text-gray-500 mt-1">Select the plan that best fits your business growth.</p>
+        </div>
+        <div className="flex items-center gap-2 bg-emerald-50 px-4 py-2 rounded-xl text-emerald-700 text-[10px] font-black uppercase tracking-widest border border-emerald-100">
+          <Zap className="w-3 h-3" />
+          {packages.find(p => p.id === currentPackageId)?.price_monthly === 0 ? (
+            <span>Lifetime Access</span>
+          ) : (
+            <span>Next Billing: {new Date(new Date().setMonth(new Date().getMonth() + 1)).toLocaleDateString()}</span>
+          )}
+        </div>
       </div>
 
-      {currentSubscription && (
-        <div className="bg-gradient-to-r from-cyan-50 to-green-50 border border-cyan-200 rounded-lg p-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center space-x-3 mb-2">
-                <h3 className="text-xl font-bold text-gray-900">
-                  {currentSubscription.package.name}
-                </h3>
-                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                  currentSubscription.status === 'active'
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-yellow-100 text-yellow-700'
-                }`}>
-                  {currentSubscription.status.toUpperCase()}
-                </span>
-              </div>
-              <p className="text-gray-600 mb-3">{currentSubscription.package.description}</p>
-              <div className="flex items-center space-x-6 text-sm text-gray-600">
-                <div>
-                  <span className="font-semibold">Billing:</span> {currentSubscription.billing_cycle}
-                </div>
-                <div>
-                  <span className="font-semibold">Renews:</span>{' '}
-                  {new Date(currentSubscription.current_period_end).toLocaleDateString()}
-                </div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold text-gray-900">
-                ${currentSubscription.billing_cycle === 'monthly'
-                  ? currentSubscription.package.price_monthly
-                  : currentSubscription.package.price_yearly}
-              </div>
-              <div className="text-sm text-gray-600">
-                /{currentSubscription.billing_cycle === 'monthly' ? 'month' : 'year'}
-              </div>
-            </div>
+      {message && (
+        <div className={`p-4 rounded-2xl flex items-center justify-between ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+          <div className="flex items-center gap-3">
+            <Check className="w-5 h-5" />
+            <span className="text-sm font-bold">{message.text}</span>
           </div>
+          <button onClick={() => setMessage(null)} className="text-gray-400 hover:text-gray-600">
+            <XCircle />
+          </button>
         </div>
       )}
 
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Available Plans</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {packages.map((pkg) => {
-            const isCurrentPackage = currentSubscription?.package_id === pkg.id;
-            const canUpgrade = !isCurrentPackage;
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {packages.map((pkg) => {
+          const isCurrent = currentPackageId === pkg.id;
+          const color = getPackageColor(pkg.name);
+          const features = getFeatures(pkg);
 
-            return (
-              <div
-                key={pkg.id}
-                className={`bg-white border-2 rounded-lg p-6 relative ${
-                  isCurrentPackage
-                    ? 'border-cyan-600 shadow-lg'
-                    : 'border-gray-200 hover:border-cyan-300 hover:shadow-md transition'
+          return (
+            <div
+              key={pkg.id}
+              className={`relative bg-white rounded-[32px] border transition-all duration-500 overflow-hidden flex flex-col p-8 ${isCurrent
+                ? 'border-emerald-500 ring-4 ring-emerald-500/10 shadow-xl'
+                : 'border-gray-100 hover:border-emerald-200 hover:shadow-2xl hover:shadow-gray-200/50'
                 }`}
-              >
-                {isCurrentPackage && (
-                  <div className="absolute top-0 right-0 bg-cyan-600 text-white px-3 py-1 text-xs font-semibold rounded-bl-lg rounded-tr-lg">
-                    Current Plan
-                  </div>
-                )}
-
-                <div className="mb-4">
-                  <h4 className="text-xl font-bold text-gray-900 mb-2">{pkg.name}</h4>
-                  <p className="text-sm text-gray-600 mb-4">{pkg.description}</p>
-                  <div className="flex items-baseline space-x-2">
-                    <span className="text-3xl font-bold text-gray-900">
-                      ${pkg.price_monthly}
-                    </span>
-                    <span className="text-gray-600">/month</span>
-                  </div>
-                  {pkg.price_yearly > 0 && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      or ${pkg.price_yearly}/year (save ${((pkg.price_monthly * 12) - pkg.price_yearly).toFixed(2)})
-                    </div>
-                  )}
+            >
+              {pkg.sort_order === 2 && (
+                <div className="absolute top-0 right-0 bg-emerald-600 text-white px-6 py-2 rounded-bl-3xl text-[10px] font-black uppercase tracking-widest">
+                  Best Value
                 </div>
-
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Products</span>
-                    <span className="font-semibold">
-                      {pkg.product_limit === 999999 ? 'Unlimited' : pkg.product_limit}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Ads Access</span>
-                    {pkg.has_ads_access ? (
-                      <Check className="h-5 w-5 text-green-600" />
-                    ) : (
-                      <X className="h-5 w-5 text-red-600" />
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Promotions</span>
-                    {pkg.has_promotion_access ? (
-                      <Check className="h-5 w-5 text-green-600" />
-                    ) : (
-                      <X className="h-5 w-5 text-red-600" />
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Analytics</span>
-                    {pkg.has_analytics_access ? (
-                      <Check className="h-5 w-5 text-green-600" />
-                    ) : (
-                      <X className="h-5 w-5 text-red-600" />
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Priority Support</span>
-                    {pkg.has_priority_support ? (
-                      <Check className="h-5 w-5 text-green-600" />
-                    ) : (
-                      <X className="h-5 w-5 text-red-600" />
-                    )}
-                  </div>
-                </div>
-
-                {canUpgrade && (
-                  <button
-                    onClick={() => handleUpgrade(pkg)}
-                    className="w-full py-2 bg-gradient-to-r from-cyan-600 to-green-600 text-white rounded-lg font-semibold hover:from-cyan-700 hover:to-green-700 transition"
-                  >
-                    {pkg.price_monthly === 0 ? 'Switch to Free' : 'Upgrade'}
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {showPaymentModal && selectedPackage && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-2xl font-bold text-gray-900">
-                {selectedPackage.price_monthly === 0 ? 'Switch Package' : 'Upgrade Package'}
-              </h3>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-semibold text-gray-900 mb-2">{selectedPackage.name}</h4>
-                <p className="text-sm text-gray-600 mb-3">{selectedPackage.description}</p>
-              </div>
-
-              {selectedPackage.price_monthly > 0 && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Billing Cycle
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        onClick={() => setSelectedBillingCycle('monthly')}
-                        className={`p-3 border-2 rounded-lg text-center transition ${
-                          selectedBillingCycle === 'monthly'
-                            ? 'border-cyan-600 bg-cyan-50'
-                            : 'border-gray-200 hover:border-cyan-300'
-                        }`}
-                      >
-                        <div className="font-semibold">Monthly</div>
-                        <div className="text-2xl font-bold text-gray-900">
-                          ${selectedPackage.price_monthly}
-                        </div>
-                        <div className="text-xs text-gray-600">/month</div>
-                      </button>
-                      <button
-                        onClick={() => setSelectedBillingCycle('yearly')}
-                        className={`p-3 border-2 rounded-lg text-center transition ${
-                          selectedBillingCycle === 'yearly'
-                            ? 'border-cyan-600 bg-cyan-50'
-                            : 'border-gray-200 hover:border-cyan-300'
-                        }`}
-                      >
-                        <div className="font-semibold">Yearly</div>
-                        <div className="text-2xl font-bold text-gray-900">
-                          ${selectedPackage.price_yearly}
-                        </div>
-                        <div className="text-xs text-green-600">
-                          Save ${((selectedPackage.price_monthly * 12) - selectedPackage.price_yearly).toFixed(2)}
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Payment Method
-                    </label>
-                    <div className="space-y-2">
-                      <button
-                        onClick={() => setSelectedPaymentGateway('stripe')}
-                        className={`w-full p-4 border-2 rounded-lg flex items-center space-x-3 transition ${
-                          selectedPaymentGateway === 'stripe'
-                            ? 'border-cyan-600 bg-cyan-50'
-                            : 'border-gray-200 hover:border-cyan-300'
-                        }`}
-                      >
-                        <CreditCard className="h-6 w-6 text-gray-600" />
-                        <div className="text-left">
-                          <div className="font-semibold">Stripe</div>
-                          <div className="text-xs text-gray-600">Credit/Debit Card</div>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => setSelectedPaymentGateway('paypal')}
-                        className={`w-full p-4 border-2 rounded-lg flex items-center space-x-3 transition ${
-                          selectedPaymentGateway === 'paypal'
-                            ? 'border-cyan-600 bg-cyan-50'
-                            : 'border-gray-200 hover:border-cyan-300'
-                        }`}
-                      >
-                        <Zap className="h-6 w-6 text-gray-600" />
-                        <div className="text-left">
-                          <div className="font-semibold">PayPal</div>
-                          <div className="text-xs text-gray-600">Fast & Secure</div>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => setSelectedPaymentGateway('paynow')}
-                        className={`w-full p-4 border-2 rounded-lg flex items-center space-x-3 transition ${
-                          selectedPaymentGateway === 'paynow'
-                            ? 'border-cyan-600 bg-cyan-50'
-                            : 'border-gray-200 hover:border-cyan-300'
-                        }`}
-                      >
-                        <TrendingUp className="h-6 w-6 text-gray-600" />
-                        <div className="text-left">
-                          <div className="font-semibold">PayNow</div>
-                          <div className="text-xs text-gray-600">Singapore Payment</div>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="bg-cyan-50 p-4 rounded-lg">
-                    <div className="flex items-center justify-between text-lg font-bold">
-                      <span>Total</span>
-                      <span>
-                        ${selectedBillingCycle === 'monthly'
-                          ? selectedPackage.price_monthly
-                          : selectedPackage.price_yearly}
-                      </span>
-                    </div>
-                  </div>
-                </>
               )}
-            </div>
 
-            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+              {isCurrent && (
+                <div className="mb-6 flex">
+                  <span className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-100">Current active plan</span>
+                </div>
+              )}
+
+              <div className="mb-8">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{pkg.name.split(' ')[0]}</p>
+                <h3 className="text-2xl font-black text-gray-900 tracking-tight">{pkg.name}</h3>
+                <div className="mt-4 flex items-baseline gap-1">
+                  <span className="text-4xl font-black text-gray-900 tabular-nums">${pkg.price_monthly}</span>
+                  <span className="text-gray-400 text-sm font-bold uppercase tracking-widest">/ Month</span>
+                </div>
+              </div>
+
+              <div className="space-y-4 mb-10 flex-1">
+                <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">What's included:</p>
+                {features.map((feature, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${isCurrent ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-50 text-gray-300'}`}>
+                      <Check className="w-3 h-3" strokeWidth={3} />
+                    </div>
+                    <span className="text-xs font-bold text-gray-600">{feature}</span>
+                  </div>
+                ))}
+              </div>
+
               <button
-                onClick={() => setShowPaymentModal(false)}
-                className="px-6 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                disabled={isCurrent || (updating === pkg.id)}
+                onClick={() => handleUpgrade(pkg.id)}
+                className={`w-full py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${isCurrent
+                  ? 'bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-100'
+                  : color === 'blue'
+                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-200 active:scale-95'
+                    : 'bg-gray-900 text-white hover:bg-black shadow-lg shadow-gray-200 active:scale-95'
+                  }`}
               >
-                Cancel
-              </button>
-              <button
-                onClick={handlePayment}
-                disabled={loading}
-                className="px-6 py-2 bg-gradient-to-r from-cyan-600 to-green-600 text-white rounded-lg hover:from-cyan-700 hover:to-green-700 transition disabled:opacity-50"
-              >
-                {loading ? 'Processing...' : selectedPackage.price_monthly === 0 ? 'Confirm' : 'Pay Now'}
+                {updating === pkg.id ? 'Processing...' : isCurrent ? 'Active Plan' : 'Select Plan'}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }
+
+

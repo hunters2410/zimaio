@@ -22,6 +22,34 @@ export function LoginPage() {
       setError(error.message);
       setLoading(false);
     } else {
+      // Get the latest profile data to redirect correctly
+      const { data: { user } } = await import('../lib/supabase').then(m => m.supabase.auth.getUser());
+
+      if (user) {
+        const { data: profile } = await import('../lib/supabase').then(m =>
+          m.supabase.from('profiles').select('role').eq('id', user.id).single()
+        );
+
+        if (profile) {
+          switch (profile.role) {
+            case 'admin':
+              navigate('/admin/dashboard');
+              break;
+            case 'vendor':
+              navigate('/vendor/dashboard');
+              break;
+            case 'customer':
+              navigate('/customer/dashboard');
+              break;
+            case 'logistic':
+              navigate('/logistic/dashboard');
+              break;
+            default:
+              navigate('/');
+          }
+          return;
+        }
+      }
       navigate('/');
     }
   };

@@ -17,8 +17,10 @@ import { CartPage } from './pages/CartPage';
 import { SupportPage } from './pages/SupportPage';
 import { VendorDashboard } from './pages/vendor/VendorDashboard';
 import { VendorWallet } from './pages/vendor/VendorWallet';
+import { VendorSetup } from './pages/vendor/VendorSetup';
 import { AdminAuthPage } from './pages/AdminAuthPage';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { AdminPOS } from './pages/admin/AdminPOS';
 import { NavigationSettings } from './pages/admin/NavigationSettings';
 import { VendorManagement } from './pages/admin/VendorManagement';
 import { AppearanceSettings } from './pages/admin/AppearanceSettings';
@@ -65,7 +67,7 @@ import {
 
 function AppContent() {
   const location = useLocation();
-  const hideHeaderFooter = location.pathname.startsWith('/admin');
+  const hideHeaderFooter = location.pathname.startsWith('/admin') || location.pathname.startsWith('/vendor/');
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -107,6 +109,15 @@ function AppContent() {
           />
 
           <Route
+            path="/vendor/setup"
+            element={
+              <ProtectedRoute allowedRoles={['vendor']}>
+                <VendorSetup />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/vendor/wallet"
             element={
               <ProtectedRoute allowedRoles={['vendor']}>
@@ -129,6 +140,14 @@ function AppContent() {
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/pos"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminPOS />
               </ProtectedRoute>
             }
           />

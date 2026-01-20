@@ -73,9 +73,9 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 transition-all duration-300">
       {/* Top Bar */}
-      <div className="bg-[#FAFAFA]/80 backdrop-blur-md border-b border-gray-100 hidden sm:block">
+      <div className="bg-white border-b border-gray-100 hidden sm:block">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-10 text-[11px] uppercase tracking-wider font-semibold text-gray-400">
+          <div className="flex items-center justify-between h-10 text-[11px] uppercase tracking-wider font-semibold text-gray-500">
             <span>Welcome To ZimAIO • Quality Marketplace</span>
             <div className="flex items-center space-x-6">
               {user ? (
@@ -229,6 +229,8 @@ export function Header() {
                   <span className="text-[9px] font-black uppercase tracking-[0.2em] mt-1.5 hidden sm:block">Account</span>
                 </Link>
               )}
+
+
 
               <Link to="/favorites" className="flex flex-col items-center p-2.5 rounded-2xl hover:bg-gray-50 transition-all text-gray-600 hover:text-pink-600">
                 <Heart className="h-6 w-6" />

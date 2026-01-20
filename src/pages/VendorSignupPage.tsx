@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Package, CheckCircle, TrendingUp, Users, DollarSign, Check, X } from 'lucide-react';
+import { Package, CheckCircle, TrendingUp, Users, DollarSign, Check, ChevronDown, Search } from 'lucide-react';
 
 interface VendorPackage {
   id: string;
@@ -30,6 +30,8 @@ export function VendorSignupPage() {
   const [acceptedVendorTerms, setAcceptedVendorTerms] = useState(false);
   const [acceptedVendorPrivacy, setAcceptedVendorPrivacy] = useState(false);
   const [contracts, setContracts] = useState<any[]>([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
@@ -278,86 +280,72 @@ export function VendorSignupPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Select Package *
-                </label>
-                <div className="space-y-3">
-                  {packages.map((pkg) => (
-                    <div
-                      key={pkg.id}
-                      onClick={() => setSelectedPackage(pkg.id)}
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition ${
-                        selectedPackage === pkg.id
-                          ? 'border-cyan-600 bg-cyan-50'
-                          : 'border-gray-200 hover:border-cyan-300'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <h4 className="font-semibold text-gray-900">{pkg.name}</h4>
-                            {pkg.is_default && (
-                              <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
-                                Recommended
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-600 mb-2">{pkg.description}</p>
-                          <div className="flex items-baseline space-x-2 mb-2">
-                            <span className="text-2xl font-bold text-gray-900">
-                              ${pkg.price_monthly}
-                            </span>
-                            <span className="text-sm text-gray-600">/month</span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
-                            <div className="flex items-center space-x-1">
-                              <span>Products:</span>
-                              <span className="font-semibold">
-                                {pkg.product_limit === 999999 ? 'Unlimited' : pkg.product_limit}
-                              </span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              {pkg.has_ads_access ? (
-                                <Check className="h-3 w-3 text-green-600" />
-                              ) : (
-                                <X className="h-3 w-3 text-red-600" />
-                              )}
-                              <span>Ads</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              {pkg.has_promotion_access ? (
-                                <Check className="h-3 w-3 text-green-600" />
-                              ) : (
-                                <X className="h-3 w-3 text-red-600" />
-                              )}
-                              <span>Promotions</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              {pkg.has_analytics_access ? (
-                                <Check className="h-3 w-3 text-green-600" />
-                              ) : (
-                                <X className="h-3 w-3 text-red-600" />
-                              )}
-                              <span>Analytics</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="ml-3">
-                          <div
-                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                              selectedPackage === pkg.id
-                                ? 'border-cyan-600 bg-cyan-600'
-                                : 'border-gray-300'
-                            }`}
-                          >
-                            {selectedPackage === pkg.id && (
-                              <Check className="h-3 w-3 text-white" />
-                            )}
-                          </div>
+                <div className="relative group z-20">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Select Package *
+                  </label>
+
+                  <div
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="w-full bg-white border border-gray-300 rounded-lg p-3 cursor-pointer flex items-center justify-between hover:border-cyan-500 transition-colors"
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-gray-900">
+                        {packages.find(p => p.id === selectedPackage)?.name || 'Select Package'}
+                      </span>
+                      <span className={`text-xs font-semibold ${packages.find(p => p.id === selectedPackage)?.price_monthly === 0 ? 'text-green-600' : 'text-gray-500'}`}>
+                        {(() => {
+                          const pkg = packages.find(p => p.id === selectedPackage);
+                          if (!pkg) return 'Choose a plan';
+                          return pkg.price_monthly === 0 ? 'Lifetime Free Access' : `$${pkg.price_monthly}/mo`;
+                        })()}
+                      </span>
+                    </div>
+                    <ChevronDown size={20} className={`text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                  </div>
+
+                  {isDropdownOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden z-50">
+                      <div className="p-3 border-b border-gray-100">
+                        <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md border border-gray-200">
+                          <Search size={16} className="text-gray-400" />
+                          <input
+                            type="text"
+                            placeholder="Search packages..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="bg-transparent border-none outline-none text-sm w-full text-gray-700 placeholder-gray-400"
+                            autoFocus
+                            onClick={(e) => e.stopPropagation()}
+                          />
                         </div>
                       </div>
+
+                      <div className="max-h-60 overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-gray-200">
+                        {packages.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).map(pkg => (
+                          <div
+                            key={pkg.id}
+                            onClick={() => {
+                              setSelectedPackage(pkg.id);
+                              setIsDropdownOpen(false);
+                            }}
+                            className={`p-3 rounded-lg cursor-pointer flex items-center justify-between transition-colors ${selectedPackage === pkg.id ? 'bg-cyan-50 text-cyan-700' : 'hover:bg-gray-50 text-gray-700'}`}
+                          >
+                            <div>
+                              <p className="text-sm font-bold">{pkg.name}</p>
+                              <p className="text-xs opacity-80">
+                                {pkg.price_monthly === 0 ? 'Free' : `$${pkg.price_monthly}/mo`} • {pkg.product_limit === 999999 ? 'Unlmtd' : pkg.product_limit} Prds
+                              </p>
+                            </div>
+                            {selectedPackage === pkg.id && <Check size={16} />}
+                          </div>
+                        ))}
+                        {packages.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                          <div className="p-4 text-center text-sm text-gray-500">No packages found</div>
+                        )}
+                      </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 

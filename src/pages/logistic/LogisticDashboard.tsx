@@ -65,6 +65,7 @@ export function LogisticDashboard() {
     const [searchQuery, setSearchQuery] = useState('');
     const [historySearchQuery, setHistorySearchQuery] = useState('');
     const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const [updateMessage, setUpdateMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [profileForm, setProfileForm] = useState({
         driver_name: '',
         phone_number: '',
@@ -149,7 +150,10 @@ export function LogisticDashboard() {
 
         if (!error) {
             setDriverInfo({ ...driverInfo, ...profileForm });
-            setIsEditingProfile(false);
+            setUpdateMessage({ type: 'success', text: 'Profile updated successfully!' });
+            // Keep editing mode open
+        } else {
+            setUpdateMessage({ type: 'error', text: 'Failed to update profile.' });
         }
         setLoading(false);
     };
@@ -518,20 +522,20 @@ export function LogisticDashboard() {
                             <button className="text-sm text-emerald-600 font-bold hover:text-emerald-700">Export History</button>
                         </div>
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left">
+                            <table className="w-full text-left border-collapse border border-slate-200">
                                 <thead className="bg-slate-50/50">
                                     <tr>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Tracking #</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Date</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Location</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Earned</th>
+                                        <th className="px-6 py-4 border border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">Tracking #</th>
+                                        <th className="px-6 py-4 border border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">Date</th>
+                                        <th className="px-6 py-4 border border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">Location</th>
+                                        <th className="px-6 py-4 border border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                                        <th className="px-6 py-4 border border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">Earned</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {completedTasks.length === 0 ? (
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">No completed deliveries found in history.</td>
+                                            <td colSpan={5} className="px-6 py-12 border border-slate-200 text-center text-slate-400 italic">No completed deliveries found in history.</td>
                                         </tr>
                                     ) : (
                                         completedTasks
@@ -541,13 +545,13 @@ export function LogisticDashboard() {
                                             )
                                             .map((delivery) => (
                                                 <tr key={delivery.id} className="hover:bg-slate-50/50 transition-colors">
-                                                    <td className="px-6 py-4 font-mono text-sm font-bold text-slate-700">{delivery.tracking_number}</td>
-                                                    <td className="px-6 py-4 text-sm text-slate-500">{new Date(delivery.created_at).toLocaleDateString()}</td>
-                                                    <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate">{delivery.delivery_address}</td>
-                                                    <td className="px-6 py-4">
+                                                    <td className="px-6 py-4 border border-slate-200 font-mono text-sm font-bold text-slate-700">{delivery.tracking_number}</td>
+                                                    <td className="px-6 py-4 border border-slate-200 text-sm text-slate-500">{new Date(delivery.created_at).toLocaleDateString()}</td>
+                                                    <td className="px-6 py-4 border border-slate-200 text-sm text-slate-500 max-w-xs truncate">{delivery.delivery_address}</td>
+                                                    <td className="px-6 py-4 border border-slate-200">
                                                         <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">DELIVERED</span>
                                                     </td>
-                                                    <td className="px-6 py-4 font-bold text-slate-900">${(delivery.orders?.shipping_fee || 0).toFixed(2)}</td>
+                                                    <td className="px-6 py-4 border border-slate-200 font-bold text-slate-900">${(delivery.orders?.shipping_fee || 0).toFixed(2)}</td>
                                                 </tr>
                                             ))
                                     )}
@@ -632,6 +636,13 @@ export function LogisticDashboard() {
                                 </span>
                             </div>
                         </div>
+
+                        {updateMessage && (
+                            <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 ${updateMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+                                {updateMessage.type === 'success' ? <CheckCircle className="h-5 w-5" /> : <Shield className="h-5 w-5" />}
+                                <p className="font-medium">{updateMessage.text}</p>
+                            </div>
+                        )}
 
                         <form onSubmit={handleUpdateProfile} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

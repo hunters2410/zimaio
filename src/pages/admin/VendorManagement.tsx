@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import { Store, Check, X, Star, Search, Mail, Calendar, DollarSign, Plus, Edit, Trash2, Eye, UserX, UserCheck, FileText } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { AdminLayout } from '../../components/AdminLayout';
@@ -82,6 +83,7 @@ export function VendorManagement() {
     tax_id: '',
     commission_rate: 10,
   });
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     fetchVendors();
@@ -192,20 +194,27 @@ export function VendorManagement() {
     e.preventDefault();
     setLoading(true);
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // Use a temporary client to avoid logging out the admin
+    const tempSupabase = createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_ANON_KEY,
+      { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+    );
+
+    const { data: authData, error: authError } = await tempSupabase.auth.signUp({
       email: formData.email,
       password: formData.password,
     });
 
     if (authError || !authData.user) {
-      alert('Failed to create vendor account: ' + authError?.message);
+      setMessage({ type: 'error', text: 'Failed to create vendor account: ' + authError?.message });
       setLoading(false);
       return;
     }
 
     const { error: profileError } = await supabase
       .from('profiles')
-      .insert({
+      .upsert({
         id: authData.user.id,
         email: formData.email,
         full_name: formData.full_name,
@@ -214,7 +223,7 @@ export function VendorManagement() {
       });
 
     if (profileError) {
-      alert('Failed to create profile: ' + profileError.message);
+      setMessage({ type: 'error', text: 'Failed to create profile: ' + profileError.message });
       setLoading(false);
       return;
     }
@@ -233,7 +242,7 @@ export function VendorManagement() {
       });
 
     if (vendorError) {
-      alert('Failed to create vendor profile: ' + vendorError.message);
+      setMessage({ type: 'error', text: 'Failed to create vendor profile: ' + vendorError.message });
       setLoading(false);
       return;
     }
@@ -260,7 +269,8 @@ export function VendorManagement() {
       }
     }
 
-    setShowRegisterModal(false);
+    setMessage({ type: 'success', text: 'Vendor registered successfully!' });
+    // setShowRegisterModal(false); // Keep modal open
     setFormData({
       email: '',
       password: '',
@@ -315,13 +325,14 @@ export function VendorManagement() {
       .eq('id', selectedVendor.id);
 
     if (vendorError) {
-      alert('Failed to update vendor profile: ' + vendorError.message);
+      setMessage({ type: 'error', text: 'Failed to update vendor profile: ' + vendorError.message });
       setLoading(false);
       return;
     }
 
-    setShowEditModal(false);
-    setSelectedVendor(null);
+    setMessage({ type: 'success', text: 'Vendor updated successfully!' });
+    // setShowEditModal(false); // Keep modal open
+    // setSelectedVendor(null); // Keep selected vendor
     fetchVendors();
   };
 
@@ -431,31 +442,28 @@ export function VendorManagement() {
             />
             <button
               onClick={() => setFilterStatus('all')}
-              className={`px-4 py-2 rounded-lg transition ${
-                filterStatus === 'all'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-4 py-2 rounded-lg transition ${filterStatus === 'all'
+                ? 'bg-green-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               All
             </button>
             <button
               onClick={() => setFilterStatus('approved')}
-              className={`px-4 py-2 rounded-lg transition ${
-                filterStatus === 'approved'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-4 py-2 rounded-lg transition ${filterStatus === 'approved'
+                ? 'bg-green-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               Approved
             </button>
             <button
               onClick={() => setFilterStatus('pending')}
-              className={`px-4 py-2 rounded-lg transition ${
-                filterStatus === 'pending'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-4 py-2 rounded-lg transition ${filterStatus === 'pending'
+                ? 'bg-green-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               Pending
             </button>
@@ -464,33 +472,33 @@ export function VendorManagement() {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full border-collapse border border-gray-200">
+          <thead className="bg-white">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 border border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Vendor
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 border border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Contact
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 border border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 border border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Performance
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 border border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Joined
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 border border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredVendors.map((vendor) => (
-              <tr key={vendor.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
+              <tr key={vendor.id} className="hover:bg-white">
+                <td className="px-6 py-4 border border-gray-200 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                       {vendor.shop_logo_url ? (
@@ -511,29 +519,27 @@ export function VendorManagement() {
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-6 py-4 border border-gray-200 whitespace-nowrap">
                   <div className="flex items-center text-sm text-gray-600">
                     <Mail className="h-4 w-4 mr-2" />
                     {vendor.business_email || 'N/A'}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-6 py-4 border border-gray-200 whitespace-nowrap">
                   <div className="flex flex-col gap-1">
                     <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        vendor.profile?.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${vendor.profile?.is_active
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                        }`}
                     >
                       {vendor.profile?.is_active ? 'Active' : 'Inactive'}
                     </span>
                     <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        vendor.is_approved
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${vendor.is_approved
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                        }`}
                     >
                       {vendor.is_approved ? 'Approved' : 'Pending'}
                     </span>
@@ -549,7 +555,7 @@ export function VendorManagement() {
                     )}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-6 py-4 border border-gray-200 whitespace-nowrap">
                   <div className="flex flex-col text-sm text-gray-600">
                     <div className="flex items-center">
                       <Star className="h-4 w-4 mr-1 text-yellow-500 fill-current" />
@@ -561,13 +567,13 @@ export function VendorManagement() {
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-6 py-4 border border-gray-200 whitespace-nowrap">
                   <div className="flex items-center text-sm text-gray-600">
                     <Calendar className="h-4 w-4 mr-2" />
                     {new Date(vendor.created_at).toLocaleDateString()}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <td className="px-6 py-4 border border-gray-200 whitespace-nowrap text-sm font-medium">
                   <div className="flex flex-wrap gap-1">
                     <button
                       onClick={() => openEditModal(vendor)}
@@ -595,11 +601,10 @@ export function VendorManagement() {
                     </button>
                     <button
                       onClick={() => toggleActive(vendor.user_id, vendor.profile?.is_active || false)}
-                      className={`inline-flex items-center px-2 py-1 rounded-md text-xs ${
-                        vendor.profile?.is_active
-                          ? 'text-orange-600 hover:bg-orange-50'
-                          : 'text-green-600 hover:bg-green-50'
-                      }`}
+                      className={`inline-flex items-center px-2 py-1 rounded-md text-xs ${vendor.profile?.is_active
+                        ? 'text-orange-600 hover:bg-orange-50'
+                        : 'text-green-600 hover:bg-green-50'
+                        }`}
                       title={vendor.profile?.is_active ? 'Deactivate vendor' : 'Activate vendor'}
                     >
                       {vendor.profile?.is_active ? (
@@ -616,11 +621,10 @@ export function VendorManagement() {
                     </button>
                     <button
                       onClick={() => toggleApproved(vendor.id, vendor.is_approved)}
-                      className={`inline-flex items-center px-2 py-1 rounded-md text-xs ${
-                        vendor.is_approved
-                          ? 'text-red-600 hover:bg-red-50'
-                          : 'text-green-600 hover:bg-green-50'
-                      }`}
+                      className={`inline-flex items-center px-2 py-1 rounded-md text-xs ${vendor.is_approved
+                        ? 'text-red-600 hover:bg-red-50'
+                        : 'text-green-600 hover:bg-green-50'
+                        }`}
                       title={vendor.is_approved ? 'Disapprove vendor' : 'Approve vendor'}
                     >
                       {vendor.is_approved ? (
@@ -685,86 +689,91 @@ export function VendorManagement() {
                 <X className="h-6 w-6" />
               </button>
             </div>
-            <form onSubmit={handleRegisterVendor} className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {message && (
+              <div className={`mx-6 mt-6 p-4 rounded-lg flex items-center gap-2 ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                {message.text}
+              </div>
+            )}
+            <form onSubmit={handleRegisterVendor} className="p-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
                   <input
                     type="email"
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Password</label>
                   <input
                     type="password"
                     required
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label>
                   <input
                     type="text"
                     required
                     value={formData.full_name}
                     onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Phone</label>
                   <input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Shop Name</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shop Name</label>
                   <input
                     type="text"
                     required
                     value={formData.shop_name}
                     onChange={(e) => setFormData({ ...formData, shop_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Business Email</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Business Email</label>
                   <input
                     type="email"
                     value={formData.business_email}
                     onChange={(e) => setFormData({ ...formData, business_email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Business Phone</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Business Phone</label>
                   <input
                     type="tel"
                     value={formData.business_phone}
                     onChange={(e) => setFormData({ ...formData, business_phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tax ID</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tax ID</label>
                   <input
                     type="text"
                     value={formData.tax_id}
                     onChange={(e) => setFormData({ ...formData, tax_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Commission Rate (%)</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Commission Rate (%)</label>
                   <input
                     type="number"
                     step="0.1"
@@ -773,34 +782,34 @@ export function VendorManagement() {
                     required
                     value={formData.commission_rate}
                     onChange={(e) => setFormData({ ...formData, commission_rate: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Business Address</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Business Address</label>
                   <textarea
                     rows={2}
                     value={formData.business_address}
                     onChange={(e) => setFormData({ ...formData, business_address: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Shop Description</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Shop Description</label>
                   <textarea
-                    rows={3}
+                    rows={2}
                     value={formData.shop_description}
                     onChange={(e) => setFormData({ ...formData, shop_description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Subscription Package *</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Subscription Package *</label>
                   <select
                     required
                     value={selectedPackage}
                     onChange={(e) => setSelectedPackage(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <option value="">Select a package</option>
                     {packages.map((pkg) => (
@@ -809,21 +818,21 @@ export function VendorManagement() {
                       </option>
                     ))}
                   </select>
-                  <p className="mt-1 text-xs text-gray-500">Select the subscription package for this vendor</p>
+                  <p className="mt-1 text-[10px] text-gray-400">Select the subscription package for this vendor</p>
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   type="button"
                   onClick={() => setShowRegisterModal(false)}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                  className="px-4 py-1.5 text-sm font-bold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+                  className="px-4 py-1.5 text-sm font-bold bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
                 >
                   {loading ? 'Creating...' : 'Register Vendor'}
                 </button>
@@ -845,6 +854,11 @@ export function VendorManagement() {
                 <X className="h-6 w-6" />
               </button>
             </div>
+            {message && (
+              <div className={`mx-6 mt-6 p-4 rounded-lg flex items-center gap-2 ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                {message.text}
+              </div>
+            )}
             <form onSubmit={handleEditVendor} className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -1070,13 +1084,12 @@ export function VendorManagement() {
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">KYC Status</h3>
                   <span
-                    className={`mt-1 inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-                      selectedVendor.kyc_status === 'approved'
-                        ? 'bg-green-100 text-green-800'
-                        : selectedVendor.kyc_status === 'rejected'
+                    className={`mt-1 inline-block px-3 py-1 rounded-full text-sm font-semibold ${selectedVendor.kyc_status === 'approved'
+                      ? 'bg-green-100 text-green-800'
+                      : selectedVendor.kyc_status === 'rejected'
                         ? 'bg-red-100 text-red-800'
                         : 'bg-yellow-100 text-yellow-800'
-                    }`}
+                      }`}
                   >
                     {selectedVendor.kyc_status}
                   </span>

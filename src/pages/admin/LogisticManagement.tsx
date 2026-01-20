@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import { AdminLayout } from '../../components/AdminLayout';
 import { supabase } from '../../lib/supabase';
 import { Search, Truck, Plus, Edit, Trash2, Eye, X, AlertCircle } from 'lucide-react';
@@ -92,7 +93,14 @@ export function LogisticManagement() {
 
         try {
             // 1. Create auth user
-            const { data: authData, error: authError } = await supabase.auth.signUp({
+            // Use a temporary client to avoid logging out the admin
+            const tempSupabase = createClient(
+                import.meta.env.VITE_SUPABASE_URL,
+                import.meta.env.VITE_SUPABASE_ANON_KEY,
+                { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+            );
+
+            const { data: authData, error: authError } = await tempSupabase.auth.signUp({
                 email: formData.email,
                 password: formData.password || 'Logistic123!', // fallback if empty, better to enforce
                 options: {
@@ -153,7 +161,8 @@ export function LogisticManagement() {
             }
 
             setMessage({ type: 'success', text: 'Logistic driver created successfully' });
-            handleCloseModal();
+            // setMessage({ type: 'success', text: 'Logistic driver created successfully' }); // Removed duplicate
+            // handleCloseModal(); // Keep modal open
             fetchDrivers();
         } catch (error: any) {
             setMessage({ type: 'error', text: error.message || 'Failed to create driver' });
@@ -195,7 +204,8 @@ export function LogisticManagement() {
             if (driverError) throw driverError;
 
             setMessage({ type: 'success', text: 'Driver updated successfully' });
-            handleCloseModal();
+            setMessage({ type: 'success', text: 'Driver updated successfully' });
+            // handleCloseModal(); // Keep modal open
             fetchDrivers();
         } catch (error: any) {
             setMessage({ type: 'error', text: error.message || 'Failed to update driver' });
@@ -332,27 +342,27 @@ export function LogisticManagement() {
 
             <div className={`${cardBg} rounded-lg shadow-sm overflow-hidden`}>
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <table className="min-w-full border-collapse border border-gray-200 dark:border-gray-700">
                         <thead className={isDark ? 'bg-gray-700' : 'bg-gray-50'}>
                             <tr>
-                                <th className={`px-6 py-3 text-left text-xs font-medium ${textSecondary} uppercase tracking-wider`}>Driver</th>
-                                <th className={`px-6 py-3 text-left text-xs font-medium ${textSecondary} uppercase tracking-wider`}>Vehicle</th>
-                                <th className={`px-6 py-3 text-left text-xs font-medium ${textSecondary} uppercase tracking-wider`}>Status</th>
-                                <th className={`px-6 py-3 text-left text-xs font-medium ${textSecondary} uppercase tracking-wider`}>Availability</th>
-                                <th className={`px-6 py-3 text-left text-xs font-medium ${textSecondary} uppercase tracking-wider`}>Actions</th>
+                                <th className={`px-6 py-3 border border-gray-200 dark:border-gray-700 text-left text-xs font-medium ${textSecondary} uppercase tracking-wider`}>Driver</th>
+                                <th className={`px-6 py-3 border border-gray-200 dark:border-gray-700 text-left text-xs font-medium ${textSecondary} uppercase tracking-wider`}>Vehicle</th>
+                                <th className={`px-6 py-3 border border-gray-200 dark:border-gray-700 text-left text-xs font-medium ${textSecondary} uppercase tracking-wider`}>Status</th>
+                                <th className={`px-6 py-3 border border-gray-200 dark:border-gray-700 text-left text-xs font-medium ${textSecondary} uppercase tracking-wider`}>Availability</th>
+                                <th className={`px-6 py-3 border border-gray-200 dark:border-gray-700 text-left text-xs font-medium ${textSecondary} uppercase tracking-wider`}>Actions</th>
                             </tr>
                         </thead>
                         <tbody className={`divide-y ${isDark ? 'divide-gray-700' : 'divide-gray-200'}`}>
                             {filteredDrivers.map((driver) => (
                                 <tr key={driver.id} className={isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}>
-                                    <td className="px-6 py-4 whitespace-nowrap">
+                                    <td className="px-6 py-4 border border-gray-200 dark:border-gray-700 whitespace-nowrap">
                                         <div>
                                             <div className={`text-sm font-medium ${textPrimary}`}>{driver.driver_name}</div>
                                             <div className={`text-sm ${textSecondary}`}>{driver.profile?.email}</div>
                                             <div className={`text-xs ${textSecondary}`}>{driver.phone_number}</div>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
+                                    <td className="px-6 py-4 border border-gray-200 dark:border-gray-700 whitespace-nowrap">
                                         <div className="flex items-center">
                                             <Truck className="h-4 w-4 mr-2 text-slate-400" />
                                             <div>
@@ -361,20 +371,20 @@ export function LogisticManagement() {
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
+                                    <td className="px-6 py-4 border border-gray-200 dark:border-gray-700 whitespace-nowrap">
                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${driver.status === 'active' ? 'bg-green-100 text-green-800' :
                                             driver.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
                                             }`}>
                                             {driver.status.charAt(0).toUpperCase() + driver.status.slice(1)}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
+                                    <td className="px-6 py-4 border border-gray-200 dark:border-gray-700 whitespace-nowrap">
                                         <div className="flex items-center">
                                             <div className={`w-2 h-2 rounded-full mr-2 ${driver.is_available ? 'bg-green-500' : 'bg-gray-300'}`} />
                                             <span className={`text-sm ${textSecondary}`}>{driver.is_available ? 'Online' : 'Offline'}</span>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <td className="px-6 py-4 border border-gray-200 dark:border-gray-700 whitespace-nowrap text-sm font-medium">
                                         <div className="flex items-center space-x-2">
                                             <button onClick={() => handleView(driver)} className="text-blue-600 hover:text-blue-900"><Eye className="h-5 w-5" /></button>
                                             <button onClick={() => handleEdit(driver)} className="text-cyan-600 hover:text-cyan-900"><Edit className="h-5 w-5" /></button>
@@ -395,6 +405,16 @@ export function LogisticManagement() {
                             <h2 className={`text-2xl font-bold ${textPrimary}`}>{isEditing ? 'Edit Driver' : 'Add New Driver'}</h2>
                             <button onClick={handleCloseModal} className={`${textSecondary} hover:text-gray-600 focus:outline-none`}><X className="h-6 w-6" /></button>
                         </div>
+
+                        {message && (
+                            <div className={`mx-6 mt-6 p-4 rounded-lg flex items-start space-x-3 ${message.type === 'success'
+                                ? 'bg-green-50 border border-green-200 text-green-800'
+                                : 'bg-red-50 border border-red-200 text-red-800'
+                                }`}>
+                                <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                                <span>{message.text}</span>
+                            </div>
+                        )}
 
                         <form onSubmit={isEditing ? handleUpdate : handleCreate} className="p-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">

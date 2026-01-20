@@ -27,6 +27,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
 
     if (!error && data) {
+      if (data.is_active === false) {
+        await supabase.auth.signOut();
+        setUser(null);
+        setProfile(null);
+        return;
+      }
       setProfile(data as Profile);
     }
   };
@@ -61,14 +67,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (!error) {
+    if (!error && data.session) {
+      // Log successful attempt
       await supabase.from('login_attempts').insert({
         email,
         success: true,
         ip_address: 'unknown'
       });
+
+      // Check if account is active
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('is_active')
+        .eq('id', data.session.user.id)
+        .single();
+
+      if (profileData && profileData.is_active === false) {
+        await supabase.auth.signOut();
+        return { error: { message: 'Account is deactivated. Please contact support.' } };
+      }
     } else {
       await supabase.from('login_attempts').insert({
         email,
@@ -93,12 +112,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (!error && data.user) {
-      await supabase.from('profiles').insert({
+      // Use upsert to handle cases where the trigger already created the profile
+      await supabase.from('profiles').upsert({
         id: data.user.id,
         email,
         full_name: fullName,
         role: role as any,
-        is_verified: true
+        is_verified: true,
+        is_active: true
       });
 
       await supabase.from('wallets').insert({

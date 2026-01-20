@@ -207,8 +207,8 @@ export function ProductsManagement() {
         .eq('id', editingProduct.id);
 
       if (error) throw error;
-      setMessage({ type: 'success', text: 'Product updated' });
-      setEditingProduct(null);
+      setMessage({ type: 'success', text: 'Product updated successfully' });
+      // setEditingProduct(null); // Keep modal open
       fetchData();
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message });
@@ -246,21 +246,19 @@ export function ProductsManagement() {
           <div className={`flex items-center border ${borderColor} rounded-lg p-1`}>
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded transition ${
-                viewMode === 'grid'
-                  ? 'bg-cyan-600 text-white'
-                  : `${textSecondary} hover:bg-gray-100 dark:hover:bg-gray-700`
-              }`}
+              className={`p-1.5 rounded transition ${viewMode === 'grid'
+                ? 'bg-cyan-600 text-white'
+                : `${textSecondary} hover:bg-gray-100 dark:hover:bg-gray-700`
+                }`}
             >
               <Grid3x3 className="h-4 w-4" />
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded transition ${
-                viewMode === 'list'
-                  ? 'bg-cyan-600 text-white'
-                  : `${textSecondary} hover:bg-gray-100 dark:hover:bg-gray-700`
-              }`}
+              className={`p-1.5 rounded transition ${viewMode === 'list'
+                ? 'bg-cyan-600 text-white'
+                : `${textSecondary} hover:bg-gray-100 dark:hover:bg-gray-700`
+                }`}
             >
               <List className="h-4 w-4" />
             </button>
@@ -270,11 +268,10 @@ export function ProductsManagement() {
 
       {message && (
         <div
-          className={`mb-4 p-3 rounded-lg flex items-start space-x-2 text-sm ${
-            message.type === 'success'
-              ? 'bg-green-50 border border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
-              : 'bg-red-50 border border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
-          }`}
+          className={`mb-4 p-3 rounded-lg flex items-start space-x-2 text-sm ${message.type === 'success'
+            ? 'bg-green-50 border border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
+            : 'bg-red-50 border border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
+            }`}
         >
           {message.type === 'success' ? (
             <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
@@ -319,9 +316,8 @@ export function ProductsManagement() {
             <select
               value={filterVendor}
               onChange={(e) => setFilterVendor(e.target.value)}
-              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-              }`}
+              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                }`}
             >
               <option value="all">All Vendors</option>
               {vendors.map(vendor => (
@@ -335,9 +331,8 @@ export function ProductsManagement() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-              }`}
+              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                }`}
             >
               <option value="all">All</option>
               <option value="active">Active</option>
@@ -350,9 +345,8 @@ export function ProductsManagement() {
             <select
               value={filterApproval}
               onChange={(e) => setFilterApproval(e.target.value)}
-              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-              }`}
+              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                }`}
             >
               <option value="all">All</option>
               <option value="approved">Approved</option>
@@ -366,9 +360,8 @@ export function ProductsManagement() {
               type="date"
               value={filterDateFrom}
               onChange={(e) => setFilterDateFrom(e.target.value)}
-              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-              }`}
+              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                }`}
             />
           </div>
 
@@ -378,9 +371,8 @@ export function ProductsManagement() {
               type="date"
               value={filterDateTo}
               onChange={(e) => setFilterDateTo(e.target.value)}
-              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-              }`}
+              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                }`}
             />
           </div>
 
@@ -391,9 +383,8 @@ export function ProductsManagement() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Name, SKU..."
-              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-              }`}
+              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                }`}
             />
           </div>
         </div>
@@ -481,11 +472,10 @@ export function ProductsManagement() {
                           </button>
                           <button
                             onClick={() => handleToggleActive(product)}
-                            className={`p-1 rounded transition ${
-                              product.is_active
-                                ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30'
-                                : 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30'
-                            }`}
+                            className={`p-1 rounded transition ${product.is_active
+                              ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30'
+                              : 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30'
+                              }`}
                             title={product.is_active ? 'Deactivate' : 'Activate'}
                           >
                             {product.is_active ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
@@ -561,11 +551,10 @@ export function ProductsManagement() {
                 </button>
                 <button
                   onClick={() => handleToggleActive(product)}
-                  className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded transition ${
-                    product.is_active
-                      ? 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400'
-                      : 'bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400'
-                  }`}
+                  className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded transition ${product.is_active
+                    ? 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400'
+                    : 'bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400'
+                    }`}
                 >
                   {product.is_active ? <PowerOff className="h-3 w-3" /> : <Power className="h-3 w-3" />}
                   {product.is_active ? 'Deactivate' : 'Activate'}
@@ -596,9 +585,8 @@ export function ProductsManagement() {
                   type="text"
                   value={editingProduct.name}
                   onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                  className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                    isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                  }`}
+                  className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                    }`}
                 />
               </div>
 
@@ -608,11 +596,22 @@ export function ProductsManagement() {
                   value={editingProduct.description || ''}
                   onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
                   rows={3}
-                  className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                    isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                  }`}
+                  className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                    }`}
                 />
               </div>
+
+              {message && (
+                <div
+                  className={`p-3 rounded-lg flex items-start space-x-2 text-sm ${message.type === 'success'
+                    ? 'bg-green-50 border border-green-200 text-green-800'
+                    : 'bg-red-50 border border-red-200 text-red-800'
+                    }`}
+                >
+                  <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                  <span>{message.text}</span>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -622,9 +621,8 @@ export function ProductsManagement() {
                     step="0.01"
                     value={editingProduct.base_price}
                     onChange={(e) => setEditingProduct({ ...editingProduct, base_price: parseFloat(e.target.value) })}
-                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                      isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                    }`}
+                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                      }`}
                   />
                 </div>
 
@@ -634,9 +632,8 @@ export function ProductsManagement() {
                     type="number"
                     value={editingProduct.stock_quantity}
                     onChange={(e) => setEditingProduct({ ...editingProduct, stock_quantity: parseInt(e.target.value) })}
-                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                      isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                    }`}
+                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                      }`}
                   />
                 </div>
               </div>
@@ -645,14 +642,12 @@ export function ProductsManagement() {
                 <label className={`text-sm font-medium ${textPrimary}`}>Featured Product</label>
                 <button
                   onClick={() => setEditingProduct({ ...editingProduct, is_featured: !editingProduct.is_featured })}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                    editingProduct.is_featured ? 'bg-cyan-600' : 'bg-gray-300'
-                  }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${editingProduct.is_featured ? 'bg-cyan-600' : 'bg-gray-300'
+                    }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                      editingProduct.is_featured ? 'translate-x-6' : 'translate-x-1'
-                    }`}
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${editingProduct.is_featured ? 'translate-x-6' : 'translate-x-1'
+                      }`}
                   />
                 </button>
               </div>
@@ -664,9 +659,8 @@ export function ProductsManagement() {
                   onChange={(e) => setEditingProduct({ ...editingProduct, admin_notes: e.target.value })}
                   rows={2}
                   placeholder="Internal notes about this product..."
-                  className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                    isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                  }`}
+                  className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                    }`}
                 />
               </div>
 

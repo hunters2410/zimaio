@@ -23,7 +23,12 @@ export function AdminDashboard() {
     fraudAlerts: 0
   });
   const [loading, setLoading] = useState(true);
-  const [analyticsData, setAnalyticsData] = useState({
+  const [analyticsData, setAnalyticsData] = useState<{
+    revenueGrowth: any[];
+    customerGrowth: any[];
+    orderTrends: any[];
+    categoryDistribution: any[];
+  }>({
     revenueGrowth: [],
     customerGrowth: [],
     orderTrends: [],
@@ -196,22 +201,22 @@ export function AdminDashboard() {
           <div className={`${cardBg} rounded-lg shadow-sm p-6`}>
             <h3 className={`text-base font-semibold ${textPrimary} mb-3`}>Quick Actions</h3>
             <div className="space-y-1.5">
-              <Link to="/admin/vendors" className="block w-full text-left px-3 py-2 bg-green-50 hover:bg-green-100 rounded-lg text-green-700 text-sm transition">
+              <Link to="/admin/vendors" className={`block w-full text-left px-3 py-2 ${isDark ? 'bg-green-900/20 text-green-400 hover:bg-green-900/40' : 'bg-green-50 text-green-700 hover:bg-green-100'} rounded-lg text-sm transition`}>
                 Manage Vendors
               </Link>
-              <Link to="/admin/kyc-verification" className="block w-full text-left px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg text-blue-700 text-sm transition">
+              <Link to="/admin/kyc-verification" className={`block w-full text-left px-3 py-2 ${isDark ? 'bg-blue-900/20 text-blue-400 hover:bg-blue-900/40' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'} rounded-lg text-sm transition`}>
                 KYC Verification
               </Link>
-              <Link to="/admin/roles-permissions" className="block w-full text-left px-3 py-2 bg-cyan-50 hover:bg-cyan-100 rounded-lg text-cyan-700 text-sm transition">
+              <Link to="/admin/roles-permissions" className={`block w-full text-left px-3 py-2 ${isDark ? 'bg-cyan-900/20 text-cyan-400 hover:bg-cyan-900/40' : 'bg-cyan-50 text-cyan-700 hover:bg-cyan-100'} rounded-lg text-sm transition`}>
                 Roles & Permissions
               </Link>
-              <Link to="/admin/orders" className="block w-full text-left px-3 py-2 bg-purple-50 hover:bg-purple-100 rounded-lg text-purple-700 text-sm transition">
+              <Link to="/admin/orders" className={`block w-full text-left px-3 py-2 ${isDark ? 'bg-purple-900/20 text-purple-400 hover:bg-purple-900/40' : 'bg-purple-50 text-purple-700 hover:bg-purple-100'} rounded-lg text-sm transition`}>
                 Orders Management
               </Link>
-              <Link to="/admin/reports" className="block w-full text-left px-3 py-2 bg-purple-50 hover:bg-purple-100 rounded-lg text-purple-700 text-sm transition">
+              <Link to="/admin/reports" className={`block w-full text-left px-3 py-2 ${isDark ? 'bg-indigo-900/20 text-indigo-400 hover:bg-indigo-900/40' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'} rounded-lg text-sm transition`}>
                 Generate Reports
               </Link>
-              <Link to="/admin/fraud-detection" className="block w-full text-left px-3 py-2 bg-red-50 hover:bg-red-100 rounded-lg text-red-700 text-sm transition">
+              <Link to="/admin/fraud-detection" className={`block w-full text-left px-3 py-2 ${isDark ? 'bg-red-900/20 text-red-400 hover:bg-red-900/40' : 'bg-red-50 text-red-700 hover:bg-red-100'} rounded-lg text-sm transition`}>
                 Fraud Detection
               </Link>
             </div>

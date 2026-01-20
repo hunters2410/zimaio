@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Package, Plus, Edit2, Trash2, X, Check, AlertCircle, MoreVertical, Shield, Star, Crown, Zap } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -313,8 +313,7 @@ export default function VendorPackages() {
         {packages.map((pkg) => (
           <div
             key={pkg.id}
-            className={`group relative rounded-3xl p-8 transition-all duration-300 hover:-translate-y-2 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'
-              } border shadow-sm hover:shadow-2xl ${!pkg.is_active ? 'opacity-75 grayscale-[0.5]' : ''
+            className={`group relative rounded-3xl p-8 transition-all duration-300 hover:-translate-y-2 ${cardBg} border ${borderColor} shadow-sm hover:shadow-2xl ${!pkg.is_active ? 'opacity-75 grayscale-[0.5]' : ''
               }`}
           >
             {/* Top Pattern Decoration */}

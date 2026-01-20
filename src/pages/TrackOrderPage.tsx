@@ -20,6 +20,12 @@ interface DeliveryInfo {
     full_name: string;
     phone: string;
   };
+  driver: {
+    driver_name: string;
+    phone_number: string;
+    vehicle_type: string;
+    vehicle_number: string;
+  } | null;
 }
 
 interface TrackingHistory {
@@ -49,44 +55,22 @@ export function TrackOrderPage() {
     setTrackingHistory([]);
 
     try {
-      const { data: deliveryData, error: deliveryError } = await supabase
-        .from('deliveries')
-        .select(`
-          id,
-          tracking_number,
-          delivery_status,
-          delivery_address,
-          customer_phone,
-          created_at,
-          pickup_time,
-          delivery_time,
-          delivery_notes,
-          order:orders(total_amount, order_status),
-          vendor:profiles!deliveries_vendor_id_fkey(full_name, phone)
-        `)
-        .eq('tracking_number', trackingNumber.trim())
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('get_delivery_details', {
+        p_tracking_number: trackingNumber.trim()
+      });
 
-      if (deliveryError) throw deliveryError;
+      if (error) throw error;
 
-      if (!deliveryData) {
+      if (!data) {
         setError('No delivery found with this tracking number');
         setLoading(false);
         return;
       }
 
-      setDelivery(deliveryData as any);
-
-      const { data: historyData, error: historyError } = await supabase
-        .from('delivery_tracking_history')
-        .select('*')
-        .eq('delivery_id', deliveryData.id)
-        .order('created_at', { ascending: false });
-
-      if (historyError) throw historyError;
-
-      setTrackingHistory(historyData || []);
+      setDelivery(data.delivery);
+      setTrackingHistory(data.history || []);
     } catch (err: any) {
+      console.error('Tracking Error:', err);
       setError(err.message || 'Failed to track order');
     } finally {
       setLoading(false);
@@ -205,6 +189,18 @@ export function TrackOrderPage() {
                   <p className="text-gray-900">{delivery.vendor.full_name}</p>
                   <p className="text-sm text-gray-600 mt-1">{delivery.vendor.phone}</p>
                 </div>
+
+                {delivery.driver && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                      <Truck className="h-4 w-4 mr-2" />
+                      Assigned Driver
+                    </h3>
+                    <p className="text-gray-900">{delivery.driver.driver_name}</p>
+                    <p className="text-sm text-gray-600 mt-1 capitalize">{delivery.driver.vehicle_type} • {delivery.driver.vehicle_number}</p>
+                    <p className="text-sm text-gray-600">{delivery.driver.phone_number}</p>
+                  </div>
+                )}
 
                 {delivery.pickup_time && (
                   <div>
