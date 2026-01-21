@@ -1,18 +1,3 @@
-import {
-  Settings,
-  Tag,
-  Mail,
-  Bell,
-  TrendingUp,
-  AlertTriangle,
-  Package,
-  ShoppingCart,
-  Truck,
-  FileCheck,
-  FileText
-} from 'lucide-react';
-import { AdminPage } from './AdminPage';
-
 export { PaymentGateways } from './PaymentGateways';
 export { LogisticManagement } from './LogisticManagement';
 export { VATManagement } from './VATManagement';
@@ -24,36 +9,26 @@ export { default as LanguageManagement } from './LanguageManagement';
 export { default as TriggerModule } from './TriggerModule';
 export { default as SMSConfiguration } from './SMSConfiguration';
 export { default as EmailConfiguration } from './EmailConfiguration';
+export { default as AdsManagement } from './AdsManagement';
+export { SliderManagement } from './SliderManagement';
 
-export function VendorPlans() {
-  return (
-    <AdminPage
-      title="Vendor Plans & Subscriptions"
-      description="Manage vendor subscription tiers and pricing"
-      icon={FileText}
-    />
-  );
-}
+export { default as VendorPackages } from './VendorPackages';
+export { SystemConfigurations } from './SystemConfigurations';
+export { PromotionManagement } from './PromotionManagement';
+export { VendorAnalytics } from './VendorAnalytics';
+export { FraudDetection } from './FraudDetection';
+export { CatalogManagement } from './CatalogManagement';
+export { ProductsManagement } from './ProductsManagement';
+export { OrdersManagement } from './OrdersManagement';
+export { ShippingManagement } from './ShippingManagement';
+export { VendorContracts } from './VendorContracts';
+export { CustomerContracts } from './CustomerContracts';
+export { Reports } from './Reports';
+export { AdminCommissions } from './AdminCommissions';
 
-export function SystemConfigurations() {
-  return (
-    <AdminPage
-      title="System Configurations"
-      description="Global platform settings and configurations"
-      icon={Settings}
-    />
-  );
-}
-
-export function PromotionManagement() {
-  return (
-    <AdminPage
-      title="Promotion Management"
-      description="Create and manage promotional campaigns"
-      icon={Tag}
-    />
-  );
-}
+// Rest of the placeholders if needed
+import { Mail, Bell } from 'lucide-react';
+import { AdminPage } from './AdminPage';
 
 export function EmailManagement() {
   return (
@@ -71,78 +46,6 @@ export function NotificationsManagement() {
       title="Notifications Management"
       description="Configure system-wide notifications and alerts"
       icon={Bell}
-    />
-  );
-}
-
-export function VendorAnalytics() {
-  return (
-    <AdminPage
-      title="Vendor Performance Analytics"
-      description="Track and analyze vendor performance metrics"
-      icon={TrendingUp}
-    />
-  );
-}
-
-export function FraudDetection() {
-  return (
-    <AdminPage
-      title="Fraud Detection & Risk Monitoring"
-      description="Monitor suspicious activities and manage fraud alerts"
-      icon={AlertTriangle}
-    />
-  );
-}
-
-export function CatalogManagement() {
-  return (
-    <AdminPage
-      title="Catalog Management"
-      description="Manage product categories, brands, and catalog structure"
-      icon={Package}
-    />
-  );
-}
-
-export { ProductsManagement } from './ProductsManagement';
-
-export function OrdersManagement() {
-  return (
-    <AdminPage
-      title="Orders Management"
-      description="View and manage all customer orders"
-      icon={ShoppingCart}
-    />
-  );
-}
-
-export function ShippingManagement() {
-  return (
-    <AdminPage
-      title="Shipping Management"
-      description="Configure shipping zones, rates, and delivery options"
-      icon={Truck}
-    />
-  );
-}
-
-export function VendorContracts() {
-  return (
-    <AdminPage
-      title="Vendor Contracts & Terms"
-      description="Track vendor contract acceptances and terms"
-      icon={FileCheck}
-    />
-  );
-}
-
-export function Reports() {
-  return (
-    <AdminPage
-      title="Reports & Analytics"
-      description="Generate comprehensive business reports"
-      icon={TrendingUp}
     />
   );
 }

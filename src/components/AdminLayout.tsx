@@ -31,7 +31,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
-  Maximize as Scan
+  Maximize as Scan,
+  Megaphone,
+  Image as ImageIcon
 } from 'lucide-react';
 import { ReactNode, useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -66,6 +68,7 @@ const navItems: NavItem[] = [
   { path: '/admin/wallets', label: 'Wallet Management', icon: <DollarSign className="h-5 w-5" />, section: 'Financial' },
   { path: '/admin/payment-gateways', label: 'Payment Gateways', icon: <CreditCard className="h-5 w-5" />, section: 'Financial' },
   { path: '/admin/vat', label: 'VAT Management', icon: <Percent className="h-5 w-5" />, section: 'Financial' },
+  { path: '/admin/commissions', label: 'Commission Oversight', icon: <DollarSign className="h-5 w-5" />, section: 'Financial' },
   { path: '/admin/refunds', label: 'Refund Management', icon: <RefreshCw className="h-5 w-5" />, section: 'Financial' },
   { path: '/admin/ledger', label: 'Immutable Ledger', icon: <BookOpen className="h-5 w-5" />, section: 'Financial' },
 
@@ -83,6 +86,8 @@ const navItems: NavItem[] = [
   { path: '/admin/documentation', label: 'Documentation', icon: <BookOpen className="h-5 w-5" />, section: 'System' },
 
   { path: '/admin/promotions', label: 'Promotion Management', icon: <Tag className="h-5 w-5" />, section: 'Marketing' },
+  { path: '/admin/ads', label: 'Ads Management', icon: <Megaphone className="h-5 w-5" />, section: 'Marketing' },
+  { path: '/admin/slider', label: 'Slider Management', icon: <ImageIcon className="h-5 w-5" />, section: 'Marketing' },
   { path: '/admin/emails', label: 'Email Management', icon: <Mail className="h-5 w-5" />, section: 'Marketing' },
 
   { path: '/admin/notifications', label: 'Notifications', icon: <Bell className="h-5 w-5" />, section: 'Other' },

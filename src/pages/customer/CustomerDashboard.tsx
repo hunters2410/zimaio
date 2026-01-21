@@ -4,23 +4,19 @@ import {
   Package,
   Wallet,
   Heart,
-  MessageCircle,
   Settings,
   LogOut,
   ShoppingBag,
   Clock,
-  CheckCircle,
-  XCircle,
-  User,
   Menu,
   X,
-  Search,
-  ChevronRight
+  ChevronRight,
+  RotateCcw
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 
-type TabType = 'overview' | 'orders' | 'wallet' | 'favorites' | 'settings';
+type TabType = 'overview' | 'orders' | 'refunds' | 'wallet' | 'favorites' | 'settings';
 
 export function CustomerDashboard() {
   const { profile, signOut } = useAuth();
@@ -37,6 +33,7 @@ export function CustomerDashboard() {
   });
 
   const [orders, setOrders] = useState<any[]>([]);
+  const [refunds, setRefunds] = useState<any[]>([]);
 
   useEffect(() => {
     if (profile) {
@@ -47,7 +44,7 @@ export function CustomerDashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [ordersRes, walletRes] = await Promise.all([
+      const [ordersRes, walletRes, refundsRes] = await Promise.all([
         supabase
           .from('orders')
           .select('*')
@@ -57,18 +54,25 @@ export function CustomerDashboard() {
           .from('wallets')
           .select('balance')
           .eq('user_id', profile?.id)
-          .maybeSingle()
+          .maybeSingle(),
+        supabase
+          .from('order_refunds')
+          .select('*, orders(order_number)')
+          .eq('customer_id', profile?.id)
+          .order('created_at', { ascending: false })
       ]);
 
       const allOrders = ordersRes.data || [];
+      const allRefunds = refundsRes.data || [];
       const pendingCount = allOrders.filter(o => ['pending', 'processing'].includes(o.status)).length;
 
       setOrders(allOrders);
+      setRefunds(allRefunds);
       setStats({
         totalOrders: allOrders.length,
         pendingOrders: pendingCount,
         walletBalance: walletRes.data?.balance || 0,
-        favoriteItems: 0 // Placeholder as favorites table might needed
+        favoriteItems: 0
       });
 
     } catch (error) {
@@ -100,8 +104,8 @@ export function CustomerDashboard() {
         setSidebarOpen(false);
       }}
       className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 ${activeTab === id
-          ? 'bg-gradient-to-r from-cyan-50 to-cyan-100 text-cyan-800 font-semibold shadow-sm'
-          : 'text-gray-600 hover:bg-gray-50'
+        ? 'bg-gradient-to-r from-cyan-50 to-cyan-100 text-cyan-800 font-semibold shadow-sm'
+        : 'text-gray-600 hover:bg-gray-50'
         }`}
     >
       <div className="flex items-center gap-3">
@@ -159,6 +163,7 @@ export function CustomerDashboard() {
           <div className="space-y-2 flex-1">
             <SidebarItem id="overview" icon={ShoppingBag} label="Overview" />
             <SidebarItem id="orders" icon={Package} label="My Orders" count={stats.pendingOrders} />
+            <SidebarItem id="refunds" icon={RotateCcw} label="Refunds" />
             <SidebarItem id="wallet" icon={Wallet} label="My Wallet" />
             <SidebarItem id="favorites" icon={Heart} label="Favorites" count={stats.favoriteItems} />
             <SidebarItem id="settings" icon={Settings} label="Settings" />
@@ -357,6 +362,55 @@ export function CustomerDashboard() {
               </div>
             )}
 
+            {activeTab === 'refunds' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-gray-900">My Refunds</h2>
+                </div>
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <table className="w-full text-left">
+                    <thead className="bg-gray-50 border-b border-gray-100">
+                      <tr>
+                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Order</th>
+                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Reason</th>
+                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Amount</th>
+                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {refunds.map((refund) => (
+                        <tr key={refund.id} className="hover:bg-gray-50/50">
+                          <td className="px-6 py-4 font-medium text-gray-900">
+                            #{refund.orders?.order_number || 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 text-gray-600 max-w-xs truncate" title={refund.reason}>{refund.reason}</td>
+                          <td className="px-6 py-4 font-medium">${refund.amount}</td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${refund.status === 'approved' ? 'bg-green-100 text-green-700 border-green-200' :
+                              refund.status === 'rejected' ? 'bg-red-100 text-red-700 border-red-200' :
+                                'bg-amber-100 text-amber-700 border-amber-200'
+                              }`}>
+                              {refund.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-gray-600">
+                            {new Date(refund.created_at).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {refunds.length === 0 && (
+                    <div className="p-12 text-center">
+                      <RotateCcw className="w-16 h-16 mx-auto text-gray-200 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900">No refunds found</h3>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {activeTab === 'wallet' && (
               <div className="max-w-xl mx-auto space-y-8">
                 <div className="text-center">
@@ -382,7 +436,7 @@ export function CustomerDashboard() {
               </div>
             )}
 
-            {activeTab === 'profile' || activeTab === 'settings' && (
+            {activeTab === 'settings' && (
               <div className="max-w-2xl mx-auto">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Profile Settings</h2>
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">

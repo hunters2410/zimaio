@@ -1,43 +1,37 @@
 import { useState, useEffect } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { useTheme } from '../../contexts/ThemeContext';
-import { DollarSign, Filter, CheckCircle, XCircle, Clock, AlertCircle, X, MessageSquare } from 'lucide-react';
+import { DollarSign, Filter, CheckCircle, XCircle, AlertCircle, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
-interface Refund {
+interface RefundRequest {
   id: string;
   order_id: string;
-  order_item_id: string;
-  requested_by: string;
-  approved_by: string | null;
-  refund_amount: number;
-  refund_reason: string;
-  refund_status: string;
-  refund_method: string | null;
-  processed_at: string | null;
-  notes: string | null;
+  reason: string;
+  amount: number;
+  status: string;
   created_at: string;
-  order?: {
-    id: string;
+  admin_notes?: string;
+  orders: {
     order_number: string;
   };
-  requestor?: {
+  profiles: {
     full_name: string;
     email: string;
   };
 }
 
-type FilterStatus = 'all' | 'pending' | 'approved' | 'rejected' | 'processed' | 'cancelled';
+type FilterStatus = 'all' | 'pending' | 'approved' | 'rejected' | 'processed';
 
 export function RefundManagement() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  const [refunds, setRefunds] = useState<Refund[]>([]);
-  const [filteredRefunds, setFilteredRefunds] = useState<Refund[]>([]);
+  const [refunds, setRefunds] = useState<RefundRequest[]>([]);
+  const [filteredRefunds, setFilteredRefunds] = useState<RefundRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
-  const [selectedRefund, setSelectedRefund] = useState<Refund | null>(null);
+  const [selectedRefund, setSelectedRefund] = useState<RefundRequest | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -54,18 +48,23 @@ export function RefundManagement() {
     if (filterStatus === 'all') {
       setFilteredRefunds(refunds);
     } else {
-      setFilteredRefunds(refunds.filter(r => r.refund_status === filterStatus));
+      setFilteredRefunds(refunds.filter(r => r.status === filterStatus));
     }
   }, [filterStatus, refunds]);
 
   const fetchRefunds = async () => {
     try {
       const { data, error } = await supabase
-        .from('refunds')
+        .from('order_refunds')
         .select(`
           *,
-          order:orders(id, order_number),
-          requestor:profiles!refunds_requested_by_fkey(full_name, email)
+          orders (
+            order_number
+          ),
+          profiles:customer_id (
+            full_name,
+            email
+          )
         `)
         .order('created_at', { ascending: false });
 
@@ -81,11 +80,10 @@ export function RefundManagement() {
   const handleUpdateStatus = async (refundId: string, newStatus: string) => {
     try {
       const { error } = await supabase
-        .from('refunds')
+        .from('order_refunds')
         .update({
-          refund_status: newStatus,
-          processed_at: newStatus === 'processed' ? new Date().toISOString() : null,
-          notes: adminNotes || null,
+          status: newStatus,
+          admin_notes: adminNotes || null,
         })
         .eq('id', refundId);
 
@@ -105,7 +103,6 @@ export function RefundManagement() {
       approved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
       rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
       processed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-      cancelled: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400',
     };
 
     return (
@@ -117,9 +114,9 @@ export function RefundManagement() {
 
   const stats = {
     total: refunds.length,
-    pending: refunds.filter(r => r.refund_status === 'pending').length,
-    approved: refunds.filter(r => r.refund_status === 'approved').length,
-    processed: refunds.filter(r => r.refund_status === 'processed').length,
+    pending: refunds.filter(r => r.status === 'pending').length,
+    approved: refunds.filter(r => r.status === 'approved').length,
+    processed: refunds.filter(r => r.status === 'processed').length,
   };
 
   if (loading) {
@@ -148,11 +145,10 @@ export function RefundManagement() {
 
       {message && (
         <div
-          className={`mb-4 p-3 rounded-lg flex items-start space-x-2 text-sm ${
-            message.type === 'success'
+          className={`mb-4 p-3 rounded-lg flex items-start space-x-2 text-sm ${message.type === 'success'
               ? 'bg-green-50 border border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
               : 'bg-red-50 border border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
-          }`}
+            }`}
         >
           {message.type === 'success' ? (
             <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
@@ -190,15 +186,14 @@ export function RefundManagement() {
           <Filter className="h-4 w-4 text-cyan-600" />
           <span className={`text-sm font-medium ${textPrimary}`}>Filter by Status:</span>
           <div className="flex gap-2 flex-wrap">
-            {(['all', 'pending', 'approved', 'rejected', 'processed', 'cancelled'] as FilterStatus[]).map(status => (
+            {(['all', 'pending', 'approved', 'rejected', 'processed'] as FilterStatus[]).map(status => (
               <button
                 key={status}
                 onClick={() => setFilterStatus(status)}
-                className={`px-3 py-1 text-xs rounded transition ${
-                  filterStatus === status
+                className={`px-3 py-1 text-xs rounded transition ${filterStatus === status
                     ? 'bg-cyan-600 text-white'
                     : `${textSecondary} hover:bg-gray-100 dark:hover:bg-gray-700`
-                }`}
+                  }`}
               >
                 {status.charAt(0).toUpperCase() + status.slice(1)}
               </button>
@@ -232,22 +227,22 @@ export function RefundManagement() {
                 filteredRefunds.map((refund) => (
                   <tr key={refund.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className={`px-4 py-3 text-sm ${textPrimary}`}>
-                      {refund.order?.order_number || 'N/A'}
+                      {refund.orders?.order_number || 'N/A'}
                     </td>
                     <td className={`px-4 py-3 text-sm ${textPrimary}`}>
                       <div>
-                        <p className="font-medium">{refund.requestor?.full_name || 'Unknown'}</p>
-                        <p className={`text-xs ${textSecondary}`}>{refund.requestor?.email}</p>
+                        <p className="font-medium">{refund.profiles?.full_name || 'Unknown'}</p>
+                        <p className={`text-xs ${textSecondary}`}>{refund.profiles?.email}</p>
                       </div>
                     </td>
                     <td className={`px-4 py-3 text-sm font-semibold ${textPrimary}`}>
-                      ${refund.refund_amount.toFixed(2)}
+                      ${refund.amount.toFixed(2)}
                     </td>
                     <td className={`px-4 py-3 text-sm ${textSecondary} max-w-xs truncate`}>
-                      {refund.refund_reason}
+                      {refund.reason}
                     </td>
                     <td className="px-4 py-3 text-sm">
-                      {getStatusBadge(refund.refund_status)}
+                      {getStatusBadge(refund.status)}
                     </td>
                     <td className={`px-4 py-3 text-xs ${textSecondary}`}>
                       {new Date(refund.created_at).toLocaleDateString()}
@@ -256,7 +251,7 @@ export function RefundManagement() {
                       <button
                         onClick={() => {
                           setSelectedRefund(refund);
-                          setAdminNotes(refund.notes || '');
+                          setAdminNotes(refund.admin_notes || '');
                         }}
                         className="text-xs text-cyan-600 hover:text-cyan-700 font-medium"
                       >
@@ -290,22 +285,22 @@ export function RefundManagement() {
             <div className="p-4 space-y-4">
               <div>
                 <p className={`text-xs ${textSecondary}`}>Order Number</p>
-                <p className={`text-sm font-medium ${textPrimary}`}>{selectedRefund.order?.order_number}</p>
+                <p className={`text-sm font-medium ${textPrimary}`}>{selectedRefund.orders?.order_number}</p>
               </div>
 
               <div>
                 <p className={`text-xs ${textSecondary}`}>Refund Amount</p>
-                <p className={`text-lg font-bold ${textPrimary}`}>${selectedRefund.refund_amount.toFixed(2)}</p>
+                <p className={`text-lg font-bold ${textPrimary}`}>${selectedRefund.amount.toFixed(2)}</p>
               </div>
 
               <div>
                 <p className={`text-xs ${textSecondary} mb-1`}>Reason</p>
-                <p className={`text-sm ${textPrimary}`}>{selectedRefund.refund_reason}</p>
+                <p className={`text-sm ${textPrimary}`}>{selectedRefund.reason}</p>
               </div>
 
               <div>
                 <p className={`text-xs ${textSecondary}`}>Current Status</p>
-                {getStatusBadge(selectedRefund.refund_status)}
+                {getStatusBadge(selectedRefund.status)}
               </div>
 
               <div>
@@ -317,14 +312,13 @@ export function RefundManagement() {
                   onChange={(e) => setAdminNotes(e.target.value)}
                   rows={3}
                   placeholder="Add notes about this refund..."
-                  className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                    isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                  }`}
+                  className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                    }`}
                 />
               </div>
 
               <div className="flex gap-2 pt-2">
-                {selectedRefund.refund_status === 'pending' && (
+                {selectedRefund.status === 'pending' && (
                   <>
                     <button
                       onClick={() => handleUpdateStatus(selectedRefund.id, 'approved')}
@@ -342,7 +336,7 @@ export function RefundManagement() {
                     </button>
                   </>
                 )}
-                {selectedRefund.refund_status === 'approved' && (
+                {selectedRefund.status === 'approved' && (
                   <button
                     onClick={() => handleUpdateStatus(selectedRefund.id, 'processed')}
                     className="flex-1 flex items-center justify-center gap-1.5 px-4 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition"

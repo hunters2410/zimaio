@@ -10,6 +10,8 @@ interface VATSettings {
   default_rate: number;
   applies_to_products: boolean;
   applies_to_shipping: boolean;
+  commission_enabled: boolean;
+  commission_rate: number;
 }
 
 interface ProductVATOverride {
@@ -87,6 +89,8 @@ export function VATManagement() {
           default_rate: settings.default_rate,
           applies_to_products: settings.applies_to_products,
           applies_to_shipping: settings.applies_to_shipping,
+          commission_enabled: settings.commission_enabled,
+          commission_rate: settings.commission_rate,
           updated_at: new Date().toISOString(),
         })
         .eq('id', settings.id);
@@ -141,11 +145,10 @@ export function VATManagement() {
 
       {message && (
         <div
-          className={`mb-4 p-3 rounded-lg flex items-start space-x-2 text-sm ${
-            message.type === 'success'
+          className={`mb-4 p-3 rounded-lg flex items-start space-x-2 text-sm ${message.type === 'success'
               ? 'bg-green-50 border border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
               : 'bg-red-50 border border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
-          }`}
+            }`}
         >
           {message.type === 'success' ? (
             <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
@@ -171,14 +174,12 @@ export function VATManagement() {
               </div>
               <button
                 onClick={() => setSettings({ ...settings, is_enabled: !settings.is_enabled })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                  settings.is_enabled ? 'bg-cyan-600' : 'bg-gray-300'
-                }`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${settings.is_enabled ? 'bg-cyan-600' : 'bg-gray-300'
+                  }`}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                    settings.is_enabled ? 'translate-x-6' : 'translate-x-1'
-                  }`}
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${settings.is_enabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
                 />
               </button>
             </div>
@@ -194,9 +195,8 @@ export function VATManagement() {
                 step="0.01"
                 value={settings.default_rate}
                 onChange={(e) => setSettings({ ...settings, default_rate: parseFloat(e.target.value) || 0 })}
-                className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                  isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                }`}
+                className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                  }`}
               />
             </div>
 
@@ -207,14 +207,12 @@ export function VATManagement() {
               </div>
               <button
                 onClick={() => setSettings({ ...settings, applies_to_products: !settings.applies_to_products })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                  settings.applies_to_products ? 'bg-cyan-600' : 'bg-gray-300'
-                }`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${settings.applies_to_products ? 'bg-cyan-600' : 'bg-gray-300'
+                  }`}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                    settings.applies_to_products ? 'translate-x-6' : 'translate-x-1'
-                  }`}
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${settings.applies_to_products ? 'translate-x-6' : 'translate-x-1'
+                    }`}
                 />
               </button>
             </div>
@@ -226,14 +224,12 @@ export function VATManagement() {
               </div>
               <button
                 onClick={() => setSettings({ ...settings, applies_to_shipping: !settings.applies_to_shipping })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                  settings.applies_to_shipping ? 'bg-cyan-600' : 'bg-gray-300'
-                }`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${settings.applies_to_shipping ? 'bg-cyan-600' : 'bg-gray-300'
+                  }`}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                    settings.applies_to_shipping ? 'translate-x-6' : 'translate-x-1'
-                  }`}
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${settings.applies_to_shipping ? 'translate-x-6' : 'translate-x-1'
+                    }`}
                 />
               </button>
             </div>
@@ -246,6 +242,61 @@ export function VATManagement() {
               >
                 <Save className="h-4 w-4" />
                 {saving ? 'Saving...' : 'Save Settings'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {settings && (
+        <div className={`${cardBg} rounded-lg shadow-sm border ${borderColor} p-4 mb-6`}>
+          <div className="flex items-center gap-2 mb-4">
+            <Percent className="h-5 w-5 text-emerald-600" />
+            <h2 className={`text-base font-semibold ${textPrimary}`}>Admin Commission Settings</h2>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className={`text-sm font-medium ${textPrimary}`}>Enable Commission</label>
+                <p className={`text-xs ${textSecondary}`}>Add admin commission on top of vendor products</p>
+              </div>
+              <button
+                onClick={() => setSettings({ ...settings, commission_enabled: !settings.commission_enabled })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${settings.commission_enabled ? 'bg-emerald-600' : 'bg-gray-300'
+                  }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${settings.commission_enabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                />
+              </button>
+            </div>
+
+            <div>
+              <label className={`block text-xs font-medium ${textPrimary} mb-1.5`}>
+                Default Commission Rate (%)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={settings.commission_rate}
+                onChange={(e) => setSettings({ ...settings, commission_rate: parseFloat(e.target.value) || 0 })}
+                className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-emerald-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                  }`}
+              />
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={handleSaveSettings}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-4 py-1.5 text-sm bg-emerald-600 text-white rounded hover:bg-emerald-700 transition disabled:opacity-50"
+              >
+                <Save className="h-4 w-4" />
+                {saving ? 'Saving...' : 'Save Commission Settings'}
               </button>
             </div>
           </div>

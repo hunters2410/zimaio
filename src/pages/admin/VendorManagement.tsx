@@ -19,7 +19,6 @@ interface VendorProfile {
   kyc_documents: any;
   subscription_plan: string;
   subscription_expires_at: string | null;
-  commission_rate: number;
   is_approved: boolean;
   is_verified: boolean;
   is_featured: boolean;
@@ -45,7 +44,6 @@ interface VendorFormData {
   business_phone: string;
   business_address: string;
   tax_id: string;
-  commission_rate: number;
 }
 
 interface VendorPackage {
@@ -81,7 +79,6 @@ export function VendorManagement() {
     business_phone: '',
     business_address: '',
     tax_id: '',
-    commission_rate: 10,
   });
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -238,7 +235,6 @@ export function VendorManagement() {
         business_phone: formData.business_phone,
         business_address: formData.business_address,
         tax_id: formData.tax_id,
-        commission_rate: formData.commission_rate,
       });
 
     if (vendorError) {
@@ -282,7 +278,6 @@ export function VendorManagement() {
       business_phone: '',
       business_address: '',
       tax_id: '',
-      commission_rate: 10,
     });
     const defaultPkg = packages.find(pkg => pkg.is_default);
     if (defaultPkg) {
@@ -320,7 +315,6 @@ export function VendorManagement() {
         business_phone: formData.business_phone,
         business_address: formData.business_address,
         tax_id: formData.tax_id,
-        commission_rate: formData.commission_rate,
       })
       .eq('id', selectedVendor.id);
 
@@ -366,7 +360,6 @@ export function VendorManagement() {
       business_phone: vendor.business_phone || '',
       business_address: vendor.business_address || '',
       tax_id: vendor.tax_id || '',
-      commission_rate: vendor.commission_rate,
     });
     setShowEditModal(true);
   };
@@ -772,19 +765,7 @@ export function VendorManagement() {
                     className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Commission Rate (%)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="100"
-                    required
-                    value={formData.commission_rate}
-                    onChange={(e) => setFormData({ ...formData, commission_rate: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                </div>
+
                 <div className="md:col-span-2">
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Business Address</label>
                   <textarea
@@ -926,19 +907,7 @@ export function VendorManagement() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Commission Rate (%)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="100"
-                    required
-                    value={formData.commission_rate}
-                    onChange={(e) => setFormData({ ...formData, commission_rate: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                </div>
+
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Business Address</label>
                   <textarea
@@ -1020,10 +989,7 @@ export function VendorManagement() {
                     <h3 className="text-sm font-medium text-gray-500">Tax ID</h3>
                     <p className="mt-1 text-gray-900">{selectedVendor.tax_id || 'N/A'}</p>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Commission Rate</h3>
-                    <p className="mt-1 text-gray-900">{selectedVendor.commission_rate}%</p>
-                  </div>
+
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>

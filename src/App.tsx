@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { CurrencyProvider } from './contexts/CurrencyContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { CartProvider } from './contexts/CartContext';
+import { SettingsProvider } from './contexts/SettingsContext';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -14,9 +16,15 @@ import { PrivacyPage } from './pages/PrivacyPage';
 import { TermsPage } from './pages/TermsPage';
 import { ContactPage } from './pages/ContactPage';
 import { CartPage } from './pages/CartPage';
+import { CheckoutPage } from './pages/CheckoutPage';
 import { SupportPage } from './pages/SupportPage';
+import { VendorsPage } from './pages/VendorsPage';
+import { ShopPage } from './pages/ShopPage';
+import { ProductDetailsPage } from './pages/ProductDetailsPage';
+import { MessagesPage } from './pages/MessagesPage';
 import { VendorDashboard } from './pages/vendor/VendorDashboard';
 import { VendorWallet } from './pages/vendor/VendorWallet';
+import { VendorPayment } from './pages/vendor/VendorPayment';
 import { VendorSetup } from './pages/vendor/VendorSetup';
 import { AdminAuthPage } from './pages/AdminAuthPage';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
@@ -28,16 +36,14 @@ import { DeliveryManagement } from './pages/admin/DeliveryManagement';
 import { LogisticDashboard } from './pages/logistic/LogisticDashboard';
 import { LogisticSignupPage } from './pages/logistic/LogisticSignupPage';
 import { CustomerDashboard } from './pages/customer/CustomerDashboard';
+import { OrderDetailsPage } from './pages/customer/OrderDetailsPage';
 import { TrackOrderPage } from './pages/TrackOrderPage';
 import { CustomerManagement } from './pages/admin/CustomerManagement';
 import { UserRolesManagement } from './pages/admin/UserRolesManagement';
 import { KYCVerification } from './pages/admin/KYCVerification';
 import { WalletManagement } from './pages/admin/WalletManagement';
-import VendorPackages from './pages/admin/VendorPackages';
 import { RolesPermissions } from './pages/admin/RolesPermissions';
 import { RoleForm } from './pages/admin/RoleForm';
-import { VendorContracts } from './pages/admin/VendorContracts';
-import { CustomerContracts } from './pages/admin/CustomerContracts';
 import { ContractPage } from './pages/ContractPage';
 import {
   PaymentGateways,
@@ -45,12 +51,13 @@ import {
   VATManagement,
   RefundManagement,
   ImmutableLedger,
-  VendorPlans,
   CurrencyManagement,
   LanguageManagement,
   TriggerModule,
   SMSConfiguration,
   EmailConfiguration,
+  AdsManagement,
+  SliderManagement,
   SystemConfigurations,
   PromotionManagement,
   EmailManagement,
@@ -59,9 +66,13 @@ import {
   FraudDetection,
   CatalogManagement,
   ProductsManagement,
+  VendorContracts,
+  CustomerContracts,
+  VendorPackages,
   OrdersManagement,
   ShippingManagement,
   Reports,
+  AdminCommissions,
   Documentation
 } from './pages/admin/AllAdminPages';
 
@@ -85,16 +96,31 @@ function AppContent() {
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/support" element={<SupportPage />} />
           <Route path="/track-order" element={<TrackOrderPage />} />
           <Route path="/orders" element={<TrackOrderPage />} />
           <Route path="/contract/:type" element={<ContractPage />} />
+          <Route path="/messages" element={<MessagesPage />} />
+          <Route path="/vendors" element={<VendorsPage />} />
+          <Route path="/shop/:userId" element={<ShopPage />} />
+          <Route path="/vendor/:userId" element={<ShopPage />} />
+          <Route path="/products/:slug" element={<ProductDetailsPage />} />
 
           <Route
             path="/dashboard"
             element={
               <ProtectedRoute allowedRoles={['customer']}>
                 <CustomerDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/orders/:id"
+            element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <OrderDetailsPage />
               </ProtectedRoute>
             }
           />
@@ -122,6 +148,15 @@ function AppContent() {
             element={
               <ProtectedRoute allowedRoles={['vendor']}>
                 <VendorWallet />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/vendor/payment"
+            element={
+              <ProtectedRoute allowedRoles={['vendor']}>
+                <VendorPayment />
               </ProtectedRoute>
             }
           />
@@ -279,6 +314,24 @@ function AppContent() {
           />
 
           <Route
+            path="/admin/ads"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdsManagement />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/slider"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <SliderManagement />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/admin/wallets"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
@@ -323,14 +376,6 @@ function AppContent() {
             }
           />
 
-          <Route
-            path="/admin/vendor-plans"
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <VendorPlans />
-              </ProtectedRoute>
-            }
-          />
 
           <Route
             path="/admin/currencies"
@@ -477,6 +522,15 @@ function AppContent() {
           />
 
           <Route
+            path="/admin/commissions"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminCommissions />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/admin/documentation"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
@@ -496,9 +550,13 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <ThemeProvider>
-          <CurrencyProvider>
-            <AppContent />
-          </CurrencyProvider>
+          <SettingsProvider>
+            <CartProvider>
+              <CurrencyProvider>
+                <AppContent />
+              </CurrencyProvider>
+            </CartProvider>
+          </SettingsProvider>
         </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>

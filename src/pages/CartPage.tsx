@@ -1,52 +1,44 @@
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Trash2, Plus, Minus } from 'lucide-react';
-import { useState } from 'react';
+import { ShoppingCart, Trash2, Plus, Minus, ShoppingBag, Store, ShieldCheck } from 'lucide-react';
+import { useCart } from '../contexts/CartContext';
+import { useCurrency } from '../contexts/CurrencyContext';
+import { useSettings } from '../contexts/SettingsContext';
 
 export function CartPage() {
-  const [cartItems, setCartItems] = useState<any[]>([]);
+  const { cartItems, updateQuantity, removeFromCart } = useCart();
+  const { formatPrice } = useCurrency();
+  const { settings, calculatePrice } = useSettings();
 
-  const updateQuantity = (id: string, change: number) => {
-    setCartItems(items =>
-      items.map(item =>
-        item.id === id
-          ? { ...item, quantity: Math.max(1, item.quantity + change) }
-          : item
-      )
-    );
-  };
+  const subtotal = cartItems.reduce((sum, item) => sum + (item.base_price * item.quantity), 0);
+  const { totalCommission, totalTax, totalWithTax } = cartItems.reduce((acc, item) => {
+    const prices = calculatePrice(item.base_price);
+    return {
+      totalCommission: acc.totalCommission + (prices.commission * item.quantity),
+      totalTax: acc.totalTax + (prices.vat * item.quantity),
+      totalWithTax: acc.totalWithTax + (prices.total * item.quantity)
+    };
+  }, { totalCommission: 0, totalTax: 0, totalWithTax: 0 });
 
-  const removeItem = (id: string) => {
-    setCartItems(items => items.filter(item => item.id !== id));
-  };
-
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = 10;
-  const tax = subtotal * 0.1;
-  const total = subtotal + shipping + tax;
+  const shipping = subtotal > 0 ? 10 : 0;
+  const total = totalWithTax + shipping;
 
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="bg-white border-b">
-          <div className="container mx-auto px-4 py-6">
-            <h1 className="text-3xl font-bold text-gray-900">Shopping Cart</h1>
+      <div className="min-h-screen bg-white">
+        <div className="container mx-auto px-4 py-20 text-center">
+          <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-8 shadow-xl shadow-emerald-900/5">
+            <ShoppingCart className="h-10 w-10 text-emerald-600" />
           </div>
-        </div>
-
-        <div className="container mx-auto px-4 py-16">
-          <div className="max-w-md mx-auto text-center">
-            <ShoppingCart className="h-24 w-24 text-gray-300 mx-auto mb-6" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Your cart is empty</h2>
-            <p className="text-gray-600 mb-8">
-              Looks like you haven't added anything to your cart yet.
-            </p>
-            <Link
-              to="/products"
-              className="inline-block px-8 py-3 bg-gradient-to-r from-cyan-600 to-green-600 text-white rounded-lg font-semibold hover:from-cyan-700 hover:to-green-700 transition"
-            >
-              Start Shopping
-            </Link>
-          </div>
+          <h2 className="text-4xl font-black text-gray-900 uppercase tracking-tight mb-4">Your cart is empty</h2>
+          <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mb-10 max-w-xs mx-auto">
+            Looks like you haven't added any premium pieces to your collection yet.
+          </p>
+          <Link
+            to="/products"
+            className="inline-block px-10 py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-200 active:scale-95"
+          >
+            Start Shopping
+          </Link>
         </div>
       </div>
     );
@@ -54,104 +46,132 @@ export function CartPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
-        <div className="container mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold text-gray-900">Shopping Cart</h1>
-          <p className="text-gray-600">{cartItems.length} items in your cart</p>
+      <div className="bg-white border-b border-gray-100">
+        <div className="container mx-auto px-4 py-12">
+          <h1 className="text-4xl font-black text-gray-900 uppercase tracking-tight mb-2">Shopping Cart</h1>
+          <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2">
+            <ShoppingBag className="w-3 h-3 text-emerald-600" /> {cartItems.length} Premium items in your secure cart
+          </p>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
-            {cartItems.map((item) => (
-              <div key={item.id} className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center space-x-4">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-24 h-24 object-cover rounded"
-                  />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-1">{item.name}</h3>
-                    <p className="text-sm text-gray-600 mb-2">{item.vendor}</p>
-                    <p className="text-lg font-bold text-cyan-600">
-                      ${item.price.toFixed(2)}
+            {cartItems.map((item, idx) => (
+              <div key={`${item.id}-${idx}`} className="bg-white rounded-3xl border border-gray-100 p-6 hover:shadow-xl hover:shadow-emerald-900/5 transition-all duration-300 group">
+                <div className="flex flex-col sm:flex-row items-center gap-6">
+                  <div className="w-32 h-32 flex-shrink-0 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100">
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                  </div>
+                  <div className="flex-1 text-center sm:text-left">
+                    <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight mb-1">{item.name}</h3>
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-3">
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                        <Store className="w-3 h-3" /> {item.vendor}
+                      </p>
+                      {item.options?.color && (
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-gray-50 rounded-lg border border-gray-100">
+                          <div className="w-2.5 h-2.5 rounded-full shadow-inner" style={{ backgroundColor: item.options.color }} />
+                          <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">{item.options.color}</span>
+                        </div>
+                      )}
+                      {item.options?.shipping && (
+                        <div className="bg-orange-50 text-orange-600 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border border-orange-100">
+                          {item.options.shipping}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xl font-black text-emerald-600">
+                      {formatPrice(item.price)}
                     </p>
                   </div>
-                  <div className="flex items-center space-x-3">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="flex items-center bg-gray-50 rounded-xl p-1 border border-gray-100">
+                      <button
+                        onClick={() => updateQuantity(item.id, item.quantity - 1, item.options)}
+                        className="p-2 hover:bg-white hover:text-emerald-600 rounded-lg transition-all active:scale-90"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+                      <span className="w-10 text-center font-black text-gray-900 text-sm">{item.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity(item.id, item.quantity + 1, item.options)}
+                        className="p-2 hover:bg-white hover:text-emerald-600 rounded-lg transition-all active:scale-90"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
                     <button
-                      onClick={() => updateQuantity(item.id, -1)}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition"
+                      onClick={() => removeFromCart(item.id, item.options)}
+                      className="flex items-center gap-1.5 text-red-400 hover:text-red-600 text-[10px] font-black uppercase tracking-widest transition-colors"
                     >
-                      <Minus className="h-4 w-4" />
-                    </button>
-                    <span className="w-12 text-center font-semibold">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.id, 1)}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition"
-                    >
-                      <Plus className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3" /> Remove Item
                     </button>
                   </div>
-                  <button
-                    onClick={() => removeItem(item.id)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
                 </div>
               </div>
             ))}
           </div>
 
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm p-6 sticky top-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Order Summary</h3>
+            <div className="bg-white rounded-[2.5rem] border border-gray-100 p-8 shadow-sm sticky top-24">
+              <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight mb-8">Secure Checkout</h3>
 
-              <div className="space-y-3 mb-4">
-                <div className="flex justify-between text-gray-600">
-                  <span>Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+              <div className="space-y-4 mb-10">
+                <div className="flex justify-between items-center text-sm font-bold uppercase tracking-widest text-gray-400">
+                  <span>Subtotal (Base)</span>
+                  <span className="text-gray-900">{formatPrice(subtotal)}</span>
                 </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>Shipping</span>
-                  <span>${shipping.toFixed(2)}</span>
+                {settings?.commission_enabled && (
+                  <div className="flex justify-between items-center text-sm font-bold uppercase tracking-widest text-gray-400">
+                    <span>Admin Commission</span>
+                    <span className="text-gray-900">{formatPrice(totalCommission)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center text-sm font-bold uppercase tracking-widest text-gray-400">
+                  <span>Shipping Fee</span>
+                  <span className="text-gray-900">{formatPrice(shipping)}</span>
                 </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>Tax</span>
-                  <span>${tax.toFixed(2)}</span>
-                </div>
-                <div className="border-t pt-3 flex justify-between text-lg font-bold text-gray-900">
-                  <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
+                {settings?.is_enabled && (
+                  <div className="flex justify-between items-center text-sm font-bold uppercase tracking-widest text-gray-400">
+                    <span>VAT ({settings.default_rate}%)</span>
+                    <span className="text-gray-900">{formatPrice(totalTax)}</span>
+                  </div>
+                )}
+                <div className="border-t border-gray-100 pt-6 flex justify-between items-end">
+                  <span className="text-xs font-black text-gray-900 uppercase tracking-[0.2em]">Grand Total</span>
+                  <span className="text-3xl font-black text-emerald-600 leading-none">{formatPrice(total)}</span>
                 </div>
               </div>
 
-              <div className="mb-4">
-                <input
-                  type="text"
-                  placeholder="Enter coupon code"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent mb-2"
-                />
-                <button className="w-full py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
-                  Apply Coupon
-                </button>
+              <div className="space-y-3">
+                <Link
+                  to="/checkout"
+                  className="block w-full py-5 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs text-center hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-200 active:scale-95 mb-4"
+                >
+                  Complete Purchase
+                </Link>
+                <Link
+                  to="/products"
+                  className="block w-full py-5 bg-gray-50 text-gray-500 rounded-2xl font-black uppercase tracking-widest text-xs text-center hover:bg-gray-100 transition-all active:scale-95"
+                >
+                  Continue Browsing
+                </Link>
               </div>
 
-              <Link
-                to="/checkout"
-                className="block w-full py-3 bg-gradient-to-r from-cyan-600 to-green-600 text-white rounded-lg font-semibold text-center hover:from-cyan-700 hover:to-green-700 transition"
-              >
-                Proceed to Checkout
-              </Link>
-
-              <Link
-                to="/products"
-                className="block w-full mt-3 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold text-center hover:bg-gray-200 transition"
-              >
-                Continue Shopping
-              </Link>
+              <div className="mt-8 pt-8 border-t border-gray-50">
+                <div className="flex items-center gap-3 text-gray-400">
+                  <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                  <p className="text-[10px] font-bold uppercase tracking-widest leading-tight">
+                    PCI Compliant Secure Checkout System Activated
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

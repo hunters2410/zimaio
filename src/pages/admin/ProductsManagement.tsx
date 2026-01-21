@@ -578,25 +578,25 @@ export function ProductsManagement() {
               </button>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-3">
               <div>
-                <label className={`block text-xs font-medium ${textPrimary} mb-1.5`}>Product Name</label>
+                <label className={`block text-[10px] font-medium ${textPrimary} mb-1.5`}>Product Name</label>
                 <input
                   type="text"
                   value={editingProduct.name}
                   onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                  className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                  className={`w-full px-3 py-1.5 text-[13px] border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
                     }`}
                 />
               </div>
 
               <div>
-                <label className={`block text-xs font-medium ${textPrimary} mb-1.5`}>Description</label>
+                <label className={`block text-[10px] font-medium ${textPrimary} mb-1.5`}>Description</label>
                 <textarea
                   value={editingProduct.description || ''}
                   onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
                   rows={3}
-                  className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                  className={`w-full px-3 py-1.5 text-[13px] border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
                     }`}
                 />
               </div>
@@ -615,24 +615,24 @@ export function ProductsManagement() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={`block text-xs font-medium ${textPrimary} mb-1.5`}>Base Price</label>
+                  <label className={`block text-[10px] font-medium ${textPrimary} mb-1.5`}>Base Price</label>
                   <input
                     type="number"
                     step="0.01"
                     value={editingProduct.base_price}
                     onChange={(e) => setEditingProduct({ ...editingProduct, base_price: parseFloat(e.target.value) })}
-                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                    className={`w-full px-3 py-1.5 text-[13px] border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
                       }`}
                   />
                 </div>
 
                 <div>
-                  <label className={`block text-xs font-medium ${textPrimary} mb-1.5`}>Stock Quantity</label>
+                  <label className={`block text-[10px] font-medium ${textPrimary} mb-1.5`}>Stock Quantity</label>
                   <input
                     type="number"
                     value={editingProduct.stock_quantity}
                     onChange={(e) => setEditingProduct({ ...editingProduct, stock_quantity: parseInt(e.target.value) })}
-                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                    className={`w-full px-3 py-1.5 text-[13px] border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
                       }`}
                   />
                 </div>
@@ -653,13 +653,13 @@ export function ProductsManagement() {
               </div>
 
               <div>
-                <label className={`block text-xs font-medium ${textPrimary} mb-1.5`}>Admin Notes</label>
+                <label className={`block text-[10px] font-medium ${textPrimary} mb-1.5`}>Admin Notes</label>
                 <textarea
                   value={editingProduct.admin_notes || ''}
                   onChange={(e) => setEditingProduct({ ...editingProduct, admin_notes: e.target.value })}
                   rows={2}
                   placeholder="Internal notes about this product..."
-                  className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                  className={`w-full px-3 py-1.5 text-[13px] border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
                     }`}
                 />
               </div>
@@ -669,14 +669,14 @@ export function ProductsManagement() {
                   <>
                     <button
                       onClick={() => handleApproveReject(editingProduct.id, true, editingProduct.admin_notes || undefined)}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-4 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition"
+                      className="flex-1 flex items-center justify-center gap-1.5 px-4 py-1.5 text-[13px] bg-green-600 text-white rounded hover:bg-green-700 transition"
                     >
                       <CheckCircle className="h-4 w-4" />
                       Approve
                     </button>
                     <button
                       onClick={() => handleApproveReject(editingProduct.id, false, editingProduct.admin_notes || 'Product rejected')}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-4 py-1.5 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition"
+                      className="flex-1 flex items-center justify-center gap-1.5 px-4 py-1.5 text-[13px] bg-red-600 text-white rounded hover:bg-red-700 transition"
                     >
                       <XCircle className="h-4 w-4" />
                       Reject
@@ -685,7 +685,7 @@ export function ProductsManagement() {
                 )}
                 <button
                   onClick={handleSaveProduct}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-1.5 text-sm bg-gradient-to-r from-cyan-600 to-green-600 text-white rounded hover:from-cyan-700 hover:to-green-700 transition"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-1.5 text-[13px] bg-gradient-to-r from-cyan-600 to-green-600 text-white rounded hover:from-cyan-700 hover:to-green-700 transition"
                 >
                   <Save className="h-4 w-4" />
                   Save Changes

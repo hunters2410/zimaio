@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCurrency } from '../../contexts/CurrencyContext';
+import { useSettings } from '../../contexts/SettingsContext';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import {
     Search,
     ShoppingCart,
@@ -14,13 +18,15 @@ import {
     Printer,
     CheckCircle,
     Package,
-    Maximize as Scan
+    Maximize as Scan,
+    Download
 } from 'lucide-react';
 
 interface Product {
     id: string;
     name: string;
     price: number;
+    base_price: number;
     stock_quantity: number;
     image_url: string;
     sku: string;
@@ -37,6 +43,8 @@ interface VendorPOSProps {
 
 export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
     const { profile } = useAuth();
+    const { formatPrice } = useCurrency();
+    const { calculatePrice } = useSettings();
     const [products, setProducts] = useState<Product[]>([]);
     const [cart, setCart] = useState<CartItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -46,6 +54,7 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
     const [submitting, setSubmitting] = useState(false);
     const [orderComplete, setOrderComplete] = useState<any>(null);
     const [vendorId, setVendorId] = useState<string | null>(overrideVendorId || null);
+    const [shopName, setShopName] = useState<string>('');
 
     const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -75,13 +84,14 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
             try {
                 const { data: vendor } = await supabase
                     .from('vendor_profiles')
-                    .select('id')
+                    .select('id, shop_name')
                     .eq('user_id', profile.id)
                     .single();
 
                 if (vendor) {
                     currentVendorId = vendor.id;
                     setVendorId(vendor.id);
+                    setShopName(vendor.shop_name);
                 }
             } catch (err) {
                 console.error('Error fetching vendor ID:', err);
@@ -90,14 +100,44 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
 
         if (currentVendorId) {
             try {
-                const { data: prods } = await supabase
+                // If we already have currentVendorId but not shopName (e.g. override), fetch it
+                if (!shopName) {
+                    const { data: v } = await supabase
+                        .from('vendor_profiles')
+                        .select('shop_name')
+                        .eq('id', currentVendorId)
+                        .single();
+                    if (v) setShopName(v.shop_name);
+                }
+
+                // Fetch from products table with correct column names
+                // base_price instead of price
+                // images is an array, we'll take the first one as image_url
+                const { data: prods, error } = await supabase
                     .from('products')
-                    .select('id, name, price, stock_quantity, image_url, sku')
+                    .select('id, name, base_price, stock_quantity, images, sku, commission_rate')
                     .eq('vendor_id', currentVendorId)
+                    .eq('is_active', true)
                     .gt('stock_quantity', 0)
                     .order('name');
 
-                setProducts(prods || []);
+                if (error) throw error;
+
+                // Map database fields to the component's Product interface
+                const mappedProducts: Product[] = (prods || []).map(p => {
+                    const priceInfo = calculatePrice(p.base_price);
+                    return {
+                        id: p.id,
+                        name: p.name,
+                        price: priceInfo.total,
+                        base_price: p.base_price,
+                        stock_quantity: p.stock_quantity,
+                        image_url: p.images && p.images.length > 0 ? p.images[0] : '',
+                        sku: p.sku
+                    };
+                });
+
+                setProducts(mappedProducts);
             } catch (err) {
                 console.error('Error fetching POS products:', err);
             } finally {
@@ -148,17 +188,48 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
         setSubmitting(true);
 
         try {
+            // Generate a simple order number
+            const orderNumber = `ZIM-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+            // Calculate total base, comm, and vat for the whole order
+            let orderBaseTotal = 0;
+            let orderCommTotal = 0;
+            let orderVatTotal = 0;
+
+            cart.forEach(item => {
+                const info = calculatePrice(item.base_price || item.price); // fallback
+                orderBaseTotal += (item.base_price || item.price) * item.quantity;
+                orderCommTotal += info.commission * item.quantity;
+                orderVatTotal += info.vat * item.quantity;
+            });
+
             // 1. Create order
             const { data: order, error: orderError } = await supabase
                 .from('orders')
                 .insert({
+                    order_number: orderNumber,
                     vendor_id: vendorId,
                     customer_id: null, // Walk-in
-                    total_amount: total,
-                    status: 'completed',
+                    total: total,
+                    subtotal: orderBaseTotal,
+                    commission_amount: orderCommTotal,
+                    vat_amount: orderVatTotal,
+                    status: 'delivered',
                     payment_status: 'paid',
                     payment_method: paymentMethod,
-                    shipping_address: 'Walk-in Customer / POS Store',
+                    shipping_address: { type: 'POS', details: 'Walk-in Customer / POS Store' },
+                    items: cart.map(item => {
+                        const info = calculatePrice(item.base_price || item.price);
+                        return {
+                            id: item.id,
+                            name: item.name,
+                            quantity: item.quantity,
+                            price: item.price,
+                            base_price: item.base_price || item.price,
+                            commission: info.commission,
+                            vat: info.vat
+                        };
+                    })
                 })
                 .select()
                 .single();
@@ -191,6 +262,35 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
             alert('Checkout failed: ' + err.message);
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const handleDownloadPDF = async () => {
+        const element = document.getElementById('printable-receipt');
+        if (!element || !orderComplete) return;
+
+        try {
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                logging: false,
+                useCORS: true,
+                backgroundColor: '#ffffff'
+            });
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: [80, 150] // Receipt size
+            });
+
+            const imgProps = pdf.getImageProperties(imgData);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`receipt-${orderComplete.order_number}.pdf`);
+        } catch (error) {
+            console.error('PDF Generation Error:', error);
         }
     };
 
@@ -254,7 +354,7 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 truncate">{product.sku || 'NO-SKU'}</p>
                                     <h3 className="font-black text-gray-900 text-sm leading-tight mb-2 line-clamp-2 h-10">{product.name}</h3>
                                     <div className="flex items-center justify-between w-full">
-                                        <span className="text-emerald-600 font-black text-sm tabular-nums">${product.price}</span>
+                                        <span className="text-emerald-600 font-black text-sm tabular-nums">{formatPrice(product.price)}</span>
                                         <span className="text-[9px] font-bold text-gray-400 uppercase bg-white px-2 py-1 rounded-lg border border-gray-100">
                                             Stock: {product.stock_quantity}
                                         </span>
@@ -311,7 +411,7 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                             </div>
                             <div className="flex-1 min-w-0">
                                 <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-emerald-700 transition-colors uppercase tracking-tight">{item.name}</h4>
-                                <p className="text-[10px] text-gray-400 mb-3 font-black">${item.price} each</p>
+                                <p className="text-[10px] text-gray-400 mb-3 font-black">{formatPrice(item.price)} each</p>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2 bg-gray-50 rounded-xl p-1 border border-gray-100">
                                         <button onClick={() => updateQuantity(item.id, -1)} className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-white rounded-lg transition-all shadow-sm"><Minus size={12} /></button>
@@ -319,7 +419,7 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                                         <button onClick={() => updateQuantity(item.id, 1)} className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-white rounded-lg transition-all shadow-sm"><Plus size={12} /></button>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <span className="text-sm font-black text-emerald-600 tabular-nums">${(item.price * item.quantity).toFixed(2)}</span>
+                                        <span className="text-sm font-black text-emerald-600 tabular-nums">{formatPrice(item.price * item.quantity)}</span>
                                         <button onClick={() => removeFromCart(item.id)} className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 p-1.5 rounded-lg"><Trash2 size={14} /></button>
                                     </div>
                                 </div>
@@ -341,7 +441,7 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                     <div className="space-y-4 mb-8">
                         <div className="flex justify-between text-gray-500">
                             <span className="text-[11px] font-black uppercase tracking-widest">Subtotal</span>
-                            <span className="font-bold tabular-nums text-xs text-gray-900">${total.toFixed(2)}</span>
+                            <span className="font-bold tabular-nums text-xs text-gray-900">{formatPrice(total)}</span>
                         </div>
                         <div className="flex justify-between text-gray-500">
                             <span className="text-[11px] font-black uppercase tracking-widest">Platform Fee (0%)</span>
@@ -350,7 +450,7 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                         <div className="h-px bg-gray-200" />
                         <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
                             <span className="text-xs font-black text-gray-600 uppercase tracking-widest">Grand Total</span>
-                            <span className="text-2xl font-black text-emerald-600 tabular-nums">${total.toFixed(2)}</span>
+                            <span className="text-2xl font-black text-emerald-600 tabular-nums">{formatPrice(total)}</span>
                         </div>
                     </div>
 
@@ -406,7 +506,7 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
 
                             <div className="bg-gray-50 p-8 rounded-[32px] text-center space-y-2 border border-gray-100">
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Payable Amount</p>
-                                <h4 className="text-4xl font-black text-gray-900 tabular-nums">${total.toFixed(2)}</h4>
+                                <h4 className="text-4xl font-black text-gray-900 tabular-nums">{formatPrice(total)}</h4>
                             </div>
 
                             <button
@@ -421,29 +521,123 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                 </div>
             )}
 
-            {/* Success Modal */}
+            {/* Success Modal & Receipt */}
             {orderComplete && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-                    <div className="bg-white w-full max-w-sm rounded-[40px] p-10 text-center space-y-8 shadow-2xl animate-in zoom-in">
-                        <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto text-green-500">
-                            <CheckCircle size={56} strokeWidth={2.5} />
-                        </div>
-                        <div>
-                            <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Success!</h3>
-                            <p className="text-sm font-bold text-gray-500 mt-2">Order #{orderComplete.id.slice(0, 8).toUpperCase()} finalized.</p>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <button
-                                onClick={() => window.print()}
-                                className="flex items-center justify-center gap-3 bg-gray-50 text-gray-900 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all border border-gray-100"
-                            >
-                                <Printer size={16} />
-                                Invoice
-                            </button>
+                <div className="fixed inset-0 z-[110] flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm animate-in fade-in overflow-y-auto py-6">
+                    <div className="bg-white w-full max-w-[340px] rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in flex flex-col">
+                        <div className="p-5 text-center space-y-3 bg-emerald-50 shrink-0 relative">
                             <button
                                 onClick={() => setOrderComplete(null)}
-                                className="bg-emerald-600 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
+                                className="absolute top-4 right-4 p-1.5 text-emerald-400 hover:text-emerald-700 transition-colors rounded-xl hover:bg-white/50 border border-emerald-100/50"
+                            >
+                                <X size={18} />
+                            </button>
+                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto text-emerald-500 shadow-sm border border-emerald-100">
+                                <CheckCircle size={24} strokeWidth={2.5} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight">Sale Completed</h3>
+                                <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest mt-0.5">Transaction Verified</p>
+                            </div>
+                        </div>
+
+                        {/* Printable Receipt Area */}
+                        <div className="p-5 bg-white overflow-y-auto max-h-[40vh] custom-scrollbar" id="printable-receipt">
+                            <div className="border-2 border-dashed border-gray-100 rounded-2xl p-4 space-y-4">
+                                <div className="text-center space-y-0.5">
+                                    <h2 className="text-base font-black uppercase tracking-tighter text-gray-900 leading-none">{shopName || 'ZimAI Store'}</h2>
+                                    <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Transaction Receipt</p>
+                                </div>
+
+                                <div className="flex justify-between border-y border-gray-50 py-2.5">
+                                    <div className="space-y-0.5">
+                                        <p className="text-[7px] font-black text-gray-400 uppercase">Order</p>
+                                        <p className="text-[9px] font-black text-gray-900">#{orderComplete.order_number}</p>
+                                    </div>
+                                    <div className="text-right space-y-0.5">
+                                        <p className="text-[7px] font-black text-gray-400 uppercase">Date</p>
+                                        <p className="text-[9px] font-black text-gray-900">{new Date(orderComplete.created_at).toLocaleDateString()}</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="text-[7px] font-black text-gray-400 uppercase">Items</p>
+                                    <div className="space-y-1.5">
+                                        {orderComplete.items?.map((item: any, idx: number) => (
+                                            <div key={idx} className="flex justify-between items-start gap-3">
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-[9px] font-black text-gray-900 uppercase leading-none truncate">{item.name}</p>
+                                                    <p className="text-[8px] font-bold text-gray-400 mt-0.5">{item.quantity} × {formatPrice(item.price)}</p>
+                                                </div>
+                                                <p className="text-[9px] font-black text-gray-900 shrink-0">{formatPrice(item.price * item.quantity)}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="pt-3 border-t-2 border-dashed border-gray-100 space-y-1.5">
+                                    <div className="flex justify-between items-center text-[9px] font-bold text-gray-400 uppercase tracking-wider leading-none">
+                                        <span>Subtotal</span>
+                                        <span className="text-gray-900">{formatPrice(orderComplete.total)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-[9px] font-bold text-gray-400 uppercase tracking-wider leading-none">
+                                        <span>Method</span>
+                                        <span className="text-gray-900 uppercase text-[8px]">{orderComplete.payment_method || 'Cash'}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center pt-1.5 px-0.5">
+                                        <span className="text-[10px] font-black text-gray-900 uppercase tracking-widest">Paid</span>
+                                        <span className="text-lg font-black text-emerald-600 font-mono tracking-tighter">{formatPrice(orderComplete.total)}</span>
+                                    </div>
+                                </div>
+
+                                <div className="pt-3 text-center">
+                                    <p className="text-[8px] font-black text-gray-300 uppercase tracking-[0.2em]">Thank you</p>
+                                    <div className="mt-2.5 flex justify-center opacity-5">
+                                        <Scan size={24} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-5 pt-0 space-y-2.5 shrink-0">
+                            <div className="grid grid-cols-2 gap-2.5">
+                                <button
+                                    onClick={() => {
+                                        const style = document.createElement('style');
+                                        style.innerHTML = `
+                                            @media print {
+                                                body * { visibility: hidden; }
+                                                #printable-receipt, #printable-receipt * { visibility: visible; }
+                                                #printable-receipt { 
+                                                    position: absolute; 
+                                                    left: 0; 
+                                                    top: 0; 
+                                                    width: 100%;
+                                                    padding: 0;
+                                                    margin: 0;
+                                                }
+                                            }
+                                        `;
+                                        document.head.appendChild(style);
+                                        window.print();
+                                        document.head.removeChild(style);
+                                    }}
+                                    className="flex items-center justify-center gap-2 bg-gray-900 text-white py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg active:scale-95"
+                                >
+                                    <Printer size={12} />
+                                    Print
+                                </button>
+                                <button
+                                    onClick={handleDownloadPDF}
+                                    className="flex items-center justify-center gap-2 bg-emerald-600 text-white py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 active:scale-95"
+                                >
+                                    <Download size={12} />
+                                    PDF
+                                </button>
+                            </div>
+                            <button
+                                onClick={() => setOrderComplete(null)}
+                                className="w-full bg-emerald-50 text-emerald-600 py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all active:scale-95 border border-emerald-100/50"
                             >
                                 New Sale
                             </button>

@@ -13,14 +13,17 @@ import {
     Zap,
     Shield,
     Package,
-    Check,
     Sun,
     Moon,
     LogOut,
     ChevronRight,
     ChevronLeft,
     ExternalLink,
-    Maximize as Scan
+    Maximize as Scan,
+    RotateCcw,
+    Megaphone,
+    TrendingUp,
+    MessageCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -44,9 +47,13 @@ interface NavItem {
 const navItems: NavItem[] = [
     { id: 'overview', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" />, section: 'Main' },
     { id: 'pos', label: 'Point of Sale (POS)', icon: <Scan className="h-5 w-5" />, section: 'Main' },
+    { id: 'messages', label: 'Customer Messages', icon: <MessageCircle className="h-5 w-5" />, section: 'Main' },
     { id: 'orders', label: 'Orders', icon: <ShoppingCart className="h-5 w-5" />, section: 'Shop Management' },
     { id: 'products', label: 'Products', icon: <Archive className="h-5 w-5" />, section: 'Shop Management' },
     { id: 'wallet', label: 'Wallet Management', icon: <CreditCard className="h-5 w-5" />, section: 'Shop Management' },
+    { id: 'refunds', label: 'Refunds', icon: <RotateCcw className="h-5 w-5" />, section: 'Shop Management' },
+    { id: 'ads', label: 'Ads & Marketing', icon: <Megaphone className="h-5 w-5" />, section: 'Shop Management' },
+    { id: 'reports', label: 'Reports & Analytics', icon: <TrendingUp className="h-5 w-5" />, section: 'Shop Management' },
     { id: 'packages', label: 'Vendor Packages', icon: <Package className="h-5 w-5" />, section: 'Shop Management' },
     { id: 'kyc', label: 'KYC Verification', icon: <Shield className="h-5 w-5" />, section: 'Configuration' },
     { id: 'settings', label: 'Shop Settings', icon: <Settings className="h-5 w-5" />, section: 'Configuration' },
@@ -297,7 +304,7 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
                         </button>
 
                         {/* KYC Global Reminder */}
-                        {kycStatus !== 'approved' && (
+                        {kycStatus !== 'approved' && kycStatus !== 'pending' && (
                             <div className="hidden xl:flex items-center gap-3 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-xl animate-in slide-in-from-left-4 duration-500">
                                 <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-500">
                                     <Shield size={16} />

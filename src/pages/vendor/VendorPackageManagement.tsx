@@ -50,7 +50,7 @@ export function VendorPackageManagement() {
         const { data: subscription } = await supabase
           .from('vendor_subscriptions')
           .select('package_id')
-          .eq('vendor_id', vendor.id)
+          .eq('vendor_id', user.id)
           .maybeSingle();
 
         if (subscription) {

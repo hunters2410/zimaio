@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, User, Search, Menu, MessageCircle, LogOut, Package, LayoutDashboard, MapPin, Heart, ChevronDown, DollarSign, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCurrency } from '../contexts/CurrencyContext';
+import { useCart } from '../contexts/CartContext';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -24,6 +25,7 @@ interface Category {
 export function Header() {
   const { user, profile, signOut } = useAuth();
   const { currency, setCurrency } = useCurrency();
+  const { totalItems } = useCart();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -240,9 +242,11 @@ export function Header() {
               <Link to="/cart" className="relative flex flex-col items-center p-2.5 rounded-2xl hover:bg-gray-50 transition-all text-gray-600 hover:text-green-600">
                 <ShoppingCart className="h-6 w-6" />
                 <span className="text-[9px] font-black uppercase tracking-[0.2em] mt-1.5 hidden sm:block">Purchase</span>
-                <span className="absolute top-2 right-2 bg-green-600 text-white text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center shadow-lg animate-pulse">
-                  0
-                </span>
+                {totalItems > 0 && (
+                  <span className="absolute top-2 right-2 bg-green-600 text-white text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center shadow-lg animate-bounce">
+                    {totalItems}
+                  </span>
+                )}
               </Link>
 
               <button
@@ -266,7 +270,7 @@ export function Header() {
                 <Link
                   key={item.id}
                   to={item.url}
-                  className="relative py-2 text-[10px] tracking-[0.25em] font-black text-green-50/90 hover:text-white transition-all uppercase flex items-center gap-3 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-white after:transition-all hover:after:w-full"
+                  className="relative py-2 text-xs tracking-[0.25em] font-extrabold text-green-50/90 hover:text-white transition-all uppercase flex items-center gap-3 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-white after:transition-all hover:after:w-full"
                 >
                   {icon && <span className="text-white/40">{icon}</span>}
                   <span>{item.label}</span>
