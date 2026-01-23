@@ -35,12 +35,16 @@ export const paymentService = {
   },
 
   async updateGateway(id: string, updates: Partial<PaymentGateway>): Promise<void> {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('payment_gateways')
       .update(updates)
-      .eq('id', id);
+      .eq('id', id)
+      .select();
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error('Update failed: Record not found or permission denied. Check if you have administrator roles assigned.');
+    }
   },
 
   async createManualGateway(gateway: Omit<PaymentGateway, 'id' | 'created_at' | 'updated_at'>): Promise<PaymentGateway> {
@@ -120,12 +124,16 @@ export const paymentService = {
   },
 
   async updateTransaction(id: string, updates: Partial<PaymentTransaction>): Promise<void> {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('payment_transactions')
       .update(updates)
-      .eq('id', id);
+      .eq('id', id)
+      .select();
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error('Update failed: Transaction not found or permission denied.');
+    }
   },
 
   async getTransactionById(id: string): Promise<PaymentTransaction | null> {

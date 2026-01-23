@@ -23,6 +23,7 @@ export { OrdersManagement } from './OrdersManagement';
 export { ShippingManagement } from './ShippingManagement';
 export { VendorContracts } from './VendorContracts';
 export { CustomerContracts } from './CustomerContracts';
+export { LogisticContracts } from './LogisticContracts';
 export { Reports } from './Reports';
 export { AdminCommissions } from './AdminCommissions';
 

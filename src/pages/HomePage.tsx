@@ -1,7 +1,9 @@
-import { Link } from 'react-router-dom';
-import { ShoppingBag, TrendingUp, Shield, Headphones, Star, ArrowRight, Store, X, ShieldCheck } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ShoppingBag, Star, ArrowRight, Store, X, ShieldCheck, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+
+import { useCart } from '../contexts/CartContext';
 
 interface Product {
   id: string;
@@ -11,6 +13,9 @@ interface Product {
   images: any[];
   vendor_id: string;
   is_featured: boolean;
+  category?: {
+    slug: string;
+  };
 }
 
 interface Category {
@@ -39,11 +44,7 @@ interface VendorAd {
   ad_type: 'banner' | 'sidebar' | 'popup' | 'featured';
 }
 
-interface Brand {
-  id: string;
-  name: string;
-  logo_url: string;
-}
+
 
 interface HomeSlide {
   id: string;
@@ -56,9 +57,11 @@ interface HomeSlide {
 }
 
 export function HomePage() {
+  const navigate = useNavigate();
+  const { addToCart } = useCart();
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
+
   const [vendorShops, setVendorShops] = useState<VendorShop[]>([]);
   const [activeAds, setActiveAds] = useState<VendorAd[]>([]);
   const [homeSlides, setHomeSlides] = useState<HomeSlide[]>([]);
@@ -78,10 +81,10 @@ export function HomePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [productsRes, categoriesRes, vendorsRes, brandsRes] = await Promise.all([
+        const [productsRes, categoriesRes, vendorsRes, adsRes, slidesRes] = await Promise.all([
           supabase
             .from('products')
-            .select('*')
+            .select('*, category:categories(slug)')
             .eq('is_active', true)
             .limit(8),
           supabase
@@ -92,39 +95,31 @@ export function HomePage() {
           supabase
             .from('vendor_profiles')
             .select('*')
-            //.eq('is_approved', true) 
             .limit(6),
           supabase
-            .from('brands')
+            .from('vendor_ads')
+            .select('*')
+            .eq('status', 'active')
+            .lte('start_date', new Date().toISOString())
+            .gte('end_date', new Date().toISOString()),
+          supabase
+            .from('home_slides')
             .select('*')
             .eq('is_active', true)
-            .limit(8)
+            .order('sort_order', { ascending: true })
         ]);
-
-        if (productsRes.error) throw productsRes.error;
-        if (categoriesRes.error) throw categoriesRes.error;
-        if (vendorsRes.error) throw vendorsRes.error;
 
         if (productsRes.data) setFeaturedProducts(productsRes.data);
         if (categoriesRes.data) setCategories(categoriesRes.data);
         if (vendorsRes.data) setVendorShops(vendorsRes.data);
-        if (brandsRes.data) setBrands(brandsRes.data);
+        if (slidesRes.data) setHomeSlides(slidesRes.data);
 
-        // Fetch Active Ads (Optional, don't block)
-        const { data: adsData, error: adsError } = await supabase
-          .from('vendor_ads')
-          .select('*')
-          .eq('status', 'active')
-          .lte('start_date', new Date().toISOString())
-          .gte('end_date', new Date().toISOString());
-
-        if (!adsError && adsData) {
-          setActiveAds(adsData);
+        if (adsRes.data) {
+          setActiveAds(adsRes.data);
 
           // Find a popup ad
-          const popup = adsData.find(ad => ad.ad_type === 'popup');
+          const popup = adsRes.data.find(ad => ad.ad_type === 'popup');
           if (popup) {
-            // Check if already shown in this session
             const hasShown = sessionStorage.getItem(`shown_popup_${popup.id}`);
             if (!hasShown) {
               setPopupAd(popup);
@@ -132,19 +127,12 @@ export function HomePage() {
             }
           }
 
-          // Fetch Home Slides
-          const { data: slidesData } = await supabase
-            .from('home_slides')
-            .select('*')
-            .eq('is_active', true)
-            .order('sort_order', { ascending: true });
-
-          if (slidesData) setHomeSlides(slidesData);
-
-          // Record Impressions
-          const adIds = adsData.map(ad => ad.id);
+          // Record Impressions (Non-blocking)
+          const adIds = adsRes.data.map(ad => ad.id);
           if (adIds.length > 0) {
-            await supabase.rpc('increment_ad_impressions', { ad_ids: adIds });
+            supabase.rpc('increment_ad_impressions', { ad_ids: adIds }).then(({ error }) => {
+              if (error) console.error('Error recording impressions:', error);
+            });
           }
         }
       } catch (err) {
@@ -176,6 +164,7 @@ export function HomePage() {
               <img
                 src={slide.image_url}
                 alt={slide.title}
+                loading={index === 0 ? "eager" : "lazy"}
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-x-0 inset-y-0 z-20 flex flex-col items-center justify-center text-center px-4 md:px-20 max-w-5xl mx-auto animate-in fade-in zoom-in-95 duration-1000">
@@ -207,7 +196,7 @@ export function HomePage() {
 
       <section className="py-24 bg-[#FAFAFA]">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12 animate-fade-in-up">
             <div>
               <h2 className="text-4xl font-extrabold text-gray-900 mb-2 tracking-tight">Vendors</h2>
               <p className="text-gray-500 font-medium tracking-tight">Verified professional sellers you can trust</p>
@@ -225,16 +214,16 @@ export function HomePage() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="flex overflow-x-auto snap-x snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-4 md:pb-0 scrollbar-hide animate-fade-in-up-delay-1">
               {vendorShops.map((shop) => (
                 <Link
                   key={shop.id}
                   to={`/shop/${shop.user_id}`}
-                  className="group bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg hover:shadow-emerald-900/5 transition-all duration-500 hover:-translate-y-1 flex flex-col"
+                  className="min-w-[280px] md:min-w-0 snap-center group bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg hover:shadow-emerald-900/5 transition-all duration-500 hover:-translate-y-1 flex flex-col"
                 >
                   <div className="h-24 bg-gray-100 relative overflow-hidden">
                     {shop.shop_banner_url ? (
-                      <img src={shop.shop_banner_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={shop.shop_name} />
+                      <img src={shop.shop_banner_url} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={shop.shop_name} />
                     ) : (
                       <div className="w-full h-full bg-emerald-50 flex items-center justify-center">
                         <Store className="w-8 h-8 text-emerald-200" />
@@ -251,7 +240,7 @@ export function HomePage() {
                     <div className="flex items-start gap-3">
                       <div className="w-12 h-12 bg-white p-1 rounded-xl shadow-lg -mt-6 relative z-10 border border-gray-50 flex items-center justify-center overflow-hidden transition-transform group-hover:rotate-3">
                         {shop.shop_logo_url ? (
-                          <img src={shop.shop_logo_url} className="w-full h-full object-cover rounded-lg" alt="" />
+                          <img src={shop.shop_logo_url} loading="lazy" className="w-full h-full object-cover rounded-lg" alt="" />
                         ) : (
                           <Store className="w-5 h-5 text-emerald-500" />
                         )}
@@ -277,7 +266,7 @@ export function HomePage() {
 
       <section className="py-20 bg-[#FAFAFA]">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 animate-fade-in-up">
             <div>
               <h2 className="text-3xl font-extrabold text-gray-900 mb-1 tracking-tight">Featured Products</h2>
               <p className="text-sm text-gray-500 font-medium tracking-tight">Handpicked premium items for you</p>
@@ -289,107 +278,134 @@ export function HomePage() {
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
               {[...Array(8)].map((_, i) => (
-                <div key={i} className="bg-gray-100 rounded-2xl h-64 animate-pulse"></div>
+                <div key={i} className="bg-gray-100 rounded-2xl h-48 md:h-64 animate-pulse"></div>
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            <div className="flex overflow-x-auto snap-x snap-mandatory md:grid md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4 pb-4 md:pb-0 scrollbar-hide animate-fade-in-up-delay-2">
               {featuredProducts.map((product) => (
-                <Link
-                  key={product.id}
-                  to={`/product/${product.slug}`}
-                  className="premium-card group bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300"
-                >
-                  <div className="h-64 bg-gray-100 overflow-hidden relative">
-                    {product.images && product.images[0] ? (
-                      <img
-                        src={product.images[0]}
-                        alt={product.name}
-                        className="w-full h-full object-cover transition duration-500 group-hover:scale-110"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gray-50 text-gray-200">
-                        <ShoppingBag className="h-20 w-20" />
-                      </div>
-                    )}
-                    <div className="absolute top-4 right-4 py-1.5 px-3 bg-white/90 backdrop-blur-md rounded-full text-[10px] font-bold uppercase tracking-widest text-gray-900 shadow-lg">
-                      Featured
+                <div key={product.id} className="min-w-[160px] md:min-w-0 snap-center premium-card group bg-white rounded-xl md:rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 relative">
+                  <Link to={`/products/${product.slug}`} className="block">
+                    <div className="h-40 md:h-48 bg-gray-100 overflow-hidden relative group-hover:bg-gray-50 transition-colors">
+                      {product.images && product.images[0] ? (
+                        <img
+                          src={product.images[0]}
+                          alt={product.name}
+                          className="w-full h-full object-cover transition duration-700 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-50 text-gray-200">
+                          <ShoppingBag className="h-12 w-12" />
+                        </div>
+                      )}
+                      {product.is_featured && (
+                        <div className="absolute top-2 left-2 py-1 px-2.5 bg-white/90 backdrop-blur-sm rounded-full text-[9px] font-bold uppercase tracking-wider text-gray-900 shadow-sm z-10">
+                          Featured
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="p-6">
-                    <h3 className="font-bold text-gray-900 text-lg mb-3 line-clamp-2 leading-tight group-hover:text-green-600 transition-colors uppercase tracking-tight">{product.name}</h3>
-                    <div className="flex items-center justify-between mt-auto">
+                  </Link>
+
+                  <div className="p-3 md:p-4 flex flex-col gap-2">
+                    <Link to={`/products/${product.slug}`}>
+                      <h3 className="font-bold text-gray-900 text-xs md:text-sm mb-1 line-clamp-2 leading-relaxed hover:text-green-600 transition-colors tracking-tight">
+                        {product.name}
+                      </h3>
+                    </Link>
+
+                    <div className="flex items-end justify-between mt-1">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Price</span>
-                        <span className="text-2xl font-bold text-green-600">
+                        <span className="text-[10px] font-medium text-gray-400">Price</span>
+                        <span className="text-sm md:text-lg font-extrabold text-green-600 font-sans">
                           ${product.base_price.toFixed(2)}
                         </span>
                       </div>
-                      <div className="flex items-center bg-yellow-50 px-2 py-1 rounded-lg">
-                        <Star className="h-3.5 w-3.5 text-yellow-500 fill-current" />
-                        <span className="ml-1.5 text-sm font-extrabold text-yellow-700">4.8</span>
+                      <div className="flex items-center gap-1 mb-1">
+                        <Star className="h-3 w-3 text-yellow-500 fill-current" />
+                        <span className="text-xs font-bold text-gray-600">4.8</span>
                       </div>
                     </div>
+
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          addToCart({
+                            id: product.id,
+                            name: product.name,
+                            price: product.base_price,
+                            image: product.images?.[0] || '',
+                            vendor_id: product.vendor_id,
+                            vendor: 'ZimAIO Vendor',
+                            base_price: product.base_price,
+                            quantity: 1
+                          });
+                        }}
+                        className="flex-1 py-2 bg-gray-900 hover:bg-green-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 active:scale-95"
+                      >
+                        <ShoppingBag className="w-3 h-3" />
+                        <span>Add to Cart</span>
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (product.category?.slug) {
+                            navigate(`/products?category=${product.category.slug}`);
+                          }
+                        }}
+                        className="py-2 px-3 bg-gray-100 hover:bg-green-600 hover:text-white text-gray-600 rounded-lg transition-all duration-300 flex items-center justify-center active:scale-95"
+                        title="Find Similar"
+                      >
+                        <Search className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}
         </div>
       </section>
 
-      <section className="py-20 border-y border-gray-100 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
-            {[
-              { icon: ShoppingBag, title: 'Wide Selection', desc: 'Premium products only' },
-              { icon: Shield, title: 'Secure Checkout', desc: 'Encrypted transactions' },
-              { icon: TrendingUp, title: 'Best Value', desc: 'Competitive market rates' },
-              { icon: Headphones, title: 'Expert Support', desc: 'Daily 24/7 assistance' }
-            ].map((feature, i) => (
-              <div key={i} className="flex flex-col items-center text-center group">
-                <div className="bg-green-50 p-6 rounded-3xl mb-6 transition-all group-hover:bg-green-600 group-hover:shadow-2xl group-hover:shadow-green-900/40">
-                  <feature.icon className="h-10 w-10 text-green-600 group-hover:text-white transition-colors" />
-                </div>
-                <h3 className="font-bold text-gray-900 text-lg mb-2 tracking-tight">{feature.title}</h3>
-                <p className="text-gray-400 text-sm font-medium tracking-tight">{feature.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {activeAds.find(ad => ad.ad_type === 'featured') && (
-        <section className="py-12 bg-white">
-          <div className="container mx-auto px-4">
-            {activeAds.filter(ad => ad.ad_type === 'featured').slice(0, 1).map(ad => (
-              <a
-                key={ad.id}
-                href={ad.link_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => handleAdClick(ad.id)}
-                className="block relative rounded-[2rem] overflow-hidden group shadow-2xl hover:shadow-purple-900/20 transition-all duration-700"
-              >
-                <div className="aspect-[21/9] md:aspect-[25/7] relative">
-                  <img src={ad.image_url} alt={ad.title} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/20 to-transparent flex items-center p-8 md:p-16">
-                    <div className="max-w-xl text-white">
-                      <span className="inline-block px-4 py-1 rounded-full bg-purple-600 text-[10px] font-black uppercase tracking-[0.2em] mb-4 shadow-lg animate-pulse">Special Offer</span>
-                      <h2 className="text-3xl md:text-5xl font-black mb-6 leading-tight drop-shadow-lg">{ad.title}</h2>
-                      <button className="bg-white text-gray-900 px-8 py-3 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-purple-600 hover:text-white transition-all shadow-xl active:scale-95">Discover More</button>
+
+      {
+        activeAds.find(ad => ad.ad_type === 'featured') && (
+          <section className="py-12 bg-white">
+            <div className="container mx-auto px-4">
+              {activeAds.filter(ad => ad.ad_type === 'featured').slice(0, 1).map(ad => (
+                <a
+                  key={ad.id}
+                  href={ad.link_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => handleAdClick(ad.id)}
+                  className="block relative rounded-[2rem] overflow-hidden group shadow-2xl hover:shadow-purple-900/20 transition-all duration-700"
+                >
+                  <div className="aspect-[21/9] md:aspect-[25/7] relative">
+                    <img src={ad.image_url} alt={ad.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/20 to-transparent flex items-center p-8 md:p-16">
+                      <div className="max-w-xl text-white">
+                        <span className="inline-block px-4 py-1 rounded-full bg-purple-600 text-[10px] font-black uppercase tracking-[0.2em] mb-4 shadow-lg animate-pulse">Special Offer</span>
+                        <h2 className="text-3xl md:text-5xl font-black mb-6 leading-tight drop-shadow-lg">{ad.title}</h2>
+                        <button className="bg-white text-gray-900 px-8 py-3 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-purple-600 hover:text-white transition-all shadow-xl active:scale-95">Discover More</button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </a>
-            ))}
-          </div>
-        </section>
-      )}
+                </a>
+              ))}
+            </div>
+          </section>
+        )
+      }
 
-      <section className="py-24 bg-white">
+      < section className="py-24 bg-white" >
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12">
             <div>
@@ -409,7 +425,7 @@ export function HomePage() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-6 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-6 gap-6 animate-fade-in-up-delay-3">
               {categories.map((category) => (
                 <Link
                   key={category.id}
@@ -425,7 +441,7 @@ export function HomePage() {
             </div>
           )}
         </div>
-      </section>
+      </section >
 
 
       <section className="py-24 bg-gray-900 text-white relative overflow-hidden">
@@ -435,7 +451,7 @@ export function HomePage() {
         <div className="container mx-auto px-4 text-center relative z-10">
           <h2 className="text-4xl md:text-5xl font-extrabold mb-6 leading-tight">Empower Your Business <br /> with ZimAIO.</h2>
           <p className="text-lg mb-12 text-gray-400 max-w-2xl mx-auto leading-relaxed">
-            Join ZimAIO's curated ecosystem. Reach meaningful customers and scale your boutique with professional tools.
+            Join ZimAIO's curated ecosystem. Reach meaningful customers and scale your shop with professional tools.
           </p>
           <Link
             to="/vendor-signup"
@@ -447,36 +463,38 @@ export function HomePage() {
         </div>
       </section>
 
-      {popupAd && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="relative max-w-lg w-full bg-white rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-500 delay-200">
-            <button
-              onClick={() => setPopupAd(null)}
-              className="absolute top-4 right-4 z-20 p-2 bg-black/20 hover:bg-black/40 text-white rounded-full transition-all"
-            >
-              <X className="w-6 h-6" />
-            </button>
-            <a
-              href={popupAd.link_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => { handleAdClick(popupAd!.id); setPopupAd(null); }}
-              className="block group"
-            >
-              <div className="aspect-square relative overflow-hidden">
-                <img src={popupAd.image_url} alt={popupAd.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-8">
-                  <span className="inline-block self-start px-3 py-1 bg-green-500 text-white text-[8px] font-black uppercase tracking-widest rounded-full mb-4">Limited Event</span>
-                  <h3 className="text-3xl font-black text-white mb-4 leading-tight uppercase tracking-tight">{popupAd.title}</h3>
-                  <div className="flex items-center gap-2 text-white/80 font-bold uppercase tracking-widest text-[10px]">
-                    Explore Now <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+      {
+        popupAd && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="relative max-w-lg w-full bg-white rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-500 delay-200">
+              <button
+                onClick={() => setPopupAd(null)}
+                className="absolute top-4 right-4 z-20 p-2 bg-black/20 hover:bg-black/40 text-white rounded-full transition-all"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <a
+                href={popupAd.link_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => { handleAdClick(popupAd!.id); setPopupAd(null); }}
+                className="block group"
+              >
+                <div className="aspect-square relative overflow-hidden">
+                  <img src={popupAd.image_url} alt={popupAd.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-8">
+                    <span className="inline-block self-start px-3 py-1 bg-green-500 text-white text-[8px] font-black uppercase tracking-widest rounded-full mb-4">Limited Event</span>
+                    <h3 className="text-3xl font-black text-white mb-4 leading-tight uppercase tracking-tight">{popupAd.title}</h3>
+                    <div className="flex items-center gap-2 text-white/80 font-bold uppercase tracking-widest text-[10px]">
+                      Explore Now <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </a>
+              </a>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }

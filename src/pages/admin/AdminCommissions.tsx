@@ -2,17 +2,14 @@ import { useState, useEffect } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { supabase } from '../../lib/supabase';
 import {
-    DollarSign,
     Search,
-    Filter,
     ArrowUpRight,
-    ArrowDownLeft,
     Wallet,
     TrendingUp,
     Store,
-    Calendar,
     ChevronRight,
-    ChevronLeft
+    ChevronLeft,
+    FileText
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCurrency } from '../../contexts/CurrencyContext';
@@ -68,12 +65,15 @@ export function AdminCommissions() {
     const fetchCommissions = async () => {
         setLoading(true);
         try {
+            // Fetch from ORDERS table because that is the source of truth for handling fees now
             let query = supabase
-                .from('commissions')
-                .select('*, orders(order_number), vendor_profiles(shop_name)', { count: 'exact' });
+                .from('orders')
+                .select('*, vendor_profiles(shop_name)', { count: 'exact' })
+                .gt('commission_amount', 0); // Only show orders with handling fees
 
             if (statusFilter !== 'all') {
-                query = query.eq('status', statusFilter);
+                if (statusFilter === 'paid') query = query.or('payment_status.eq.paid,payment_status.eq.completed');
+                if (statusFilter === 'pending') query = query.neq('payment_status', 'paid').neq('payment_status', 'completed');
             }
 
             const { data, count, error } = await query
@@ -81,7 +81,23 @@ export function AdminCommissions() {
                 .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
 
             if (error) throw error;
-            setCommissions(data || []);
+
+            // Map orders to Commission interface shape for compatibility
+            const mappedData = (data || []).map(order => ({
+                id: order.id,
+                order_id: order.id,
+                vendor_id: order.vendor_id,
+                order_amount: order.subtotal + order.commission_amount, // Approximate total
+                commission_rate: 0, // We can calculate or leave 0, handling fee is absolute
+                commission_amount: order.commission_amount,
+                status: (order.payment_status === 'paid' || order.payment_status === 'completed') ? 'paid' : 'pending',
+                paid_at: order.created_at, // Approximate
+                created_at: order.created_at,
+                orders: { order_number: order.id.substring(0, 8).toUpperCase() }, // Mock number
+                vendor_profiles: { shop_name: order.vendor_profiles?.shop_name || 'N/A' }
+            }));
+
+            setCommissions(mappedData as any);
             setTotalComm(count || 0);
         } catch (error) {
             console.error('Error fetching commissions:', error);
@@ -92,13 +108,21 @@ export function AdminCommissions() {
 
     const fetchStats = async () => {
         try {
-            const { data: allComms } = await supabase
-                .from('commissions')
-                .select('commission_amount, status');
+            const { data: orders } = await supabase
+                .from('orders')
+                .select('commission_amount, payment_status');
 
-            if (allComms) {
-                const total = allComms.reduce((acc, curr) => acc + (curr.status === 'paid' ? curr.commission_amount : 0), 0);
-                const pending = allComms.reduce((acc, curr) => acc + (curr.status === 'pending' ? curr.commission_amount : 0), 0);
+            if (orders) {
+                const total = orders.reduce((acc, curr) => {
+                    const isPaid = curr.payment_status === 'paid' || curr.payment_status === 'completed';
+                    return isPaid ? acc + (curr.commission_amount || 0) : acc;
+                }, 0);
+
+                const pending = orders.reduce((acc, curr) => {
+                    const isPaid = curr.payment_status === 'paid' || curr.payment_status === 'completed';
+                    return !isPaid ? acc + (curr.commission_amount || 0) : acc;
+                }, 0);
+
                 setStats(prev => ({
                     ...prev,
                     totalEarned: total,
@@ -116,8 +140,8 @@ export function AdminCommissions() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className={`text-3xl font-black ${textPrimary} uppercase tracking-tighter`}>Commission Management</h1>
-                        <p className={textSecondary}>Monitor and oversee platform revenue from vendor sales</p>
+                        <h1 className={`text-3xl font-black ${textPrimary} uppercase tracking-tighter`}>Handling Fee Management</h1>
+                        <p className={textSecondary}>Monitor and oversee platform revenue from handling fees on vendor sales</p>
                     </div>
                 </div>
 
@@ -130,7 +154,7 @@ export function AdminCommissions() {
                             </div>
                             <span className="text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg text-xs font-black">+12.5%</span>
                         </div>
-                        <p className={`text-xs font-black ${textSecondary} uppercase tracking-widest mb-1`}>Total Commission</p>
+                        <p className={`text-xs font-black ${textSecondary} uppercase tracking-widest mb-1`}>Total Handling Fees</p>
                         <h3 className={`text-3xl font-black ${textPrimary} tracking-tight`}>{formatPrice(stats.totalEarned)}</h3>
                     </div>
 
@@ -144,25 +168,6 @@ export function AdminCommissions() {
                         <h3 className={`text-3xl font-black ${textPrimary} tracking-tight`}>{formatPrice(stats.pendingAmount)}</h3>
                     </div>
 
-                    <div className={`${cardBg} p-6 rounded-[2.5rem] border ${borderColor} shadow-xl shadow-blue-500/5`}>
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="p-3 bg-blue-500/10 rounded-2xl">
-                                <ArrowUpRight className="w-6 h-6 text-blue-500" />
-                            </div>
-                        </div>
-                        <p className={`text-xs font-black ${textSecondary} uppercase tracking-widest mb-1`}>Active Rates</p>
-                        <h3 className={`text-3xl font-black ${textPrimary} tracking-tight`}>24.5% Avg.</h3>
-                    </div>
-
-                    <div className={`${cardBg} p-6 rounded-[2.5rem] border ${borderColor} shadow-xl shadow-purple-500/5`}>
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="p-3 bg-purple-500/10 rounded-2xl">
-                                <Store className="w-6 h-6 text-purple-500" />
-                            </div>
-                        </div>
-                        <p className={`text-xs font-black ${textSecondary} uppercase tracking-widest mb-1`}>Top Earner</p>
-                        <h3 className={`text-xl font-black ${textPrimary} tracking-tight truncate`}>Skyline Tech</h3>
-                    </div>
                 </div>
 
                 {/* Filters & Table */}
@@ -174,8 +179,8 @@ export function AdminCommissions() {
                                     key={status}
                                     onClick={() => setStatusFilter(status)}
                                     className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === status
-                                            ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200'
-                                            : 'bg-white text-gray-400 hover:text-emerald-600 border border-gray-100'
+                                        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200'
+                                        : 'bg-white text-gray-400 hover:text-emerald-600 border border-gray-100'
                                         }`}
                                 >
                                     {status}
@@ -201,7 +206,7 @@ export function AdminCommissions() {
                                     <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Order Details</th>
                                     <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Vendor</th>
                                     <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Order Amount</th>
-                                    <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Commission</th>
+                                    <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Handling Fee</th>
                                     <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
                                     <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</th>
                                 </tr>
@@ -223,8 +228,7 @@ export function AdminCommissions() {
                                                         <FileText className="w-4 h-4 text-gray-400 group-hover:text-emerald-600" />
                                                     </div>
                                                     <div>
-                                                        <p className={`text-sm font-black ${textPrimary} group-hover:text-emerald-600 transition-colors`}>{comm.orders?.order_number}</p>
-                                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Order ID</p>
+                                                        <p className={`text-sm font-black ${textPrimary} group-hover:text-emerald-600 transition-colors`}>#{comm.orders?.order_number}</p>
                                                     </div>
                                                 </div>
                                             </td>
@@ -236,6 +240,7 @@ export function AdminCommissions() {
                                             </td>
                                             <td className="px-8 py-6 text-sm font-black text-gray-600 font-mono">
                                                 {formatPrice(comm.order_amount)}
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Rate: {comm.commission_rate}%</p>
                                             </td>
                                             <td className="px-8 py-6">
                                                 <p className="text-sm font-black text-emerald-600 font-mono">{formatPrice(comm.commission_amount)}</p>
@@ -243,8 +248,8 @@ export function AdminCommissions() {
                                             </td>
                                             <td className="px-8 py-6">
                                                 <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${comm.status === 'paid'
-                                                        ? 'bg-emerald-50 text-emerald-600'
-                                                        : 'bg-amber-50 text-amber-600'
+                                                    ? 'bg-emerald-50 text-emerald-600'
+                                                    : 'bg-amber-50 text-amber-600'
                                                     }`}>
                                                     {comm.status}
                                                 </span>

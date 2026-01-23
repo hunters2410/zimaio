@@ -1,23 +1,20 @@
 import { useState, useEffect } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { supabase } from '../../lib/supabase';
+import { useCurrency } from '../../contexts/CurrencyContext';
 import {
     TrendingUp,
     Download,
     FileText,
     Table as TableIcon,
-    Search,
-    Calendar,
-    ChevronDown,
-    Filter,
     BarChart,
     LineChart,
     PieChart,
     Clock,
-    ArrowRight,
-    Info
+    ArrowUpRight,
+    AlertCircle
 } from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
+import { jsPDF } from 'jspdf';
 
 interface ReportType {
     id: string;
@@ -36,161 +33,400 @@ const REPORT_TYPES: ReportType[] = [
 ];
 
 export function Reports() {
-    const { theme } = useTheme();
-    const isDark = theme === 'dark';
-
+    const { formatPrice } = useCurrency();
     const [dateRange, setDateRange] = useState('7d');
     const [selectedCategory, setSelectedCategory] = useState<'all' | 'sales' | 'inventory' | 'customers' | 'vendors'>('all');
     const [generating, setGenerating] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [stats, setStats] = useState({
+        revenue: 0,
+        orders: 0,
+        lowStock: 0,
+        pendingPayouts: 0,
+        pendingPayoutsCount: 0
+    });
+    const [error, setError] = useState<string | null>(null);
 
-    const cardBg = isDark ? 'bg-gray-800' : 'bg-white';
-    const textPrimary = isDark ? 'text-gray-100' : 'text-gray-900';
-    const textSecondary = isDark ? 'text-gray-400' : 'text-gray-600';
-    const borderColor = isDark ? 'border-gray-700' : 'border-gray-200';
+    useEffect(() => {
+        fetchStats();
+    }, [dateRange]);
 
-    const handleDownload = (reportId: string) => {
+    const fetchStats = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const now = new Date();
+            let startDate = new Date();
+            if (dateRange === '24h') startDate.setHours(now.getHours() - 24);
+            else if (dateRange === '7d') startDate.setDate(now.getDate() - 7);
+            else if (dateRange === '30d') startDate.setDate(now.getDate() - 30);
+            else if (dateRange === '90d') startDate.setDate(now.getDate() - 90);
+
+            // 1. Gross Revenue & Orders (Only paid orders)
+            const { data: ordersData, error: ordersError } = await supabase
+                .from('orders')
+                .select('total')
+                .eq('payment_status', 'paid')
+                .gte('created_at', startDate.toISOString());
+
+            if (ordersError) throw ordersError;
+
+            const revenue = ordersData?.reduce((sum, order) => sum + (Number(order.total) || 0), 0) || 0;
+            const ordersCount = ordersData?.length || 0;
+
+            // 2. Low Stock
+            const { count: lowStockCount, error: stockError } = await supabase
+                .from('products')
+                .select('*', { count: 'exact', head: true })
+                .lt('stock_quantity', 10)
+                .eq('is_active', true);
+
+            if (stockError) throw stockError;
+
+            // 3. Pending Payouts (Assuming commissions table tracks this)
+            const { data: payoutsData, error: payoutsError } = await supabase
+                .from('commissions')
+                .select('commission_amount')
+                .eq('status', 'pending');
+
+            if (payoutsError) {
+                // If commissions table doesn't exist or has issues, fallback to 0
+                console.warn('Commissions table check failed, might not be created yet:', payoutsError);
+            }
+
+            const pendingPayoutsTotal = payoutsData?.reduce((sum, item) => sum + (Number(item.commission_amount) || 0), 0) || 0;
+            const pendingPayoutsCount = payoutsData?.length || 0;
+
+            setStats({
+                revenue,
+                orders: ordersCount,
+                lowStock: lowStockCount || 0,
+                pendingPayouts: pendingPayoutsTotal,
+                pendingPayoutsCount
+            });
+
+        } catch (err: any) {
+            console.error('Error fetching report stats:', err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDownload = async (reportId: string, format: 'pdf' | 'csv' = 'pdf') => {
         setGenerating(reportId);
-        // Simulate generation
-        setTimeout(() => {
+        try {
+            const now = new Date();
+            let startDate = new Date();
+            if (dateRange === '24h') startDate.setHours(now.getHours() - 24);
+            else if (dateRange === '7d') startDate.setDate(now.getDate() - 7);
+            else if (dateRange === '30d') startDate.setDate(now.getDate() - 30);
+            else if (dateRange === '90d') startDate.setDate(now.getDate() - 90);
+
+            let reportData: any[] = [];
+            let title = "";
+
+            if (reportId === 'daily_sales') {
+                title = "Daily Sales Report";
+                const { data } = await supabase.from('orders')
+                    .select('order_number, total, status, payment_status, created_at')
+                    .gte('created_at', startDate.toISOString())
+                    .order('created_at', { ascending: false });
+                reportData = data || [];
+            } else if (reportId === 'monthly_revenue') {
+                title = "Monthly Revenue Summary";
+                const { data } = await supabase.from('orders')
+                    .select('total, created_at')
+                    .eq('payment_status', 'paid')
+                    .gte('created_at', startDate.toISOString());
+                reportData = data || [];
+            } else if (reportId === 'inventory_levels') {
+                title = "Low Stock Alert Report";
+                const { data } = await supabase.from('products')
+                    .select('name, stock_quantity, base_price')
+                    .lt('stock_quantity', 10)
+                    .eq('is_active', true);
+                reportData = data || [];
+            } else if (reportId === 'customer_growth') {
+                title = "New Customer Registrations";
+                const { data } = await supabase.from('profiles')
+                    .select('full_name, email, created_at')
+                    .eq('role', 'customer')
+                    .gte('created_at', startDate.toISOString());
+                reportData = data || [];
+            } else if (reportId === 'vendor_payouts') {
+                title = "Vendor Payout History";
+                const { data } = await supabase.from('commissions')
+                    .select('*, vendor:vendor_profiles(shop_name)')
+                    .gte('created_at', startDate.toISOString());
+                reportData = data || [];
+            } else if (reportId === 'top_products') {
+                title = "Best Selling Products";
+                const { data } = await supabase.from('products')
+                    .select('name, sales_count, base_price')
+                    .order('sales_count', { ascending: false })
+                    .limit(50);
+                reportData = data || [];
+            }
+
+            if (format === 'csv') {
+                if (reportData.length === 0) {
+                    alert('No data available for this report and date range.');
+                    return;
+                }
+                const headers = Object.keys(reportData[0]);
+                const csvContent = [
+                    headers.join(','),
+                    ...reportData.map(row => headers.map(h => {
+                        let val = row[h];
+                        if (typeof val === 'object') val = JSON.stringify(val);
+                        return `"${String(val).replace(/"/g, '""')}"`;
+                    }).join(','))
+                ].join('\n');
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.setAttribute('download', `${reportId}_${new Date().getTime()}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } else {
+                // PDF Implementation
+                const doc = new jsPDF();
+                const pageWidth = doc.internal.pageSize.getWidth();
+
+                doc.setFillColor(79, 70, 229); // indigo-600
+                doc.rect(0, 0, pageWidth, 40, 'F');
+
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(22);
+                doc.text("ZimAIO Business Intelligence", 15, 20);
+                doc.setFontSize(12);
+                doc.text(title || reportId.toUpperCase(), 15, 30);
+
+                doc.setTextColor(51, 65, 85);
+                doc.setFontSize(10);
+                doc.text(`Generation Date: ${new Date().toLocaleString()}`, 150, 20, { align: 'right' });
+                doc.text(`Region: Zimbabwe / Global`, 150, 26, { align: 'right' });
+
+                let y = 55;
+                if (reportData.length === 0) {
+                    doc.text("No data records found for the selected criteria.", 15, y);
+                } else {
+                    const headers = Object.keys(reportData[0]);
+
+                    // Header Row
+                    doc.setFontSize(9);
+                    doc.setTextColor(100, 116, 139);
+                    doc.setFont("helvetica", "bold");
+                    headers.forEach((h, i) => {
+                        doc.text(h.replace('_', ' ').toUpperCase(), 15 + (i * 35), y);
+                    });
+
+                    y += 5;
+                    doc.setDrawColor(226, 232, 240);
+                    doc.line(15, y, pageWidth - 15, y);
+                    y += 8;
+
+                    // Data Rows
+                    doc.setFont("helvetica", "normal");
+                    doc.setTextColor(51, 65, 85);
+                    reportData.slice(0, 30).forEach((row) => {
+                        headers.forEach((h, i) => {
+                            let val = row[h];
+                            if (val && typeof val === 'object' && val.shop_name) val = val.shop_name;
+                            else if (typeof val === 'object') val = "Data";
+                            doc.text(String(val).slice(0, 20), 15 + (i * 35), y);
+                        });
+                        y += 8;
+                        if (y > 275) {
+                            doc.addPage();
+                            y = 20;
+                        }
+                    });
+                }
+
+                doc.save(`${reportId}_${new Date().getTime()}.pdf`);
+            }
+        } catch (err: any) {
+            console.error('Export failed:', err);
+            setError(`Export failed: ${err.message}`);
+        } finally {
             setGenerating(null);
-            alert('Report generation started. Your download will begin shortly.');
-        }, 1500);
+        }
     };
 
     const filteredReports = REPORT_TYPES.filter(r =>
         selectedCategory === 'all' || r.category === selectedCategory
     );
 
+    const cardBg = 'bg-white';
+    const textPrimary = 'text-slate-900';
+    const textSecondary = 'text-slate-500';
+    const borderColor = 'border-slate-200';
+
     return (
         <AdminLayout>
-            <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl shadow-lg shadow-indigo-100 dark:shadow-none">
-                            <TrendingUp className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-                        </div>
-                        <h1 className={`text-3xl font-black uppercase tracking-tight ${textPrimary}`}>Business Intelligence Reports</h1>
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className={`text-xl font-black uppercase tracking-tight ${textPrimary}`}>Reports & Analytics</h1>
+                        <p className={`text-xs ${textSecondary} font-medium`}>Real-time business intelligence and data export</p>
                     </div>
-                    <p className={textSecondary}>Generate, analyze, and export comprehensive business data and performance reports.</p>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={fetchStats}
+                            disabled={loading}
+                            className="px-4 py-2 bg-white text-slate-600 border border-slate-200 text-xs font-black uppercase tracking-wider rounded-lg shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2 disabled:opacity-50"
+                        >
+                            <Clock className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} /> Refresh
+                        </button>
+                        <button className="px-4 py-2 bg-indigo-600 text-white text-xs font-black uppercase tracking-wider rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                            <Download className="h-3 w-3" /> Export Dashboard
+                        </button>
+                    </div>
                 </div>
-            </div>
 
-            {/* Global Filters */}
-            <div className={`${cardBg} p-8 rounded-[48px] border ${borderColor} shadow-sm mb-10 flex flex-col lg:flex-row lg:items-center gap-8`}>
-                <div className="flex-1">
-                    <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-3 ml-2`}>Time Frame</label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {['24h', '7d', '30d', '90d'].map(range => (
-                            <button
-                                key={range}
-                                onClick={() => setDateRange(range)}
-                                className={`px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all ${dateRange === range
-                                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none'
-                                        : `bg-slate-50 dark:bg-gray-700/50 ${textSecondary} hover:bg-slate-100`
-                                    }`}
-                            >
-                                Last {range}
-                            </button>
-                        ))}
+                {error && (
+                    <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-4 text-red-700">
+                        <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-wider mb-1">Data Connection Error</p>
+                            <p className="text-xs font-medium opacity-80">{error}</p>
+                        </div>
+                    </div>
+                )}
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className={`${cardBg} p-4 rounded-xl border ${borderColor} shadow-sm`}>
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] uppercase tracking-widest text-slate-400 font-black">Gross Revenue</span>
+                            <span className="p-1 bg-emerald-50 text-emerald-600 rounded-md"><TrendingUp className="h-3 w-3" /></span>
+                        </div>
+                        <div className={`text-2xl font-black ${textPrimary}`}>
+                            {loading ? '...' : formatPrice(stats.revenue)}
+                        </div>
+                        <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-slate-400">
+                            <span className="text-emerald-600 flex items-center"><ArrowUpRight className="h-3 w-3" /> Paid</span> <span className="text-slate-300">|</span> last {dateRange}
+                        </div>
+                    </div>
+
+                    <div className={`${cardBg} p-4 rounded-xl border ${borderColor} shadow-sm`}>
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] uppercase tracking-widest text-slate-400 font-black">Orders</span>
+                            <span className="p-1 bg-blue-50 text-blue-600 rounded-md"><FileText className="h-3 w-3" /></span>
+                        </div>
+                        <div className={`text-2xl font-black ${textPrimary}`}>
+                            {loading ? '...' : stats.orders}
+                        </div>
+                        <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-slate-400">
+                            <span className="text-blue-600 flex items-center"><ArrowUpRight className="h-3 w-3" /> Live</span> <span className="text-slate-300">|</span> last {dateRange}
+                        </div>
+                    </div>
+
+                    <div className={`${cardBg} p-4 rounded-xl border ${borderColor} shadow-sm`}>
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] uppercase tracking-widest text-slate-400 font-black">Low Stock Items</span>
+                            <span className="p-1 bg-amber-50 text-amber-600 rounded-md"><BarChart className="h-3 w-3" /></span>
+                        </div>
+                        <div className={`text-2xl font-black ${textPrimary}`}>
+                            {loading ? '...' : stats.lowStock}
+                        </div>
+                        <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-rose-600">
+                            {stats.lowStock > 0 ? 'Restock Needed' : 'Healthy Levels'}
+                        </div>
+                    </div>
+
+                    <div className={`${cardBg} p-4 rounded-xl border ${borderColor} shadow-sm`}>
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] uppercase tracking-widest text-slate-400 font-black">Pending Payouts</span>
+                            <span className="p-1 bg-violet-50 text-violet-600 rounded-md"><PieChart className="h-3 w-3" /></span>
+                        </div>
+                        <div className={`text-2xl font-black ${textPrimary}`}>
+                            {loading ? '...' : formatPrice(stats.pendingPayouts)}
+                        </div>
+                        <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-slate-500">
+                            {stats.pendingPayoutsCount} commissions pending
+                        </div>
                     </div>
                 </div>
-                <div className="lg:w-px lg:h-12 bg-gray-100 dark:bg-gray-700" />
-                <div className="flex-1">
-                    <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-3 ml-2`}>Filter by Category</label>
-                    <div className="flex flex-wrap gap-3">
+
+                <div className={`${cardBg} p-3 rounded-xl border ${borderColor} shadow-sm flex flex-col md:flex-row items-center justify-between gap-4`}>
+                    <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
                         {['all', 'sales', 'inventory', 'customers', 'vendors'].map(cat => (
                             <button
                                 key={cat}
                                 onClick={() => setSelectedCategory(cat as any)}
-                                className={`px-4 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all ${selectedCategory === cat
-                                        ? 'bg-violet-600 text-white shadow-lg shadow-violet-200 dark:shadow-none'
-                                        : `bg-slate-50 dark:bg-gray-700/50 ${textSecondary} hover:bg-slate-100`
+                                className={`px-3 py-1.5 rounded-lg font-bold uppercase text-[9px] tracking-wider transition-all whitespace-nowrap ${selectedCategory === cat
+                                    ? 'bg-slate-900 text-white'
+                                    : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700'
                                     }`}
                             >
                                 {cat}
                             </button>
                         ))}
                     </div>
+                    <div className="flex bg-slate-100 rounded-lg p-1">
+                        {['24h', '7d', '30d', '90d'].map(range => (
+                            <button
+                                key={range}
+                                onClick={() => setDateRange(range)}
+                                className={`px-3 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-all ${dateRange === range
+                                    ? 'bg-white text-slate-900 shadow-sm'
+                                    : 'text-slate-400 hover:text-slate-600'
+                                    }`}
+                            >
+                                {range}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                {filteredReports.map((report) => (
-                    <div key={report.id} className={`${cardBg} p-8 rounded-[48px] border ${borderColor} shadow-sm group hover:shadow-2xl transition-all duration-500 flex flex-col`}>
-                        <div className="flex items-start justify-between mb-6">
-                            <div className="p-4 rounded-3xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 group-hover:scale-110 transition-transform">
-                                {report.category === 'sales' && <LineChart className="h-8 w-8" />}
-                                {report.category === 'inventory' && <BarChart className="h-8 w-8" />}
-                                {report.category === 'customers' && <PieChart className="h-8 w-8" />}
-                                {report.category === 'vendors' && <FileText className="h-8 w-8" />}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filteredReports.map((report) => (
+                        <div key={report.id} className={`${cardBg} p-4 rounded-xl border ${borderColor} shadow-sm group hover:border-indigo-500/30 transition-all`}>
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className={`p-2 rounded-lg ${report.category === 'sales' ? 'bg-blue-50 text-blue-600' :
+                                    report.category === 'inventory' ? 'bg-amber-50 text-amber-600' :
+                                        report.category === 'customers' ? 'bg-emerald-50 text-emerald-600' :
+                                            'bg-violet-50 text-violet-600'
+                                    }`}>
+                                    {report.category === 'sales' && <LineChart className="h-4 w-4" />}
+                                    {report.category === 'inventory' && <BarChart className="h-4 w-4" />}
+                                    {report.category === 'customers' && <PieChart className="h-4 w-4" />}
+                                    {report.category === 'vendors' && <FileText className="h-4 w-4" />}
+                                </div>
+                                <h3 className={`text-sm font-bold ${textPrimary} truncate`}>{report.name}</h3>
                             </div>
-                            <div className="flex gap-2">
-                                <button className="p-2 bg-gray-50 dark:bg-gray-700 text-gray-400 rounded-xl hover:text-indigo-600 transition-colors">
-                                    <Info className="h-4 w-4" />
+
+                            <p className="text-[10px] text-slate-500 font-medium mb-4 h-8 leading-snug line-clamp-2">
+                                {report.description}
+                            </p>
+
+                            <div className="grid grid-cols-2 gap-2 mt-auto">
+                                <button
+                                    onClick={() => handleDownload(report.id, 'pdf')}
+                                    disabled={!!generating}
+                                    className="px-3 py-2 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    {generating === report.id ? <Clock className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+                                    PDF
+                                </button>
+                                <button
+                                    onClick={() => handleDownload(report.id, 'csv')}
+                                    disabled={!!generating}
+                                    className="px-3 py-2 bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-slate-100 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <TableIcon className="h-3 w-3" />
+                                    CSV
                                 </button>
                             </div>
                         </div>
-
-                        <h3 className={`text-2xl font-black ${textPrimary} uppercase tracking-tighter leading-tight mb-3`}>{report.name}</h3>
-                        <p className={`text-sm ${textSecondary} font-medium mb-8 flex-1`}>{report.description}</p>
-
-                        <div className="space-y-3 mt-auto">
-                            <button
-                                onClick={() => handleDownload(report.id)}
-                                disabled={!!generating}
-                                className="w-full py-4 bg-indigo-600 text-white rounded-[24px] font-black uppercase tracking-[0.15em] text-xs shadow-xl shadow-indigo-100 dark:shadow-none hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                            >
-                                {generating === report.id ? <Clock className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                                {generating === report.id ? 'Generating...' : 'Export as PDF'}
-                            </button>
-                            <button
-                                onClick={() => handleDownload(report.id)}
-                                disabled={!!generating}
-                                className={`w-full py-4 ${isDark ? 'bg-gray-700' : 'bg-slate-50'} ${textSecondary} rounded-[24px] font-black uppercase tracking-[0.15em] text-xs hover:bg-slate-100 transition-all flex items-center justify-center gap-3 disabled:opacity-50`}
-                            >
-                                <TableIcon className="h-4 w-4" />
-                                CSV Spreadsheet
-                            </button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Analytics Insight Card */}
-            <div className={`mt-12 p-10 rounded-[64px] bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 text-white shadow-2xl relative overflow-hidden`}>
-                <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-10">
-                    <div className="max-w-2xl">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md">
-                                <BarChart className="h-6 w-6" />
-                            </div>
-                            <h3 className="text-2xl font-black uppercase tracking-tight">AI Smart Analytics</h3>
-                        </div>
-                        <p className="text-lg font-medium opacity-90 leading-relaxed mb-8">
-                            Our intelligence engine has identified a <span className="text-amber-400 font-black">15% increase</span> in mobile-web transactions this week. Consider optimizing the "Fast-Checkout" experience for better conversion.
-                        </p>
-                        <button className="px-10 py-5 bg-white text-indigo-600 rounded-[28px] font-black uppercase tracking-[0.2em] text-sm shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3">
-                            Deep Analysis Report <ArrowRight className="h-4 w-4" />
-                        </button>
-                    </div>
-                    <div className="flex flex-col gap-6">
-                        <div className="p-8 bg-white/10 rounded-[48px] backdrop-blur-xl border border-white/10">
-                            <span className="text-[10px] font-black uppercase tracking-widest opacity-70">Weekly Conversion</span>
-                            <div className="text-4xl font-black mt-2">64.8%</div>
-                            <div className="flex items-center gap-2 mt-2 text-emerald-400 font-bold">
-                                <ArrowUpRight className="h-4 w-4" /> +4.2%
-                            </div>
-                        </div>
-                        <div className="p-8 bg-white/10 rounded-[48px] backdrop-blur-xl border border-white/10">
-                            <span className="text-[10px] font-black uppercase tracking-widest opacity-70">Customer Retention</span>
-                            <div className="text-4xl font-black mt-2">82.1%</div>
-                            <div className="flex items-center gap-2 mt-2 text-emerald-400 font-bold">
-                                <ArrowUpRight className="h-4 w-4" /> +1.8%
-                            </div>
-                        </div>
-                    </div>
+                    ))}
                 </div>
-                <div className="absolute top-0 right-0 h-full w-1/3 bg-gradient-to-l from-white/5 to-transparent pointer-events-none" />
+
+
             </div>
         </AdminLayout>
     );

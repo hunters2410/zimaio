@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Filter, Search } from 'lucide-react';
+import { ShoppingBag, Filter, Search, ChevronDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -41,6 +41,7 @@ export function ProductsPage() {
   const [categorySearch, setCategorySearch] = useState('');
   const { formatPrice } = useCurrency();
   const { calculatePrice } = useSettings();
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -93,9 +94,46 @@ export function ProductsPage() {
     }
   };
 
-  const filteredProducts = selectedCategory
-    ? products.filter(p => p.category_id === selectedCategory)
-    : products;
+  const searchQuery = searchParams.get('search');
+
+  const filteredProducts = products.filter(p => {
+    // 1. Filter by Category
+    if (selectedCategory && p.category_id !== selectedCategory) {
+      return false;
+    }
+    // 2. Filter by Search Query (Deep Search)
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase().trim();
+      const searchWords = query.split(/\s+/).filter(w => w.length > 0);
+
+      return searchWords.every(word => {
+        // Search in Name
+        if (p.name.toLowerCase().includes(word)) return true;
+
+        // Search in Slug (often contains semantic keywords)
+        if (p.slug && p.slug.toLowerCase().includes(word)) return true;
+
+        // Search in Description (if available)
+        if ((p as any).description && (p as any).description.toLowerCase().includes(word)) return true;
+
+        // Search in Tags (if tags exists as array or string)
+        if ((p as any).tags) {
+          if (Array.isArray((p as any).tags)) {
+            if ((p as any).tags.some((t: string) => t.toLowerCase().includes(word))) return true;
+          } else if (typeof (p as any).tags === 'string') {
+            if ((p as any).tags.toLowerCase().includes(word)) return true;
+          }
+        }
+
+        // Search in Category Name (if we could map it, but we only have category_id on product currently)
+        // We could assume user might search 'Electronics' which is a category. 
+        // Ideally we join category name, but let's stick to product fields for now. 
+
+        return false;
+      });
+    }
+    return true;
+  });
 
   const filteredCategories = categories.filter(c =>
     c.name.toLowerCase().includes(categorySearch.toLowerCase())
@@ -103,6 +141,13 @@ export function ProductsPage() {
 
   const handleAdClick = async (adId: string) => {
     await supabase.rpc('increment_ad_clicks', { ad_id: adId });
+  };
+
+  const handleFindSimilar = (categoryId: string) => {
+    const category = categories.find(c => c.id === categoryId);
+    if (category) {
+      handleCategoryClick(category.id, category.slug);
+    }
   };
 
   return (
@@ -116,12 +161,31 @@ export function ProductsPage() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
-          <aside className="lg:w-64 space-y-6">
+          {/* Mobile Filter Toggle */}
+          <div className="lg:hidden mb-4">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-xl shadow-sm text-sm font-bold text-gray-700 active:scale-[0.99] transition-transform"
+            >
+              <span className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-emerald-600" />
+                Filters & Categories
+              </span>
+              <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${showFilters ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+
+          <aside className={`lg:w-64 space-y-6 lg:block ${showFilters ? 'block' : 'hidden'}`}>
             <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm transition-all duration-300">
-              <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-4 flex items-center">
-                <Filter className="h-4 w-4 mr-2 text-emerald-600" />
-                Filter by Category
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest flex items-center">
+                  <Filter className="h-4 w-4 mr-2 text-emerald-600" />
+                  Filter by Category
+                </h3>
+                <button onClick={() => setShowFilters(false)} className="lg:hidden text-gray-400 hover:text-gray-600">
+                  <ChevronDown className="h-4 w-4 rotate-180" />
+                </button>
+              </div>
 
               <div className="relative mb-6">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
@@ -136,7 +200,7 @@ export function ProductsPage() {
 
               <div className="space-y-1 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 <button
-                  onClick={() => handleCategoryClick(null)}
+                  onClick={() => { handleCategoryClick(null); setShowFilters(false); }}
                   className={`w-full text-left px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${selectedCategory === null
                     ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200'
                     : 'text-gray-500 hover:bg-gray-50'
@@ -147,7 +211,7 @@ export function ProductsPage() {
                 {filteredCategories.map((category) => (
                   <button
                     key={category.id}
-                    onClick={() => handleCategoryClick(category.id, category.slug)}
+                    onClick={() => { handleCategoryClick(category.id, category.slug); setShowFilters(false); }}
                     className={`w-full text-left px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${selectedCategory === category.id
                       ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200'
                       : 'text-gray-500 hover:bg-gray-50'
@@ -229,8 +293,20 @@ export function ProductsPage() {
                         <span className="text-sm font-black text-emerald-600">
                           {formatPrice(calculatePrice(product.base_price).total, product.currency_code || 'USD')}
                         </span>
-                        <div className="p-1 px-2 border border-gray-100 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                          <ShoppingBag className="h-3 w-3" />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleFindSimilar(product.category_id);
+                            }}
+                            title="Find similar products"
+                            className="p-1 px-2 border border-gray-100 rounded-lg hover:bg-emerald-600 hover:text-white transition-all"
+                          >
+                            <Search className="h-3 w-3" />
+                          </button>
+                          <div className="p-1 px-2 border border-gray-100 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                            <ShoppingBag className="h-3 w-3" />
+                          </div>
                         </div>
                       </div>
                     </div>

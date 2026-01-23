@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Store, Star, MapPin, ShieldCheck, ShoppingBag, Package, ArrowLeft, MessageSquare, Send, AlertCircle, Check } from 'lucide-react';
+import { Store, Star, MapPin, ShieldCheck, ShoppingBag, Package, ArrowLeft, MessageSquare, Send, AlertCircle, Check, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface VendorShop {
@@ -22,7 +22,7 @@ interface Product {
     images: string[];
     slug: string;
     is_active: boolean;
-    category: { name: string };
+    category: { name: string; slug: string };
 }
 
 interface VendorReview {
@@ -36,6 +36,7 @@ interface VendorReview {
 }
 
 export function ShopPage() {
+    const navigate = useNavigate();
     const { userId } = useParams<{ userId: string }>();
     const { user } = useAuth();
     const [vendor, setVendor] = useState<VendorShop | null>(null);
@@ -68,7 +69,7 @@ export function ShopPage() {
                 // Fetch Vendor's Products
                 const { data: productData } = await supabase
                     .from('products')
-                    .select('*, category:categories(name)')
+                    .select('*, category:categories(name, slug)')
                     .eq('vendor_id', vendorData.id)
                     .eq('is_active', true)
                     .order('created_at', { ascending: false });
@@ -128,7 +129,7 @@ export function ShopPage() {
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <div className="text-center">
                     <div className="w-16 h-16 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-gray-400 font-black uppercase tracking-widest text-xs">Opening Boutique...</p>
+                    <p className="text-gray-400 font-black uppercase tracking-widest text-xs">Opening Shop...</p>
                 </div>
             </div>
         );
@@ -140,7 +141,7 @@ export function ShopPage() {
                 <div className="text-center max-w-md">
                     <Store className="w-20 h-20 text-gray-200 mx-auto mb-6" />
                     <h2 className="text-3xl font-black text-gray-900 uppercase mb-4">Store Not Found</h2>
-                    <p className="text-gray-500 font-medium mb-8">The boutique you are looking for might have moved or closed down.</p>
+                    <p className="text-gray-500 font-medium mb-8">The shop you are looking for might have moved or closed down.</p>
                     <Link to="/vendors" className="inline-flex items-center gap-2 bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-emerald-200 hover:bg-emerald-700 transition-all">
                         <ArrowLeft className="w-4 h-4" /> Back to Vendors
                     </Link>
@@ -257,8 +258,23 @@ export function ShopPage() {
                                         </h4>
                                         <div className="flex items-center justify-between border-t border-gray-50 pt-2">
                                             <p className="text-sm font-black text-emerald-600">${product.base_price.toFixed(2)}</p>
-                                            <div className="w-6 h-6 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                                                <ArrowLeft className="w-3.5 h-3.5 rotate-180" />
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        if (product.category?.slug) {
+                                                            navigate(`/products?category=${product.category.slug}`);
+                                                        }
+                                                    }}
+                                                    className="w-6 h-6 bg-gray-50 hover:bg-emerald-600 hover:text-white text-gray-400 rounded-lg flex items-center justify-center transition-all"
+                                                    title="Find Similar"
+                                                >
+                                                    <Search className="w-3.5 h-3.5" />
+                                                </button>
+                                                <div className="w-6 h-6 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                                                    <ArrowLeft className="w-3.5 h-3.5 rotate-180" />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

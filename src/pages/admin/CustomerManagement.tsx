@@ -146,8 +146,8 @@ export function CustomerManagement() {
 
       if (profileError) throw profileError;
 
-      setMessage({ type: 'success', text: 'Customer created successfully' });
-      // handleCloseModal(); // Keep modal open
+      setMessage({ type: 'success', text: 'Customer ' + formData.full_name + ' created successfully' });
+      handleCloseModal();
       fetchCustomers();
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message || 'Failed to create customer' });
@@ -192,8 +192,8 @@ export function CustomerManagement() {
 
       if (error) throw error;
 
-      setMessage({ type: 'success', text: 'Customer updated successfully' });
-      // handleCloseModal(); // Keep modal open
+      setMessage({ type: 'success', text: 'Customer ' + formData.full_name + ' updated successfully' });
+      handleCloseModal();
       fetchCustomers();
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message || 'Failed to update customer' });
@@ -481,30 +481,30 @@ export function CustomerManagement() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className={`${cardBg} rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`}>
-            <div className={`p-6 border-b ${borderColor} flex items-center justify-between`}>
-              <h2 className={`text-2xl font-bold ${textPrimary}`}>
-                {isEditing ? 'Edit Customer' : 'Add New Customer'}
+          <div className={`${cardBg} rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto`}>
+            <div className={`p-4 border-b ${borderColor} flex items-center justify-between`}>
+              <h2 className={`text-xl font-bold ${textPrimary}`}>
+                {isEditing ? 'Edit Customer' : 'Add Customer'}
               </h2>
               <button onClick={handleCloseModal} className={`${textSecondary} hover:text-gray-600 transition`}>
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
             {message && (
-              <div className={`mx-6 mt-6 p-4 rounded-lg flex items-start space-x-3 ${message.type === 'success'
+              <div className={`mx-4 mt-4 p-3 rounded-lg flex items-start space-x-2 text-xs font-bold ${message.type === 'success'
                 ? 'bg-green-50 border border-green-200 text-green-800'
                 : 'bg-red-50 border border-red-200 text-red-800'
                 }`}>
-                <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                 <span>{message.text}</span>
               </div>
             )}
 
-            <form onSubmit={isEditing ? handleUpdate : handleCreate} className="p-5">
+            <form onSubmit={isEditing ? handleUpdate : handleCreate} className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                 <div>
-                  <label className={`block text-xs font-bold uppercase mb-1 ${textPrimary}`}>
+                  <label className={`block text-[10px] font-black uppercase mb-1 ${textSecondary}`}>
                     Email *
                   </label>
                   <input
@@ -512,26 +512,26 @@ export function CustomerManagement() {
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'}`}
+                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/20 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'}`}
                   />
                 </div>
 
                 <div>
-                  <label className={`block text-xs font-bold uppercase mb-1 ${textPrimary}`}>
-                    Password {isEditing ? '(leave blank to keep current)' : '*'}
+                  <label className={`block text-[10px] font-black uppercase mb-1 ${textSecondary}`}>
+                    Password {isEditing ? '(Optional)' : '*'}
                   </label>
                   <input
                     type="password"
                     required={!isEditing}
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'}`}
+                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/20 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'}`}
                     minLength={6}
                   />
                 </div>
 
                 <div>
-                  <label className={`block text-xs font-bold uppercase mb-1 ${textPrimary}`}>
+                  <label className={`block text-[10px] font-black uppercase mb-1 ${textSecondary}`}>
                     Full Name *
                   </label>
                   <input
@@ -539,30 +539,30 @@ export function CustomerManagement() {
                     required
                     value={formData.full_name}
                     onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'}`}
+                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/20 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'}`}
                   />
                 </div>
 
                 <div>
-                  <label className={`block text-xs font-bold uppercase mb-1 ${textPrimary}`}>
+                  <label className={`block text-[10px] font-black uppercase mb-1 ${textSecondary}`}>
                     Phone
                   </label>
                   <input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'}`}
+                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/20 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'}`}
                   />
                 </div>
 
                 <div>
-                  <label className={`block text-xs font-bold uppercase mb-1 ${textPrimary}`}>
+                  <label className={`block text-[10px] font-black uppercase mb-1 ${textSecondary}`}>
                     Language
                   </label>
                   <select
                     value={formData.language_code}
                     onChange={(e) => setFormData({ ...formData, language_code: e.target.value })}
-                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'}`}
+                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/20 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'}`}
                   >
                     <option value="en">English</option>
                     <option value="es">Spanish</option>
@@ -583,20 +583,20 @@ export function CustomerManagement() {
                 </label>
               </div>
 
-              <div className="flex justify-end space-x-3">
+              <div className="flex justify-end space-x-2">
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className={`px-4 py-1.5 text-sm font-bold border ${borderColor} rounded-lg hover:bg-gray-100 transition ${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700'}`}
+                  className={`px-3 py-1.5 text-sm font-bold border ${borderColor} rounded-lg hover:bg-gray-100 transition ${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700'}`}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-4 py-1.5 text-sm font-bold bg-gradient-to-r from-cyan-600 to-green-600 text-white rounded-lg hover:from-cyan-700 hover:to-green-700 transition disabled:opacity-50"
+                  className="px-3 py-1.5 text-sm font-bold bg-gradient-to-r from-cyan-600 to-green-600 text-white rounded-lg hover:shadow-lg transition disabled:opacity-50"
                 >
-                  {loading ? 'Processing...' : isEditing ? 'Update Customer' : 'Create Customer'}
+                  {loading ? 'Processing...' : isEditing ? 'Update' : 'Create'}
                 </button>
               </div>
             </form>

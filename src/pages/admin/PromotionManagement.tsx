@@ -1,24 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { supabase } from '../../lib/supabase';
-import {
-    Tag,
-    Plus,
-    Edit,
-    Trash2,
-    Calendar,
-    Percent,
-    CheckCircle,
-    XCircle,
-    Search,
-    Filter,
-    X,
-    AlertCircle,
-    Clock,
-    Zap,
-    Ticket
-} from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
+import { Tag, Plus, Edit, Trash2, Calendar, Percent, CheckCircle, XCircle, Search, Filter, X, AlertCircle, Clock, Zap, Ticket } from 'lucide-react';
 
 interface Promotion {
     id: string;
@@ -38,9 +21,6 @@ interface Promotion {
 }
 
 export function PromotionManagement() {
-    const { theme } = useTheme();
-    const isDark = theme === 'dark';
-
     const [promotions, setPromotions] = useState<Promotion[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -63,11 +43,6 @@ export function PromotionManagement() {
         min_purchase_amount: 0,
     });
 
-    const cardBg = isDark ? 'bg-gray-800' : 'bg-white';
-    const textPrimary = isDark ? 'text-gray-100' : 'text-gray-900';
-    const textSecondary = isDark ? 'text-gray-400' : 'text-gray-600';
-    const borderColor = isDark ? 'border-gray-700' : 'border-gray-200';
-
     useEffect(() => {
         fetchPromotions();
     }, []);
@@ -75,11 +50,7 @@ export function PromotionManagement() {
     const fetchPromotions = async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('promotions')
-                .select('*')
-                .order('created_at', { ascending: false });
-
+            const { data, error } = await supabase.from('promotions').select('*').order('start_date', { ascending: false });
             if (error) throw error;
             setPromotions(data || []);
         } catch (error: any) {
@@ -92,23 +63,16 @@ export function PromotionManagement() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-
         try {
             if (editingPromotion) {
-                const { error } = await supabase
-                    .from('promotions')
-                    .update(formData)
-                    .eq('id', editingPromotion.id);
+                const { error } = await supabase.from('promotions').update(formData).eq('id', editingPromotion.id);
                 if (error) throw error;
-                setMessage({ type: 'success', text: 'Promotion updated successfully' });
+                setMessage({ type: 'success', text: 'Promotion updated' });
             } else {
-                const { error } = await supabase
-                    .from('promotions')
-                    .insert([formData]);
+                const { error } = await supabase.from('promotions').insert([formData]);
                 if (error) throw error;
-                setMessage({ type: 'success', text: 'Promotion created successfully' });
+                setMessage({ type: 'success', text: 'Promotion created' });
             }
-
             fetchPromotions();
             handleCloseModal();
         } catch (error: any) {
@@ -137,15 +101,11 @@ export function PromotionManagement() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this promotion?')) return;
-
+        if (!confirm('Delete this promotion?')) return;
         try {
-            const { error } = await supabase
-                .from('promotions')
-                .delete()
-                .eq('id', id);
+            const { error } = await supabase.from('promotions').delete().eq('id', id);
             if (error) throw error;
-            setMessage({ type: 'success', text: 'Promotion deleted successfully' });
+            setMessage({ type: 'success', text: 'Promotion deleted' });
             fetchPromotions();
         } catch (error: any) {
             setMessage({ type: 'error', text: error.message });
@@ -154,10 +114,7 @@ export function PromotionManagement() {
 
     const handleToggleStatus = async (promo: Promotion) => {
         try {
-            const { error } = await supabase
-                .from('promotions')
-                .update({ is_active: !promo.is_active })
-                .eq('id', promo.id);
+            const { error } = await supabase.from('promotions').update({ is_active: !promo.is_active }).eq('id', promo.id);
             if (error) throw error;
             fetchPromotions();
         } catch (error: any) {
@@ -168,410 +125,274 @@ export function PromotionManagement() {
     const handleCloseModal = () => {
         setShowModal(false);
         setEditingPromotion(null);
-        setFormData({
-            name: '',
-            description: '',
-            promo_type: 'coupon',
-            code: '',
-            discount_value: 0,
-            discount_type: 'percentage',
-            start_date: '',
-            end_date: '',
-            is_active: true,
-            usage_limit: 0,
-            min_purchase_amount: 0,
-        });
+        setFormData({ name: '', description: '', promo_type: 'coupon', code: '', discount_value: 0, discount_type: 'percentage', start_date: '', end_date: '', is_active: true, usage_limit: 0, min_purchase_amount: 0 });
     };
 
     const filteredPromotions = promotions.filter(p => {
-        const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (p.code?.toLowerCase().includes(searchTerm.toLowerCase()));
+        const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || (p.code?.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesType = filterType === 'all' || p.promo_type === filterType;
         return matchesSearch && matchesType;
     });
 
     return (
         <AdminLayout>
-            <div className="mb-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-4">
+                <div className="flex justify-between items-center">
                     <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl shadow-indigo-100 dark:shadow-none shadow-lg">
-                                <Tag className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-                            </div>
-                            <h1 className={`text-3xl font-black uppercase tracking-tight ${textPrimary}`}>Promotion Management</h1>
-                        </div>
-                        <p className={textSecondary}>Create and manage discount codes, flash sales, and platform campaigns.</p>
+                        <h1 className="text-2xl font-bold text-slate-900 flex items-center">
+                            <Tag className="w-6 h-6 mr-2 text-indigo-600" />
+                            Promotion Management
+                        </h1>
+                        <p className="text-slate-600 mt-1 text-sm">Create and manage discount codes and campaigns</p>
                     </div>
-                    <button
-                        onClick={() => setShowModal(true)}
-                        className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-2xl font-bold shadow-lg shadow-indigo-200 dark:shadow-none hover:scale-105 transition-all active:scale-95"
-                    >
-                        <Plus className="h-5 w-5" />
-                        Add Promotion
+                    <button onClick={() => setShowModal(true)} className="flex items-center px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition text-sm">
+                        <Plus className="w-4 h-4 mr-1" />
+                        Add
                     </button>
                 </div>
-            </div>
 
-            {message && (
-                <div className={`mb-6 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 ${message.type === 'success'
-                        ? 'bg-emerald-50 border border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400'
-                        : 'bg-rose-50 border border-rose-200 text-rose-800 dark:bg-rose-900/20 dark:border-rose-800 dark:text-rose-400'
-                    }`}>
-                    <AlertCircle className="h-5 w-5 shrink-0" />
-                    <span className="font-bold flex-1">{message.text}</span>
-                    <button onClick={() => setMessage(null)}><X className="h-5 w-5" /></button>
-                </div>
-            )}
+                {message && (
+                    <div className={`p-2 rounded flex items-center gap-2 text-sm ${message.type === 'success' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                        <AlertCircle className="w-4 h-4" />
+                        <span>{message.text}</span>
+                        <button onClick={() => setMessage(null)}><X className="w-4 h-4" /></button>
+                    </div>
+                )}
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div className={`${cardBg} p-6 rounded-[32px] border ${borderColor} shadow-sm group hover:shadow-xl transition-all`}>
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
-                            <Ticket className="h-6 w-6" />
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                        <div className="flex items-center justify-between mb-2">
+                            <Ticket className="w-5 h-5 text-indigo-600" />
                         </div>
+                        <p className="text-xs text-slate-600 uppercase">Total</p>
+                        <h2 className="text-2xl font-bold text-slate-900">{promotions.length}</h2>
                     </div>
-                    <p className={`text-sm font-bold uppercase tracking-widest ${textSecondary}`}>Total Promos</p>
-                    <h2 className={`text-3xl font-black ${textPrimary} mt-1`}>{promotions.length}</h2>
-                </div>
-                <div className={`${cardBg} p-6 rounded-[32px] border ${borderColor} shadow-sm group hover:shadow-xl transition-all`}>
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-                            <CheckCircle className="h-6 w-6" />
+                    <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                        <div className="flex items-center justify-between mb-2">
+                            <CheckCircle className="w-5 h-5 text-emerald-600" />
                         </div>
+                        <p className="text-xs text-slate-600 uppercase">Active</p>
+                        <h2 className="text-2xl font-bold text-emerald-600">{promotions.filter(p => p.is_active).length}</h2>
                     </div>
-                    <p className={`text-sm font-bold uppercase tracking-widest ${textSecondary}`}>Active Now</p>
-                    <h2 className={`text-3xl font-black text-emerald-600 mt-1`}>{promotions.filter(p => p.is_active).length}</h2>
-                </div>
-                <div className={`${cardBg} p-6 rounded-[32px] border ${borderColor} shadow-sm group hover:shadow-xl transition-all`}>
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-2xl text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform">
-                            <Zap className="h-6 w-6" />
+                    <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                        <div className="flex items-center justify-between mb-2">
+                            <Zap className="w-5 h-5 text-amber-600" />
                         </div>
+                        <p className="text-xs text-slate-600 uppercase">Usages</p>
+                        <h2 className="text-2xl font-bold text-slate-900">{promotions.reduce((acc, p) => acc + p.usage_count, 0)}</h2>
                     </div>
-                    <p className={`text-sm font-bold uppercase tracking-widest ${textSecondary}`}>Total Usages</p>
-                    <h2 className={`text-3xl font-black ${textPrimary} mt-1`}>{promotions.reduce((acc, p) => acc + p.usage_count, 0)}</h2>
-                </div>
-                <div className={`${cardBg} p-6 rounded-[32px] border ${borderColor} shadow-sm group hover:shadow-xl transition-all`}>
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="p-3 bg-rose-50 dark:bg-rose-900/20 rounded-2xl text-rose-600 dark:text-rose-400 group-hover:scale-110 transition-transform">
-                            <Clock className="h-6 w-6" />
+                    <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                        <div className="flex items-center justify-between mb-2">
+                            <Clock className="w-5 h-5 text-rose-600" />
                         </div>
+                        <p className="text-xs text-slate-600 uppercase">Expiring</p>
+                        <h2 className="text-2xl font-bold text-rose-600">
+                            {promotions.filter(p => {
+                                const daysLeft = (new Date(p.end_date).getTime() - new Date().getTime()) / (1000 * 3600 * 24);
+                                return daysLeft > 0 && daysLeft < 7;
+                            }).length}
+                        </h2>
                     </div>
-                    <p className={`text-sm font-bold uppercase tracking-widest ${textSecondary}`}>Expiring Soon</p>
-                    <h2 className={`text-3xl font-black text-rose-600 mt-1`}>
-                        {promotions.filter(p => {
-                            const daysLeft = (new Date(p.end_date).getTime() - new Date().getTime()) / (1000 * 3600 * 24);
-                            return daysLeft > 0 && daysLeft < 7;
-                        }).length}
-                    </h2>
                 </div>
-            </div>
 
-            {/* Filters & Search */}
-            <div className={`${cardBg} p-6 rounded-[32px] border ${borderColor} shadow-sm mb-8`}>
-                <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-                    <div className="relative flex-1">
-                        <Search className={`absolute left-4 top-1/2 -translate-y-1/2 ${textSecondary} h-5 w-5`} />
-                        <input
-                            type="text"
-                            placeholder="Search by name or code..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className={`w-full pl-12 pr-6 py-4 rounded-2xl border ${borderColor} focus:outline-none focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-gray-50'}`}
-                        />
-                    </div>
-                    <div className="flex items-center gap-4">
+                <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                    <div className="flex flex-col lg:flex-row gap-3">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                            <input type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-8 pr-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white text-sm" />
+                        </div>
                         <div className="flex items-center gap-2">
-                            <Filter className={`h-5 w-5 ${textSecondary}`} />
-                            <select
-                                value={filterType}
-                                onChange={(e) => setFilterType(e.target.value)}
-                                className={`px-6 py-4 rounded-2xl border ${borderColor} focus:outline-none focus:ring-4 focus:ring-indigo-500/20 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-gray-50'}`}
-                            >
+                            <Filter className="w-4 h-4 text-slate-400" />
+                            <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white text-sm">
                                 <option value="all">All Types</option>
                                 <option value="coupon">Coupons</option>
                                 <option value="flash_sale">Flash Sales</option>
-                                <option value="banner">Banner Promos</option>
+                                <option value="banner">Banners</option>
                             </select>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Promotions List */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                {loading ? (
-                    Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className={`${cardBg} h-64 rounded-[40px] animate-pulse border ${borderColor}`} />
-                    ))
-                ) : filteredPromotions.map((promo) => (
-                    <div key={promo.id} className={`${cardBg} rounded-[40px] border ${borderColor} shadow-sm overflow-hidden group hover:shadow-2xl transition-all duration-500`}>
-                        <div className={`h-3 ${promo.is_active ? 'bg-indigo-600' : 'bg-gray-400'}`} />
-                        <div className="p-8">
-                            <div className="flex justify-between items-start mb-6">
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${promo.promo_type === 'coupon' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' :
-                                                promo.promo_type === 'flash_sale' ? 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400' :
-                                                    'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                            }`}>
-                                            {promo.promo_type.replace('_', ' ')}
-                                        </span>
-                                        {promo.is_active ? (
-                                            <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100 dark:border-emerald-800">
-                                                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                                Live
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {loading ? (
+                        Array.from({ length: 3 }).map((_, i) => (
+                            <div key={i} className="bg-gray-50 h-48 rounded animate-pulse border border-gray-200" />
+                        ))
+                    ) : filteredPromotions.map((promo) => (
+                        <div key={promo.id} className="bg-gray-50 rounded border border-gray-200 overflow-hidden hover:shadow-md transition">
+                            <div className={`h-2 ${promo.is_active ? 'bg-indigo-600' : 'bg-gray-400'}`} />
+                            <div className="p-4">
+                                <div className="flex justify-between items-start mb-3">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-1 mb-1">
+                                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${promo.promo_type === 'coupon' ? 'bg-indigo-100 text-indigo-700' : promo.promo_type === 'flash_sale' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                                {promo.promo_type.replace('_', ' ')}
                                             </span>
-                                        ) : (
-                                            <span className="px-3 py-1 bg-gray-50 text-gray-500 dark:bg-gray-700 dark:text-gray-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-gray-100 dark:border-gray-600">
-                                                Disabled
-                                            </span>
-                                        )}
+                                            {promo.is_active && (
+                                                <span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs">
+                                                    <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" />
+                                                    Live
+                                                </span>
+                                            )}
+                                        </div>
+                                        <h3 className="text-lg font-bold text-slate-900">{promo.name}</h3>
                                     </div>
-                                    <h3 className={`text-2xl font-black ${textPrimary} uppercase tracking-tight line-clamp-1`}>{promo.name}</h3>
                                 </div>
-                            </div>
 
-                            <div className={`p-4 rounded-3xl mb-6 flex items-center justify-between ${isDark ? 'bg-gray-700/50' : 'bg-indigo-50/50'}`}>
-                                <div className="flex flex-col">
-                                    <span className={`text-[10px] font-black uppercase tracking-widest ${textSecondary}`}>Discount</span>
-                                    <span className={`text-2xl font-black ${textPrimary}`}>
-                                        {promo.discount_type === 'percentage' ? `${promo.discount_value}%` : `$${promo.discount_value}`}
-                                    </span>
+                                <div className="p-2 rounded bg-indigo-50 mb-3 flex items-center justify-between">
+                                    <div>
+                                        <span className="text-xs text-slate-600">Discount</span>
+                                        <p className="text-xl font-bold text-slate-900">
+                                            {promo.discount_type === 'percentage' ? `${promo.discount_value}%` : `$${promo.discount_value}`}
+                                        </p>
+                                    </div>
+                                    {promo.code && (
+                                        <div className="text-right">
+                                            <span className="text-xs text-slate-600">Code</span>
+                                            <p className="text-sm font-bold font-mono text-indigo-600 bg-white px-2 py-1 rounded">{promo.code}</p>
+                                        </div>
+                                    )}
                                 </div>
-                                {promo.code && (
-                                    <div className="flex flex-col items-end">
-                                        <span className={`text-[10px] font-black uppercase tracking-widest ${textSecondary}`}>Code</span>
-                                        <span className="text-xl font-black font-mono text-indigo-600 dark:text-indigo-400 bg-white dark:bg-gray-800 px-3 py-1 rounded-xl shadow-sm border border-indigo-100 dark:border-indigo-900/30">
-                                            {promo.code}
+
+                                <div className="space-y-2 mb-4 text-xs">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1 text-gray-500">
+                                            <Calendar className="w-3 h-3" />
+                                            <span>Validity</span>
+                                        </div>
+                                        <span className="font-medium text-slate-900">
+                                            {new Date(promo.start_date).toLocaleDateString()} - {new Date(promo.end_date).toLocaleDateString()}
                                         </span>
                                     </div>
-                                )}
-                            </div>
-
-                            <div className="space-y-4 mb-8">
-                                <div className="flex items-center justify-between text-sm">
-                                    <div className="flex items-center gap-2 text-gray-500">
-                                        <Calendar className="h-4 w-4" />
-                                        <span className="font-bold uppercase text-[10px] tracking-widest">Validity</span>
-                                    </div>
-                                    <span className={`font-bold ${textPrimary}`}>
-                                        {new Date(promo.start_date).toLocaleDateString()} - {new Date(promo.end_date).toLocaleDateString()}
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between text-sm">
-                                    <div className="flex items-center gap-2 text-gray-500">
-                                        <Zap className="h-4 w-4" />
-                                        <span className="font-bold uppercase text-[10px] tracking-widest">Usage</span>
-                                    </div>
-                                    <div className="flex flex-col items-end">
-                                        <span className={`font-bold ${textPrimary}`}>
-                                            {promo.usage_count} / {promo.usage_limit || '∞'}
-                                        </span>
-                                        <div className="w-32 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mt-1 overflow-hidden">
-                                            <div
-                                                className="h-full bg-indigo-600"
-                                                style={{ width: `${Math.min(100, (promo.usage_count / (promo.usage_limit || 100)) * 100)}%` }}
-                                            />
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1 text-gray-500">
+                                            <Zap className="w-3 h-3" />
+                                            <span>Usage</span>
+                                        </div>
+                                        <div className="flex flex-col items-end">
+                                            <span className="font-medium text-slate-900">{promo.usage_count} / {promo.usage_limit || '∞'}</span>
+                                            <div className="w-24 h-1 bg-gray-200 rounded-full mt-1 overflow-hidden">
+                                                <div className="h-full bg-indigo-600" style={{ width: `${Math.min(100, (promo.usage_count / (promo.usage_limit || 100)) * 100)}%` }} />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="flex items-center gap-3 pt-6 border-t border-gray-100 dark:border-gray-700">
-                                <button
-                                    onClick={() => handleEdit(promo)}
-                                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-indigo-50 hover:bg-indigo-600 hover:text-white dark:bg-indigo-900/30 dark:hover:bg-indigo-600 text-indigo-600 dark:text-indigo-400 rounded-2xl font-bold transition-all duration-300"
-                                >
-                                    <Edit className="h-4 w-4" />
-                                    Edit
-                                </button>
-                                <button
-                                    onClick={() => handleToggleStatus(promo)}
-                                    className={`p-3 rounded-2xl transition-all duration-300 ${promo.is_active
-                                            ? 'bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white dark:bg-rose-900/30 dark:hover:bg-rose-600'
-                                            : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white dark:bg-emerald-900/30 dark:hover:bg-emerald-600'
-                                        }`}
-                                >
-                                    {promo.is_active ? <XCircle className="h-5 w-5" /> : <CheckCircle className="h-5 w-5" />}
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(promo.id)}
-                                    className="p-3 bg-gray-50 text-gray-400 hover:bg-rose-600 hover:text-white dark:bg-gray-700 dark:hover:bg-rose-600 rounded-2xl transition-all duration-300"
-                                >
-                                    <Trash2 className="h-5 w-5" />
-                                </button>
+                                <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
+                                    <button onClick={() => handleEdit(promo)} className="flex-1 flex items-center justify-center gap-1 py-1 bg-indigo-100 hover:bg-indigo-600 hover:text-white text-indigo-600 rounded transition text-sm">
+                                        <Edit className="w-3 h-3" />
+                                        Edit
+                                    </button>
+                                    <button onClick={() => handleToggleStatus(promo)} className={`p-1 rounded transition ${promo.is_active ? 'bg-rose-100 text-rose-600 hover:bg-rose-600 hover:text-white' : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-600 hover:text-white'}`}>
+                                        {promo.is_active ? <XCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                                    </button>
+                                    <button onClick={() => handleDelete(promo.id)} className="p-1 bg-gray-100 text-gray-400 hover:bg-rose-600 hover:text-white rounded transition">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    ))}
 
-                {!loading && filteredPromotions.length === 0 && (
-                    <div className="col-span-full py-20 bg-gray-50 dark:bg-gray-800/50 rounded-[48px] border-4 border-dashed border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center">
-                        <div className="p-6 bg-white dark:bg-gray-800 rounded-3xl shadow-xl mb-6">
-                            <Ticket className="h-16 w-16 text-gray-200 dark:text-gray-600" />
+                    {!loading && filteredPromotions.length === 0 && (
+                        <div className="col-span-full py-12 bg-gray-50 rounded border-2 border-dashed border-gray-200 flex flex-col items-center text-center">
+                            <Ticket className="w-12 h-12 text-gray-300 mb-3" />
+                            <h3 className="text-lg font-bold text-slate-900">No Promotions Found</h3>
+                            <p className="text-sm text-slate-600">Try adjusting filters or create a new campaign</p>
                         </div>
-                        <h3 className={`text-2xl font-black uppercase tracking-tight ${textPrimary}`}>No Promotions Found</h3>
-                        <p className={`${textSecondary} mt-2 max-w-sm`}>Try adjusting your search filters or create a new campaign to get started.</p>
+                    )}
+                </div>
+
+                {showModal && (
+                    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-indigo-600 text-white">
+                                <div>
+                                    <h2 className="text-xl font-bold">{editingPromotion ? 'Edit Campaign' : 'New Campaign'}</h2>
+                                    <p className="text-xs text-white/70">Configure promotion details</p>
+                                </div>
+                                <button onClick={handleCloseModal} className="p-1 hover:bg-white/20 rounded transition">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-4">
+                                <form onSubmit={handleSubmit} className="space-y-3">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div className="md:col-span-2">
+                                            <label className="block text-xs font-medium text-slate-700 mb-1">Campaign Name *</label>
+                                            <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white text-sm" placeholder="Summer Sale 2026" />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-700 mb-1">Type</label>
+                                            <select value={formData.promo_type} onChange={(e) => setFormData({ ...formData, promo_type: e.target.value as any })} className="w-full px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white text-sm">
+                                                <option value="coupon">Coupon Code</option>
+                                                <option value="flash_sale">Flash Sale</option>
+                                                <option value="banner">Banner Promo</option>
+                                            </select>
+                                        </div>
+
+                                        {formData.promo_type === 'coupon' && (
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-700 mb-1">Code *</label>
+                                                <input type="text" required value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })} className="w-full px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white text-sm uppercase font-mono" placeholder="SUMMER50" />
+                                            </div>
+                                        )}
+
+                                        <div className="p-3 bg-slate-50 rounded md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-700 mb-1">Discount Value *</label>
+                                                <div className="flex gap-2">
+                                                    <input type="number" step="0.01" required value={formData.discount_value} onChange={(e) => setFormData({ ...formData, discount_value: parseFloat(e.target.value) })} className="flex-1 px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white text-sm" />
+                                                    <select value={formData.discount_type} onChange={(e) => setFormData({ ...formData, discount_type: e.target.value as any })} className="px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white text-sm">
+                                                        <option value="percentage">%</option>
+                                                        <option value="fixed">$</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-700 mb-1">Min Purchase</label>
+                                                <input type="number" value={formData.min_purchase_amount} onChange={(e) => setFormData({ ...formData, min_purchase_amount: parseFloat(e.target.value) })} className="w-full px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white text-sm" />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-700 mb-1">Start Date *</label>
+                                            <input type="date" required value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} className="w-full px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white text-sm" />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-700 mb-1">End Date *</label>
+                                            <input type="date" required value={formData.end_date} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} className="w-full px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white text-sm" />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-700 mb-1">Usage Limit (0 for ∞)</label>
+                                            <input type="number" value={formData.usage_limit} onChange={(e) => setFormData({ ...formData, usage_limit: parseInt(e.target.value) })} className="w-full px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white text-sm" />
+                                        </div>
+
+                                        <div className="flex items-center">
+                                            <button type="button" onClick={() => setFormData({ ...formData, is_active: !formData.is_active })} className="flex items-center gap-2">
+                                                <div className={`w-10 h-5 rounded-full p-0.5 transition ${formData.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+                                                    <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${formData.is_active ? 'translate-x-5' : ''}`} />
+                                                </div>
+                                                <span className="text-sm font-medium text-slate-900">Active</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-3 border-t border-gray-200 flex justify-end">
+                                        <button type="submit" disabled={loading} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition disabled:opacity-50 text-sm">
+                                            {loading ? 'Processing...' : editingPromotion ? 'Save Changes' : 'Create Promotion'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
-
-            {showModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-                    <div className={`${cardBg} rounded-[48px] shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-white/20`}>
-                        <div className="p-8 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-indigo-600 text-white">
-                            <div>
-                                <h2 className="text-3xl font-black uppercase tracking-tighter">
-                                    {editingPromotion ? 'Edit Campaign' : 'New Campaign'}
-                                </h2>
-                                <p className="text-white/70 font-bold uppercase text-[10px] tracking-[0.2em] mt-1">Platform-wide promotion configuration</p>
-                            </div>
-                            <button
-                                onClick={handleCloseModal}
-                                className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl transition-all"
-                            >
-                                <X className="h-6 w-6" />
-                            </button>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-10">
-                            <form onSubmit={handleSubmit} className="space-y-8">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="md:col-span-2">
-                                        <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-3`}>Campaign Name *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            className={`w-full px-6 py-4 rounded-2xl border ${borderColor} focus:outline-none focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-gray-50 font-bold'}`}
-                                            placeholder="e.g., Summer Mega Sale 2026"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-3`}>Promo Type</label>
-                                        <select
-                                            value={formData.promo_type}
-                                            onChange={(e) => setFormData({ ...formData, promo_type: e.target.value as any })}
-                                            className={`w-full px-6 py-4 rounded-2xl border ${borderColor} focus:outline-none focus:ring-4 focus:ring-indigo-500/20 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-gray-50'}`}
-                                        >
-                                            <option value="coupon">Coupon Code</option>
-                                            <option value="flash_sale">Flash Sale</option>
-                                            <option value="banner">Banner Promo</option>
-                                        </select>
-                                    </div>
-
-                                    {formData.promo_type === 'coupon' && (
-                                        <div>
-                                            <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-3`}>Coupon Code *</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={formData.code}
-                                                onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                                                className={`w-full px-6 py-4 rounded-2xl border ${borderColor} focus:outline-none focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 uppercase font-mono tracking-widest ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-indigo-50/50'}`}
-                                                placeholder="SUMMER50"
-                                            />
-                                        </div>
-                                    )}
-
-                                    <div className="p-6 bg-slate-50 dark:bg-gray-900/40 rounded-[32px] md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div>
-                                            <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-3`}>Discount Value *</label>
-                                            <div className="flex gap-4">
-                                                <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    required
-                                                    value={formData.discount_value}
-                                                    onChange={(e) => setFormData({ ...formData, discount_value: parseFloat(e.target.value) })}
-                                                    className={`flex-1 px-6 py-4 rounded-2xl border ${borderColor} focus:outline-none focus:ring-4 focus:ring-indigo-500/20 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white font-bold'}`}
-                                                />
-                                                <select
-                                                    value={formData.discount_type}
-                                                    onChange={(e) => setFormData({ ...formData, discount_type: e.target.value as any })}
-                                                    className={`px-4 py-4 rounded-2xl border ${borderColor} focus:outline-none focus:ring-4 focus:ring-indigo-500/20 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white font-bold'}`}
-                                                >
-                                                    <option value="percentage">%</option>
-                                                    <option value="fixed">$</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-3`}>Min purchase Amount</label>
-                                            <input
-                                                type="number"
-                                                value={formData.min_purchase_amount}
-                                                onChange={(e) => setFormData({ ...formData, min_purchase_amount: parseFloat(e.target.value) })}
-                                                className={`w-full px-6 py-4 rounded-2xl border ${borderColor} focus:outline-none focus:ring-4 focus:ring-indigo-500/20 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white font-bold'}`}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-3`}>Start Date *</label>
-                                        <input
-                                            type="date"
-                                            required
-                                            value={formData.start_date}
-                                            onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                                            className={`w-full px-6 py-4 rounded-2xl border ${borderColor} focus:outline-none focus:ring-4 focus:ring-indigo-500/20 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-gray-50 font-bold'}`}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-3`}>End Date *</label>
-                                        <input
-                                            type="date"
-                                            required
-                                            value={formData.end_date}
-                                            onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                                            className={`w-full px-6 py-4 rounded-2xl border ${borderColor} focus:outline-none focus:ring-4 focus:ring-indigo-500/20 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-gray-50 font-bold'}`}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-3`}>Usage Limit (0 for ∞)</label>
-                                        <input
-                                            type="number"
-                                            value={formData.usage_limit}
-                                            onChange={(e) => setFormData({ ...formData, usage_limit: parseInt(e.target.value) })}
-                                            className={`w-full px-6 py-4 rounded-2xl border ${borderColor} focus:outline-none focus:ring-4 focus:ring-indigo-500/20 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-gray-50'}`}
-                                        />
-                                    </div>
-
-                                    <div className="flex items-center">
-                                        <button
-                                            type="button"
-                                            onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
-                                            className="flex items-center gap-4 group"
-                                        >
-                                            <div className={`w-14 h-8 rounded-full p-1 transition-all ${formData.is_active ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
-                                                <div className={`w-6 h-6 bg-white rounded-full shadow-lg transition-transform ${formData.is_active ? 'translate-x-6' : ''}`} />
-                                            </div>
-                                            <span className={`text-sm font-bold uppercase tracking-widest ${textPrimary}`}>Promotion Active</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="pt-8 border-t border-gray-100 dark:border-gray-700 flex justify-end">
-                                    <button
-                                        type="submit"
-                                        disabled={loading}
-                                        className="px-12 py-5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-[24px] font-black uppercase tracking-[0.2em] shadow-xl shadow-indigo-200 dark:shadow-none hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
-                                    >
-                                        {loading ? 'Processing...' : editingPromotion ? 'Save Changes' : 'Create Promotion'}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            )}
         </AdminLayout>
     );
 }

@@ -3,11 +3,9 @@ import { AdminLayout } from '../../components/AdminLayout';
 import { supabase } from '../../lib/supabase';
 import {
     Package,
-    Plus,
     Trash2,
     X,
     AlertCircle,
-    FolderTree,
     Tag
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -160,40 +158,34 @@ export function CatalogManagement() {
             <div className="mb-8">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-3 bg-cyan-100 dark:bg-cyan-900/30 rounded-2xl">
-                                <FolderTree className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
-                            </div>
-                            <h1 className={`text-3xl font-black uppercase tracking-tight ${textPrimary}`}>Catalog Management</h1>
-                        </div>
-                        <p className={textSecondary}>Manage product categories and brands to organize your marketplace.</p>
+                        <h1 className={`text-xl font-bold ${textPrimary} mb-1`}>Catalog Management</h1>
+                        <p className={`text-sm ${textSecondary}`}>Manage product categories and brands to organize your marketplace.</p>
                     </div>
                     <button
                         onClick={() => setShowModal(true)}
-                        className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-600 to-emerald-600 text-white rounded-2xl font-bold hover:scale-105 transition-all shadow-lg active:scale-95"
+                        className={`px-4 py-2 border ${borderColor} ${textPrimary} rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition text-sm font-medium`}
                     >
-                        <Plus className="h-5 w-5" />
                         Add {activeTab === 'categories' ? 'Category' : 'Brand'}
                     </button>
                 </div>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-4 mb-8">
+            <div className="flex gap-2 mb-6 border-b ${borderColor}">
                 <button
                     onClick={() => setActiveTab('categories')}
-                    className={`px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${activeTab === 'categories'
-                        ? 'bg-cyan-600 text-white shadow-lg'
-                        : `${cardBg} ${textSecondary} border ${borderColor} hover:bg-gray-50 dark:hover:bg-gray-700`
+                    className={`px-4 py-2 font-medium text-sm transition-all ${activeTab === 'categories'
+                        ? `${textPrimary} border-b-2 border-gray-900 dark:border-white`
+                        : `${textSecondary} hover:${textPrimary}`
                         }`}
                 >
                     Categories
                 </button>
                 <button
                     onClick={() => setActiveTab('brands')}
-                    className={`px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${activeTab === 'brands'
-                        ? 'bg-cyan-600 text-white shadow-lg'
-                        : `${cardBg} ${textSecondary} border ${borderColor} hover:bg-gray-50 dark:hover:bg-gray-700`
+                    className={`px-4 py-2 font-medium text-sm transition-all ${activeTab === 'brands'
+                        ? `${textPrimary} border-b-2 border-gray-900 dark:border-white`
+                        : `${textSecondary} hover:${textPrimary}`
                         }`}
                 >
                     Brands
@@ -212,156 +204,213 @@ export function CatalogManagement() {
             )}
 
             {/* Content */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                {loading ? (
-                    Array.from({ length: 4 }).map((_, i) => (
-                        <div key={i} className={`${cardBg} h-64 rounded-[40px] animate-pulse border ${borderColor}`} />
-                    ))
-                ) : activeTab === 'categories' ? (
-                    categories.map((cat) => (
-                        <div key={cat.id} className={`${cardBg} rounded-[40px] border ${borderColor} shadow-sm overflow-hidden group hover:shadow-2xl transition-all duration-500`}>
-                            <div className="h-40 relative bg-gray-100 dark:bg-gray-700">
-                                {cat.image_url ? (
-                                    <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                        <Package className="h-12 w-12 text-gray-300 dark:text-gray-600" />
-                                    </div>
-                                )}
-                                <div className="absolute top-4 right-4">
-                                    <span className={`px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${cat.is_active ? 'bg-emerald-500 text-white' : 'bg-gray-500 text-white'}`}>
-                                        {cat.is_active ? 'Active' : 'Hidden'}
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="p-6">
-                                <h3 className={`text-xl font-black ${textPrimary} uppercase tracking-tight`}>{cat.name}</h3>
-                                <p className={`text-xs ${textSecondary} mt-1 line-clamp-1`}>{cat.description || 'No description'}</p>
-                                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                                    <button onClick={() => handleEdit(cat)} className="flex-1 py-2 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 rounded-xl font-bold text-xs hover:bg-cyan-100 transition">
-                                        Edit
-                                    </button>
-                                    <button onClick={() => handleDelete(cat.id)} className="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-xl transition">
-                                        <Trash2 className="h-4 w-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    ))
-                ) : (
-                    brands.map((brand) => (
-                        <div key={brand.id} className={`${cardBg} rounded-[40px] border ${borderColor} shadow-sm overflow-hidden group hover:shadow-2xl transition-all duration-500 text-center p-8`}>
-                            <div className="w-24 h-24 mx-auto mb-6 rounded-3xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center p-4">
-                                {brand.logo_url ? (
-                                    <img src={brand.logo_url} alt={brand.name} className="max-w-full max-h-full object-contain" />
-                                ) : (
-                                    <Tag className="h-10 w-10 text-gray-300" />
-                                )}
-                            </div>
-                            <h3 className={`text-xl font-black ${textPrimary} uppercase tracking-tight mb-2`}>{brand.name}</h3>
-                            <div className="flex items-center justify-center gap-2 mt-6">
-                                <button onClick={() => handleEdit(brand)} className="px-6 py-2 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 rounded-xl font-bold text-xs hover:bg-cyan-100 transition">
-                                    Edit
-                                </button>
-                                <button onClick={() => handleDelete(brand.id)} className="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-xl transition">
-                                    <Trash2 className="h-4 w-4" />
-                                </button>
-                            </div>
-                        </div>
-                    ))
-                )}
+            {/* Content Table */}
+            <div className="rounded border border-gray-200 overflow-hidden bg-white">
+                <table className="w-full text-left border-collapse">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th className="px-3 py-2 text-xs font-medium text-gray-900 border-r border-gray-200">
+                                {activeTab === 'categories' ? 'Image' : 'Logo'}
+                            </th>
+                            <th className="px-3 py-2 text-xs font-medium text-gray-900 border-r border-gray-200">
+                                Name
+                            </th>
+                            {activeTab === 'categories' && (
+                                <th className="px-3 py-2 text-xs font-medium text-gray-900 border-r border-gray-200">
+                                    Description
+                                </th>
+                            )}
+                            <th className="px-3 py-2 text-xs font-medium text-gray-900 border-r border-gray-200">
+                                Status
+                            </th>
+                            <th className="px-3 py-2 text-xs font-medium text-gray-900 text-right">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                        {loading ? (
+                            <tr>
+                                <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                                    Loading...
+                                </td>
+                            </tr>
+                        ) : activeTab === 'categories' ? (
+                            categories.map((cat) => (
+                                <tr key={cat.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-3 py-2 border-r border-gray-200 w-12">
+                                        <div className="w-8 h-8 rounded bg-gray-50 overflow-hidden flex items-center justify-center border border-gray-200">
+                                            {cat.image_url ? (
+                                                <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <Package className="h-4 w-4 text-gray-400" />
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-3 py-2 border-r border-gray-200">
+                                        <div className="text-xs font-bold text-gray-900">{cat.name}</div>
+                                        <div className="text-xs text-gray-500">{cat.slug}</div>
+                                    </td>
+                                    <td className="px-3 py-2 border-r border-gray-200 max-w-xs truncate text-xs text-gray-600">
+                                        {cat.description || '-'}
+                                    </td>
+                                    <td className="px-3 py-2 border-r border-gray-200">
+                                        <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-900 border border-gray-200 text-xs">
+                                            {cat.is_active ? 'Active' : 'Hidden'}
+                                        </span>
+                                    </td>
+                                    <td className="px-3 py-2 text-right">
+                                        <div className="flex items-center justify-end gap-1">
+                                            <button
+                                                onClick={() => handleEdit(cat)}
+                                                className="px-2 py-1 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 rounded text-xs"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(cat.id)}
+                                                className="px-2 py-1 text-gray-600 border border-gray-200 hover:bg-gray-50 rounded text-xs"
+                                            >
+                                                <Trash2 className="h-3 w-3" />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            brands.map((brand) => (
+                                <tr key={brand.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-3 py-2 border-r border-gray-200 w-12">
+                                        <div className="w-8 h-8 rounded bg-gray-50 overflow-hidden flex items-center justify-center border border-gray-200">
+                                            {brand.logo_url ? (
+                                                <img src={brand.logo_url} alt={brand.name} className="w-full h-full object-contain" />
+                                            ) : (
+                                                <Tag className="h-4 w-4 text-gray-400" />
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-3 py-2 border-r border-gray-200">
+                                        <div className="text-xs font-bold text-gray-900">{brand.name}</div>
+                                        <div className="text-xs text-gray-500">{brand.slug}</div>
+                                    </td>
+                                    <td className="px-3 py-2 border-r border-gray-200">
+                                        <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-900 border border-gray-200 text-xs">
+                                            {brand.is_active ? 'Active' : 'Hidden'}
+                                        </span>
+                                    </td>
+                                    <td className="px-3 py-2 text-right">
+                                        <div className="flex items-center justify-end gap-1">
+                                            <button
+                                                onClick={() => handleEdit(brand)}
+                                                className="px-2 py-1 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 rounded text-xs"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(brand.id)}
+                                                className="px-2 py-1 text-gray-600 border border-gray-200 hover:bg-gray-50 rounded text-xs"
+                                            >
+                                                <Trash2 className="h-3 w-3" />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
             </div>
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-                    <div className={`${cardBg} rounded-[48px] shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-white/20`}>
-                        <div className="p-8 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-cyan-600 text-white">
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded shadow-lg max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col border border-gray-200">
+                        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-white">
                             <div>
-                                <h2 className="text-3xl font-black uppercase tracking-tighter">
+                                <h2 className="text-sm font-bold text-gray-900">
                                     {editingItem ? 'Edit ' : 'New '}{activeTab === 'categories' ? 'Category' : 'Brand'}
                                 </h2>
                             </div>
-                            <button onClick={handleCloseModal} className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl transition-all">
-                                <X className="h-6 w-6" />
+                            <button onClick={handleCloseModal} className="p-2 hover:bg-gray-100 rounded transition">
+                                <X className="h-4 w-4 text-gray-500" />
                             </button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-10">
-                            <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <form onSubmit={handleSubmit} className="space-y-4">
                                 <div>
-                                    <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-2`}>Name *</label>
+                                    <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-1`}>Name *</label>
                                     <input
                                         type="text"
                                         required
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        className={`w-full px-6 py-4 rounded-2xl border ${borderColor} focus:outline-none focus:ring-4 focus:ring-cyan-500/20 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-gray-50'}`}
+                                        className={`w-full px-3 py-2 text-xs rounded-lg border ${borderColor} focus:outline-none focus:ring-2 focus:ring-slate-900/10 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white text-slate-900'}`}
                                     />
                                 </div>
                                 <div>
-                                    <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-2`}>Slug * (URL friendly)</label>
+                                    <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-1`}>Slug *</label>
                                     <input
                                         type="text"
                                         required
                                         value={formData.slug}
                                         onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/ /g, '-') })}
-                                        className={`w-full px-6 py-4 rounded-2xl border ${borderColor} focus:outline-none focus:ring-4 focus:ring-cyan-500/20 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-gray-50'}`}
+                                        className={`w-full px-3 py-2 text-xs rounded-lg border ${borderColor} focus:outline-none focus:ring-2 focus:ring-slate-900/10 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white text-slate-900'}`}
                                     />
                                 </div>
                                 {activeTab === 'categories' && (
                                     <>
                                         <div>
-                                            <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-2`}>Description</label>
+                                            <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-1`}>Description</label>
                                             <textarea
                                                 value={formData.description}
                                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                                rows={3}
-                                                className={`w-full px-6 py-4 rounded-2xl border ${borderColor} focus:outline-none focus:ring-4 focus:ring-cyan-500/20 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-gray-50'}`}
+                                                rows={2}
+                                                className={`w-full px-3 py-2 text-xs rounded-lg border ${borderColor} focus:outline-none focus:ring-2 focus:ring-slate-900/10 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white text-slate-900'}`}
                                             />
                                         </div>
                                         <div>
-                                            <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-2`}>Sort Order</label>
+                                            <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-1`}>Sort Order</label>
                                             <input
                                                 type="number"
                                                 value={formData.sort_order}
                                                 onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) })}
-                                                className={`w-full px-6 py-4 rounded-2xl border ${borderColor} focus:outline-none focus:ring-4 focus:ring-cyan-500/20 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-gray-50'}`}
+                                                className={`w-full px-3 py-2 text-xs rounded-lg border ${borderColor} focus:outline-none focus:ring-2 focus:ring-slate-900/10 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white text-slate-900'}`}
                                             />
                                         </div>
                                     </>
                                 )}
                                 <div>
-                                    <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-2`}>
+                                    <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-1`}>
                                         {activeTab === 'categories' ? 'Image URL' : 'Logo URL'}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.image_url || formData.logo_url}
                                         onChange={(e) => setFormData({ ...formData, [activeTab === 'categories' ? 'image_url' : 'logo_url']: e.target.value })}
-                                        className={`w-full px-6 py-4 rounded-2xl border ${borderColor} focus:outline-none focus:ring-4 focus:ring-cyan-500/20 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-gray-50'}`}
-                                        placeholder="https://example.com/image.png"
+                                        className={`w-full px-3 py-2 text-xs rounded-lg border ${borderColor} focus:outline-none focus:ring-2 focus:ring-slate-900/10 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white text-slate-900'}`}
+                                        placeholder="URL here"
                                     />
                                 </div>
                                 <div className="flex items-center">
                                     <button
                                         type="button"
                                         onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
-                                        className="flex items-center gap-4 group"
+                                        className="flex items-center gap-3"
                                     >
-                                        <div className={`w-14 h-8 rounded-full p-1 transition-all ${formData.is_active ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
-                                            <div className={`w-6 h-6 bg-white rounded-full shadow-lg transition-transform ${formData.is_active ? 'translate-x-6' : ''}`} />
+                                        <div className={`w-10 h-6 bg-slate-200 dark:bg-slate-700 rounded-full relative transition-colors ${formData.is_active ? 'bg-emerald-500' : ''}`}>
+                                            <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${formData.is_active ? 'translate-x-4' : ''}`} />
                                         </div>
-                                        <span className={`text-sm font-bold uppercase tracking-widest ${textPrimary}`}>Active in Shop</span>
+                                        <span className={`text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white`}>Active</span>
                                     </button>
                                 </div>
 
-                                <div className="pt-8 border-t border-gray-100 dark:border-gray-700 flex justify-end">
+                                <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end">
                                     <button
                                         type="submit"
-                                        className="px-12 py-5 bg-gradient-to-r from-cyan-600 to-emerald-600 text-white rounded-[24px] font-black uppercase tracking-[0.2em] shadow-xl hover:scale-105 active:scale-95 transition-all text-sm"
+                                        className="px-6 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-800 transition-all"
                                     >
-                                        Save Changes
+                                        Save
                                     </button>
                                 </div>
                             </form>

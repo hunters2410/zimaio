@@ -47,7 +47,7 @@ export function VendorsPage() {
                 <div className="container mx-auto px-4 relative z-10 text-center">
                     <h1 className="text-4xl md:text-6xl font-black mb-6 uppercase tracking-tight">Our Verified Vendors</h1>
                     <p className="text-lg text-gray-400 max-w-2xl mx-auto font-medium uppercase tracking-wide leading-relaxed">
-                        Discover premium boutiques and professional sellers curated for excellence and reliability.
+                        Discover premium shops and professional sellers curated for excellence and reliability.
                     </p>
                 </div>
             </div>

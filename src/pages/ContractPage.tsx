@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
+
 import { supabase } from '../lib/supabase';
 import { FileText, Calendar } from 'lucide-react';
 
@@ -36,11 +35,9 @@ export function ContractPage() {
   if (loading) {
     return (
       <div>
-        <Header />
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -48,22 +45,19 @@ export function ContractPage() {
   if (!contract) {
     return (
       <div>
-        <Header />
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Contract Not Found</h1>
             <p className="text-gray-600">The requested contract could not be found.</p>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div>
-      <Header />
-      <div className="min-h-screen bg-gray-50 py-12">
+      <div className="min-h-screen bg-white py-12">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="bg-white rounded-lg shadow-sm p-8 md:p-12">
             <div className="mb-8">
@@ -97,7 +91,6 @@ export function ContractPage() {
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   );
 }

@@ -26,8 +26,6 @@ import {
   LogOut,
   Menu,
   X,
-  Sun,
-  Moon,
   ChevronLeft,
   ChevronRight,
   Search,
@@ -37,7 +35,9 @@ import {
 } from 'lucide-react';
 import { ReactNode, useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
+import { useSiteSettings } from '../contexts/SiteSettingsContext';
+import { AdminNotifications } from './admin/AdminNotifications';
+import { supabase } from '../lib/supabase';
 import { Zap } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -59,15 +59,20 @@ const navItems: NavItem[] = [
   { path: '/admin/vendors', label: 'Vendor Management', icon: <Store className="h-5 w-5" />, section: 'Users & Vendors' },
   { path: '/admin/vendor-packages', label: 'Vendor Packages', icon: <Package className="h-5 w-5" />, section: 'Users & Vendors' },
   { path: '/admin/customers', label: 'Customer Management', icon: <Users className="h-5 w-5" />, section: 'Users & Vendors' },
-  { path: '/admin/logistics', label: 'Logistic Management', icon: <Truck className="h-5 w-5" />, section: 'Users & Vendors' },
   { path: '/admin/roles-permissions', label: 'Roles & Permissions', icon: <Shield className="h-5 w-5" />, section: 'Users & Vendors' },
   { path: '/admin/kyc-verification', label: 'KYC Verification', icon: <Shield className="h-5 w-5" />, section: 'Users & Vendors' },
   { path: '/admin/vendor-contracts', label: 'Vendor Contracts', icon: <FileCheck className="h-5 w-5" />, section: 'Users & Vendors' },
   { path: '/admin/customer-contracts', label: 'Customer Contracts', icon: <FileText className="h-5 w-5" />, section: 'Users & Vendors' },
 
+
+  { path: '/admin/logistics', label: 'Logistics Overview', icon: <Globe className="h-5 w-5" />, section: 'Shipping & Logistics' },
+  { path: '/admin/shipping', label: 'Shipping Methods', icon: <BarChart3 className="h-5 w-5" />, section: 'Shipping & Logistics' },
+  { path: '/admin/delivery', label: 'Delivery Tracking', icon: <Truck className="h-5 w-5" />, section: 'Shipping & Logistics' },
+  { path: '/admin/logistic-contracts', label: 'Logistic Contracts', icon: <FileCheck className="h-5 w-5" />, section: 'Shipping & Logistics' },
+
   { path: '/admin/wallets', label: 'Wallet Management', icon: <DollarSign className="h-5 w-5" />, section: 'Financial' },
   { path: '/admin/payment-gateways', label: 'Payment Gateways', icon: <CreditCard className="h-5 w-5" />, section: 'Financial' },
-  { path: '/admin/vat', label: 'VAT Management', icon: <Percent className="h-5 w-5" />, section: 'Financial' },
+  { path: '/admin/vat', label: 'Commission & VAT', icon: <Percent className="h-5 w-5" />, section: 'Financial' },
   { path: '/admin/commissions', label: 'Commission Oversight', icon: <DollarSign className="h-5 w-5" />, section: 'Financial' },
   { path: '/admin/refunds', label: 'Refund Management', icon: <RefreshCw className="h-5 w-5" />, section: 'Financial' },
   { path: '/admin/ledger', label: 'Immutable Ledger', icon: <BookOpen className="h-5 w-5" />, section: 'Financial' },
@@ -75,7 +80,6 @@ const navItems: NavItem[] = [
   { path: '/admin/catalog', label: 'Catalog Management', icon: <Package className="h-5 w-5" />, section: 'Products & Orders' },
   { path: '/admin/products', label: 'Products Management', icon: <Package className="h-5 w-5" />, section: 'Products & Orders' },
   { path: '/admin/orders', label: 'Orders Management', icon: <ShoppingCart className="h-5 w-5" />, section: 'Products & Orders' },
-  { path: '/admin/shipping', label: 'Shipping Management', icon: <Truck className="h-5 w-5" />, section: 'Products & Orders' },
 
   { path: '/admin/currencies', label: 'Currency Management', icon: <DollarSign className="h-5 w-5" />, section: 'System' },
   { path: '/admin/languages', label: 'Language Management', icon: <Globe className="h-5 w-5" />, section: 'System' },
@@ -97,11 +101,12 @@ const navItems: NavItem[] = [
 
 const sections = Array.from(new Set(navItems.map(item => item.section)));
 
-export function AdminLayout({ children }: AdminLayoutProps) {
+function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, profile } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { settings } = useSiteSettings();
+  // const { theme, toggleTheme } = useTheme(); // Theme removed
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('admin-sidebar-collapsed');
@@ -109,7 +114,32 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   });
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const [quickActionSearch, setQuickActionSearch] = useState('');
+  const [pendingKycCount, setPendingKycCount] = useState(0);
   const quickActionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetchPendingKycCount();
+
+    // Subscribe to changes in vendor_profiles to update count
+    const kycChannel = supabase
+      .channel('kyc-pending-count')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vendor_profiles' }, () => {
+        fetchPendingKycCount();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(kycChannel);
+    };
+  }, []);
+
+  const fetchPendingKycCount = async () => {
+    const { count } = await supabase
+      .from('vendor_profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('kyc_status', 'pending');
+    setPendingKycCount(count || 0);
+  };
 
   // Close quick actions on click outside
   useEffect(() => {
@@ -168,31 +198,34 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       if (savedScroll) {
         sidebar.scrollTop = parseInt(savedScroll, 10);
       }
-    }
-  }, []); // Run once on mount
 
-  const saveScrollPosition = () => {
-    if (sidebarRef.current) {
-      sessionStorage.setItem('adminSidebarScroll', sidebarRef.current.scrollTop.toString());
+      // Add scroll event listener to save position as user scrolls
+      const handleScroll = () => {
+        sessionStorage.setItem('adminSidebarScroll', sidebar.scrollTop.toString());
+      };
+
+      sidebar.addEventListener('scroll', handleScroll);
+      return () => sidebar.removeEventListener('scroll', handleScroll);
     }
-  };
+  }, []); // Run on mount and keep track
+
 
   const handleLogout = async () => {
     await signOut();
     navigate('/admin');
   };
 
-  const isDark = theme === 'dark';
+  const isDark = false; // Forced light mode
 
   // Theme Colors
-  const bgColor = isDark ? 'bg-[#0f172a]' : 'bg-[#f8fafc]'; // Slate-900 / Slate-50
-  const sidebarBg = isDark ? 'bg-[#1e293b]' : 'bg-white'; // Slate-800 / White
-  const headerBg = isDark ? 'bg-[#1e293b]/80' : 'bg-white/80'; // Glassmorphism backdrop
-  const borderColor = isDark ? 'border-slate-700' : 'border-slate-200';
-  const textPrimary = isDark ? 'text-slate-100' : 'text-slate-900';
-  const textSecondary = isDark ? 'text-slate-400' : 'text-slate-500';
-  const hoverBg = isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-50';
-  const activeItemBg = isDark ? 'bg-cyan-500/10 text-cyan-400' : 'bg-cyan-50 text-cyan-700';
+  const bgColor = 'bg-[#f8fafc]'; // Slate-50
+  const sidebarBg = 'bg-white'; // White
+  const headerBg = 'bg-white/80'; // Glassmorphism backdrop
+  const borderColor = 'border-slate-200';
+  const textPrimary = 'text-slate-900';
+  const textSecondary = 'text-slate-500';
+  const hoverBg = 'hover:bg-slate-50';
+  const activeItemBg = 'bg-cyan-50 text-cyan-700';
 
   const expandedWidth = 'w-72';
   const collapsedWidth = 'w-20';
@@ -202,7 +235,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* Sidebar - FIXED LEFT FULL HEIGHT */}
       <aside
-        ref={sidebarRef}
         className={`
           fixed top-0 left-0 bottom-0 z-50
           ${sidebarCollapsed ? collapsedWidth : expandedWidth}
@@ -218,20 +250,17 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           h-20 flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between px-6'}
           border-b ${borderColor}
         `}>
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-10 h-10 shrink-0">
+          <div className="flex items-center justify-center w-full">
+            <div className={`${sidebarCollapsed ? 'w-10 h-10' : 'w-40 h-14'} transition-all duration-300 flex items-center justify-center`}>
               <img
-                src="/zimaio_mineral_edition,_no_background_v1.2.png"
-                alt="ZimAIO"
+                src={settings.site_logo}
+                alt={settings.site_name}
                 className="w-full h-full object-contain"
+                onError={(e) => {
+                  e.currentTarget.src = '/zimaio_mineral_edition,_no_background_v1.2.png';
+                }}
               />
             </div>
-            {!sidebarCollapsed && (
-              <div className="flex flex-col">
-                <span className={`font-black text-xl tracking-tighter leading-none ${textPrimary}`}>ZimAIo</span>
-                <span className="text-[9px] uppercase tracking-widest font-black text-cyan-600 mt-0.5">Admin Panel</span>
-              </div>
-            )}
           </div>
           {!sidebarCollapsed && (
             <button
@@ -244,7 +273,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-6 px-3 custom-scrollbar">
+        <nav
+          ref={sidebarRef}
+          className="flex-1 overflow-y-auto py-6 px-3 custom-scrollbar"
+        >
           {sections.map(section => (
             <div key={section} className="mb-8">
               {!sidebarCollapsed && (
@@ -263,7 +295,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                         to={item.path}
                         onClick={() => {
                           setSidebarOpen(false);
-                          saveScrollPosition();
+                          // No need to explicitly save here as the scroll listener handles it
                         }}
                         className={`
                           group flex items-center ${sidebarCollapsed ? 'justify-center py-3' : 'px-4 py-3'}
@@ -284,8 +316,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                           <span className="ml-3 text-sm truncate">{item.label}</span>
                         )}
 
+                        {item.path === '/admin/kyc-verification' && pendingKycCount > 0 && (
+                          <span className={`ml-auto ${sidebarCollapsed ? 'absolute top-2 right-2' : 'ml-2'} bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full animate-pulse shadow-sm`}>
+                            {pendingKycCount}
+                          </span>
+                        )}
+
                         {/* Active Indicator Strip (Optional Design Element) */}
-                        {isActive && !sidebarCollapsed && (
+                        {isActive && !sidebarCollapsed && item.path !== '/admin/kyc-verification' && (
                           <div className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-500" />
                         )}
                       </Link>
@@ -412,7 +450,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </div>
           </div>
 
-          {/* Right Side (Actions) */}
           <div className="flex items-center gap-2 sm:gap-4">
             <Link
               to="/"
@@ -424,20 +461,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               <span>View Site</span>
             </Link>
 
-            <button
-              onClick={toggleTheme}
-              className={`p-2.5 rounded-xl ${hoverBg} text-slate-500 transition-colors`}
-              title="Toggle Theme"
-            >
-              {isDark ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-600" />}
-            </button>
+            <AdminNotifications />
 
             <div className={`h-8 w-[1px] ${isDark ? 'bg-slate-700' : 'bg-slate-200'} mx-1`}></div>
 
             <div className="flex items-center gap-3 pl-1">
               <div className="text-right hidden sm:block">
-                <p className={`text-sm font-bold ${textPrimary} leading-none`}>{profile?.full_name || 'Admin User'}</p>
-                <p className={`text-xs ${textSecondary} mt-0.5`}>{profile?.email || 'admin@zimaio.com'}</p>
+                <p className={`text-sm font-bold ${textPrimary} leading-none`}>{profile?.full_name}</p>
+                <p className={`text-xs ${textSecondary} mt-0.5`}>{profile?.email}</p>
               </div>
               <div className="relative group cursor-pointer">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-green-600 p-[2px]">
@@ -480,3 +511,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     </div>
   );
 }
+
+export { AdminLayout };
+export default AdminLayout;

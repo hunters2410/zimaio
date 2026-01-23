@@ -3,6 +3,7 @@ import { ShoppingCart, User, Search, Menu, MessageCircle, LogOut, Package, Layou
 import { useAuth } from '../contexts/AuthContext';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { useCart } from '../contexts/CartContext';
+import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -26,6 +27,7 @@ export function Header() {
   const { user, profile, signOut } = useAuth();
   const { currency, setCurrency } = useCurrency();
   const { totalItems } = useCart();
+  const { settings } = useSiteSettings();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -42,7 +44,38 @@ export function Header() {
         .order('order_position');
 
       if (data) {
-        setNavigationItems(data.filter(item => item.label !== 'CATEGORIES'));
+        const filtered = data.filter(item => item.label !== 'CATEGORIES' && item.label !== 'BRANDS');
+        const sellIndex = filtered.findIndex(item => item.url === '/vendor-signup');
+
+        const contactItem: NavigationItem = {
+          id: 'contact-synthetic',
+          label: 'Contact Us',
+          url: '/contact',
+          icon: 'MessageCircle', // MessageCircle icon
+          order_position: 0
+        };
+
+        if (sellIndex !== -1) {
+          filtered.splice(sellIndex + 1, 0, {
+            id: 'logistics-synthetic',
+            label: 'Join Our Logistics',
+            url: '/logistic-signup',
+            icon: 'MapPin',
+            order_position: 0
+          });
+          filtered.splice(sellIndex + 2, 0, contactItem);
+        } else {
+          filtered.push({
+            id: 'logistics-synthetic',
+            label: 'Join Our Logistics',
+            url: '/logistic-signup',
+            icon: 'MapPin',
+            order_position: 0
+          });
+          filtered.push(contactItem);
+        }
+
+        setNavigationItems(filtered);
       }
     };
     const fetchCategories = async () => {
@@ -69,6 +102,8 @@ export function Header() {
   const getIcon = (iconName: string | null) => {
     if (iconName === 'Menu') return <Menu className="h-4 w-4" />;
     if (iconName === 'Package') return <Package className="h-4 w-4" />;
+    if (iconName === 'MessageCircle') return <MessageCircle className="h-4 w-4" />;
+    if (iconName === 'MapPin') return <MapPin className="h-4 w-4" />;
     return null;
   };
 
@@ -78,7 +113,7 @@ export function Header() {
       <div className="bg-white border-b border-gray-100 hidden sm:block">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-10 text-[11px] uppercase tracking-wider font-semibold text-gray-500">
-            <span>Welcome To ZimAIO • Quality Marketplace</span>
+            <span>Welcome To {settings.site_name} • {settings.site_tagline}</span>
             <div className="flex items-center space-x-6">
               {user ? (
                 <Link to="/dashboard" className="hover:text-green-600 transition-colors flex items-center">
@@ -137,9 +172,12 @@ export function Header() {
             {/* Logo */}
             <Link to="/" className="flex-shrink-0 transition-transform active:scale-95 group">
               <img
-                src="/zimaio_mineral_edition,_no_background_v1.2.png"
-                alt="ZimAIO"
+                src={settings.site_logo}
+                alt={settings.site_name}
                 className="h-10 md:h-12 w-auto object-contain"
+                onError={(e) => {
+                  e.currentTarget.src = '/zimaio_mineral_edition,_no_background_v1.2.png';
+                }}
               />
             </Link>
 
@@ -186,6 +224,7 @@ export function Header() {
                       <div className="px-5 py-2.5 border-b border-gray-50 mb-2">
                         <p className="text-[9px] text-gray-400 uppercase font-black tracking-widest mb-1">Authenticating as</p>
                         <p className="text-sm font-bold text-gray-900 truncate">{profile?.full_name}</p>
+                        <p className="text-[10px] text-gray-500 truncate">{user?.email}</p>
                       </div>
                       {profile?.role === 'customer' && (
                         <Link to="/dashboard" className="flex items-center px-5 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors">
@@ -286,7 +325,14 @@ export function Header() {
         <div className="lg:hidden fixed inset-0 z-[100] bg-white animate-in slide-in-from-right duration-300">
           <div className="container mx-auto px-6 py-8">
             <div className="flex items-center justify-between mb-10">
-              <img src="/zimaio_mineral_edition,_no_background_v1.2.png" alt="ZimAIO" className="h-10" />
+              <img
+                src={settings.site_logo}
+                alt={settings.site_name}
+                className="h-10"
+                onError={(e) => {
+                  e.currentTarget.src = '/zimaio_mineral_edition,_no_background_v1.2.png';
+                }}
+              />
               <button onClick={() => setShowMobileMenu(false)} className="p-2 rounded-xl bg-gray-100">
                 <Menu className="h-6 w-6 rotate-90" />
               </button>
@@ -303,30 +349,91 @@ export function Header() {
               </div>
             </div>
 
-            <nav className="flex flex-col gap-1">
+            {/* Mobile User Profile Section */}
+            {user ? (
+              <div className="bg-gray-50 rounded-2xl p-4 mb-8 border border-gray-100 flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold text-xl uppercase">
+                  {profile?.full_name?.[0] || 'U'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-900 truncate">{profile?.full_name}</p>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest">{profile?.role} Account</p>
+                </div>
+                <button onClick={handleSignOut} className="p-2 bg-white rounded-xl shadow-sm border border-gray-100 text-red-500">
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-r from-green-600 to-green-500 rounded-2xl p-6 mb-8 text-white shadow-lg shadow-green-900/20">
+                <h4 className="font-bold text-lg mb-1">Welcome Guest</h4>
+                <p className="text-green-100 text-xs mb-4">Sign in to access your orders and wishlist.</p>
+                <div className="flex gap-3">
+                  <Link to="/login" onClick={() => setShowMobileMenu(false)} className="px-6 py-2 bg-white text-green-600 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg">Sign In</Link>
+                  <Link to="/signup" onClick={() => setShowMobileMenu(false)} className="px-6 py-2 bg-green-700/50 text-white rounded-xl font-bold text-xs uppercase tracking-widest">Join</Link>
+                </div>
+              </div>
+            )}
+
+            <nav className="flex flex-col gap-1 mb-8">
+              <p className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-2 pl-2">Menu</p>
+
+              {user && (
+                <>
+                  {profile?.role === 'customer' && (
+                    <Link to="/dashboard" onClick={() => setShowMobileMenu(false)} className="mobile-link">
+                      <span className="flex items-center gap-3"><LayoutDashboard className="h-5 w-5 text-gray-400" /> Dashboard</span>
+                      <ArrowRight className="h-4 w-4 text-gray-300" />
+                    </Link>
+                  )}
+                  {profile?.role === 'vendor' && (
+                    <Link to="/vendor/dashboard" onClick={() => setShowMobileMenu(false)} className="mobile-link">
+                      <span className="flex items-center gap-3"><LayoutDashboard className="h-5 w-5 text-gray-400" /> Vendor Panel</span>
+                      <ArrowRight className="h-4 w-4 text-gray-300" />
+                    </Link>
+                  )}
+                  {profile?.role === 'admin' && (
+                    <Link to="/admin/dashboard" onClick={() => setShowMobileMenu(false)} className="mobile-link">
+                      <span className="flex items-center gap-3"><LayoutDashboard className="h-5 w-5 text-gray-400" /> Admin Control</span>
+                      <ArrowRight className="h-4 w-4 text-gray-300" />
+                    </Link>
+                  )}
+                  <Link to="/orders" onClick={() => setShowMobileMenu(false)} className="mobile-link">
+                    <span className="flex items-center gap-3"><Package className="h-5 w-5 text-gray-400" /> My Orders</span>
+                    <ArrowRight className="h-4 w-4 text-gray-300" />
+                  </Link>
+                  <Link to="/messages" onClick={() => setShowMobileMenu(false)} className="mobile-link">
+                    <span className="flex items-center gap-3"><MessageCircle className="h-5 w-5 text-gray-400" /> Messages</span>
+                    <ArrowRight className="h-4 w-4 text-gray-300" />
+                  </Link>
+                  <div className="h-px bg-gray-100 my-2" />
+                </>
+              )}
+
               {[
-                { label: 'Categories', url: '/categories' },
-                { label: 'Featured Brands', url: '/brands' },
-                { label: 'Verified Vendors', url: '/vendors' },
-                { label: 'New Arrivals', url: '/products' },
-                { label: 'Sell On ZimAIO', url: '/vendor-signup' },
-                { label: 'Get Support', url: '/support' }
+                { label: 'Categories', url: '/categories', icon: Search },
+                { label: 'Verified Vendors', url: '/vendors', icon: User },
+                { label: 'New Arrivals', url: '/products', icon: Package },
+                { label: 'Sell On ZimAIO', url: '/vendor-signup', icon: DollarSign },
+                { label: 'Join Our Logistics', url: '/logistic-signup', icon: MapPin },
               ].map((link) => (
                 <Link
                   key={link.url}
                   to={link.url}
                   onClick={() => setShowMobileMenu(false)}
-                  className="py-4 text-lg font-bold text-gray-900 border-b border-gray-50 flex items-center justify-between group active:bg-gray-50 transition-colors"
+                  className="mobile-link"
                 >
-                  <span>{link.label}</span>
-                  <ArrowRight className="h-5 w-5 text-gray-300 group-hover:translate-x-1 transition-transform" />
+                  <span className="flex items-center gap-3">
+                    <link.icon className="h-5 w-5 text-gray-400" />
+                    {link.label}
+                  </span>
+                  <ArrowRight className="h-4 w-4 text-gray-300" />
                 </Link>
               ))}
             </nav>
 
             <div className="mt-12 p-6 bg-green-600 rounded-3xl text-white">
               <h4 className="font-bold mb-2">Ready to sell?</h4>
-              <p className="text-sm text-green-100 mb-4 opacity-80">Open your boutique on ZimAIO today.</p>
+              <p className="text-sm text-green-100 mb-4 opacity-80">Open your shop on ZimAIO today.</p>
               <Link
                 to="/vendor-signup"
                 className="inline-flex items-center text-sm font-bold bg-white text-green-600 px-6 py-2.5 rounded-xl shadow-lg"

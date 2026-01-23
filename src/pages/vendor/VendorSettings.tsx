@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Lock, Mail, Save, AlertCircle, CheckCircle, Store, Upload, Image } from 'lucide-react';
+import { Lock, Mail, Save, AlertCircle, CheckCircle, Store, Upload, Image, DollarSign } from 'lucide-react';
 
 export function VendorSettings() {
     const { user } = useAuth();
@@ -13,6 +13,7 @@ export function VendorSettings() {
     const [shopDescription, setShopDescription] = useState('');
     const [shopLogoUrl, setShopLogoUrl] = useState('');
     const [shopBannerUrl, setShopBannerUrl] = useState('');
+    const [currencyCode, setCurrencyCode] = useState('USD');
 
     const [loading, setLoading] = useState(false);
     const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -25,17 +26,30 @@ export function VendorSettings() {
 
     const fetchShopDetails = async () => {
         if (!user) return;
-        const { data } = await supabase
+
+        // Fetch vendor profile
+        const { data: vendorData } = await supabase
             .from('vendor_profiles')
             .select('shop_name, shop_description, shop_logo_url, shop_banner_url')
             .eq('user_id', user.id)
             .single();
 
-        if (data) {
-            setShopName(data.shop_name || '');
-            setShopDescription(data.shop_description || '');
-            setShopLogoUrl(data.shop_logo_url || '');
-            setShopBannerUrl(data.shop_banner_url || '');
+        if (vendorData) {
+            setShopName(vendorData.shop_name || '');
+            setShopDescription(vendorData.shop_description || '');
+            setShopLogoUrl(vendorData.shop_logo_url || '');
+            setShopBannerUrl(vendorData.shop_banner_url || '');
+        }
+
+        // Fetch profile currency
+        const { data: profileData } = await supabase
+            .from('profiles')
+            .select('currency_code')
+            .eq('id', user.id)
+            .single();
+
+        if (profileData) {
+            setCurrencyCode(profileData.currency_code || 'USD');
         }
     };
 
@@ -80,7 +94,8 @@ export function VendorSettings() {
         setMessage(null);
 
         try {
-            const { error } = await supabase
+            // Update vendor profile
+            const { error: vendorError } = await supabase
                 .from('vendor_profiles')
                 .update({
                     shop_name: shopName,
@@ -90,8 +105,17 @@ export function VendorSettings() {
                 })
                 .eq('user_id', user?.id);
 
-            if (error) throw error;
-            setMessage({ type: 'success', text: 'Shop details updated successfully.' });
+            if (vendorError) throw vendorError;
+
+            // Update user profile currency
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .update({ currency_code: currencyCode })
+                .eq('id', user?.id);
+
+            if (profileError) throw profileError;
+
+            setMessage({ type: 'success', text: 'Financial and shop settings updated successfully.' });
         } catch (error: any) {
             setMessage({ type: 'error', text: error.message });
         } finally {
@@ -247,10 +271,49 @@ export function VendorSettings() {
                             className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <Save className="w-3.5 h-3.5" />
-                            {loading ? 'Saving...' : 'Save Details'}
+                            {loading ? 'Saving...' : 'Save Settings'}
                         </button>
                     </div>
                 </form>
+            </div>
+
+            {/* Financial Settings */}
+            <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-5">
+                    <div className="bg-cyan-50 p-2 rounded-lg">
+                        <DollarSign className="w-4 h-4 text-cyan-600" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-sm">Financial Settings</h3>
+                </div>
+
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-widest">Withdrawal & Payout Currency</label>
+                        <p className="text-[10px] text-gray-400 mb-3 font-bold uppercase tracking-widest leading-relaxed">Select how you want to receive your profits and view your primary balances.</p>
+                        <div className="grid grid-cols-2 gap-4">
+                            <button
+                                onClick={() => setCurrencyCode('USD')}
+                                className={`px-6 py-4 rounded-xl border-2 transition-all flex items-center justify-between ${currencyCode === 'USD' ? 'border-cyan-500 bg-cyan-50/50 text-cyan-700' : 'border-gray-50 bg-gray-50/50 text-gray-400 opacity-50'}`}
+                            >
+                                <div className="text-left font-black uppercase text-xs tracking-widest">
+                                    United States Dollar
+                                    <p className="font-bold text-[9px] opacity-60 mt-0.5">International Standard (USD)</p>
+                                </div>
+                                {currencyCode === 'USD' && <CheckCircle size={16} />}
+                            </button>
+                            <button
+                                onClick={() => setCurrencyCode('ZIG')}
+                                className={`px-6 py-4 rounded-xl border-2 transition-all flex items-center justify-between ${currencyCode === 'ZIG' ? 'border-amber-500 bg-amber-50/50 text-amber-700' : 'border-gray-50 bg-gray-50/50 text-gray-400 opacity-50'}`}
+                            >
+                                <div className="text-left font-black uppercase text-xs tracking-widest">
+                                    Zimbabwe Gold
+                                    <p className="font-bold text-[9px] opacity-60 mt-0.5">Local Stable (ZIG)</p>
+                                </div>
+                                {currencyCode === 'ZIG' && <CheckCircle size={16} />}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">

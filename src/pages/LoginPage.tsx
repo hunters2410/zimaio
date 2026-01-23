@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import { Package } from 'lucide-react';
 
 export function LoginPage() {
@@ -9,6 +10,7 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
+  const { settings } = useSiteSettings();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,9 +62,12 @@ export function LoginPage() {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
             <img
-              src="/zimaio_mineral_edition,_no_background_v1.2.png"
-              alt="ZimAIO"
+              src={settings.site_logo}
+              alt={settings.site_name}
               className="h-12 w-auto object-contain"
+              onError={(e) => {
+                e.currentTarget.src = '/zimaio_mineral_edition,_no_background_v1.2.png';
+              }}
             />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
@@ -84,7 +89,7 @@ export function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
               placeholder="you@example.com"
               required
             />
@@ -98,7 +103,7 @@ export function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
               placeholder="••••••••"
               required
             />
@@ -117,7 +122,7 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-gradient-to-r from-cyan-600 to-green-600 text-white rounded-lg font-semibold hover:from-cyan-700 hover:to-green-700 transition disabled:opacity-50"
+            className="w-full py-2 bg-gradient-to-r from-cyan-600 to-green-600 text-white rounded-lg font-semibold hover:from-cyan-700 hover:to-green-700 transition disabled:opacity-50"
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
@@ -132,7 +137,7 @@ export function LoginPage() {
           </p>
           <div className="pt-4 border-t border-gray-100">
             <Link to="/logistic-signup" className="text-sm text-green-600 hover:text-green-700 font-bold flex items-center justify-center gap-2">
-              <Package className="h-4 w-4" /> Sign In As Logistic
+              <Package className="h-4 w-4" /> Sign Up As Logistic
             </Link>
           </div>
         </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { paymentService } from '../../services/paymentService';
-import { CreditCard, Plus, Edit, Trash2, Power, PowerOff, Save, X, AlertCircle, CheckCircle, Grid3x3, List } from 'lucide-react';
+import { CreditCard, Plus, Edit, Trash2, Power, PowerOff, Save, X, AlertCircle, CheckCircle, Grid3x3, List, Search } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import type { PaymentGateway, PaymentInstruction } from '../../types/payment';
 
@@ -17,7 +17,8 @@ export function PaymentGateways() {
   const [showAddManual, setShowAddManual] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [editInstructions, setEditInstructions] = useState<PaymentInstruction[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const cardBg = isDark ? 'bg-gray-800' : 'bg-white';
   const textPrimary = isDark ? 'text-gray-100' : 'text-gray-900';
@@ -41,7 +42,10 @@ export function PaymentGateways() {
   };
 
   const handleEdit = async (gateway: PaymentGateway) => {
-    setEditingGateway(gateway);
+    setEditingGateway({
+      ...gateway,
+      configuration: gateway.configuration || {}
+    });
 
     if (gateway.gateway_type === 'manual') {
       try {
@@ -84,6 +88,12 @@ export function PaymentGateways() {
   };
 
   const handleToggleActive = async (gateway: PaymentGateway) => {
+    // Optimistic Update
+    const oldGateways = [...gateways];
+    setGateways(gateways.map(g =>
+      g.id === gateway.id ? { ...g, is_active: !g.is_active } : g
+    ));
+
     try {
       await paymentService.updateGateway(gateway.id, {
         is_active: !gateway.is_active,
@@ -92,8 +102,9 @@ export function PaymentGateways() {
         type: 'success',
         text: `${gateway.display_name} ${gateway.is_active ? 'disabled' : 'enabled'} successfully`,
       });
-      fetchGateways();
+      fetchGateways(); // Re-sync with server
     } catch (error: any) {
+      setGateways(oldGateways); // Rollback on error
       setMessage({ type: 'error', text: error.message });
     }
   };
@@ -191,6 +202,12 @@ export function PaymentGateways() {
     }
   };
 
+  const filteredGateways = gateways.filter(gateway =>
+    gateway.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    gateway.gateway_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    gateway.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (loading && gateways.length === 0) {
     return (
       <AdminLayout>
@@ -204,7 +221,7 @@ export function PaymentGateways() {
   return (
     <AdminLayout>
       <div className="mb-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <CreditCard className="h-6 w-6 text-cyan-600" />
             <div>
@@ -212,26 +229,35 @@ export function PaymentGateways() {
               <p className={`text-sm ${textSecondary}`}>Configure payment methods for your store</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative">
+              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${textSecondary}`} />
+              <input
+                type="text"
+                placeholder="Search gateways..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={`pl-9 pr-4 py-1.5 text-sm border ${borderColor} rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-800 text-gray-100' : 'bg-white'
+                  } w-full md:w-64`}
+              />
+            </div>
             <div className={`flex items-center border ${borderColor} rounded-lg p-1`}>
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded transition ${
-                  viewMode === 'grid'
-                    ? 'bg-cyan-600 text-white'
-                    : `${textSecondary} hover:bg-gray-100 dark:hover:bg-gray-700`
-                }`}
+                className={`p-1.5 rounded transition ${viewMode === 'grid'
+                  ? 'bg-cyan-600 text-white'
+                  : `${textSecondary} hover:bg-gray-100 dark:hover:bg-gray-700`
+                  }`}
                 title="Grid view"
               >
                 <Grid3x3 className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded transition ${
-                  viewMode === 'list'
-                    ? 'bg-cyan-600 text-white'
-                    : `${textSecondary} hover:bg-gray-100 dark:hover:bg-gray-700`
-                }`}
+                className={`p-1.5 rounded transition ${viewMode === 'list'
+                  ? 'bg-cyan-600 text-white'
+                  : `${textSecondary} hover:bg-gray-100 dark:hover:bg-gray-700`
+                  }`}
                 title="List view"
               >
                 <List className="h-4 w-4" />
@@ -250,11 +276,10 @@ export function PaymentGateways() {
 
       {message && (
         <div
-          className={`mb-4 p-3 rounded-lg flex items-start space-x-2 text-sm ${
-            message.type === 'success'
-              ? 'bg-green-50 border border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
-              : 'bg-red-50 border border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
-          }`}
+          className={`mb-4 p-3 rounded-lg flex items-start space-x-2 text-sm ${message.type === 'success'
+            ? 'bg-green-50 border border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
+            : 'bg-red-50 border border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
+            }`}
         >
           {message.type === 'success' ? (
             <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
@@ -269,82 +294,64 @@ export function PaymentGateways() {
       )}
 
       {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-          {gateways.map((gateway) => (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredGateways.map((gateway) => (
             <div
               key={gateway.id}
-              className={`${cardBg} rounded-lg shadow-sm border ${borderColor} p-4 transition-all hover:shadow-md ${
-                gateway.is_active ? 'ring-1 ring-green-500' : ''
-              }`}
+              className={`${cardBg} rounded-2xl shadow-sm border ${borderColor} p-6 transition-all hover:shadow-xl hover:-translate-y-1 group duration-300 relative overflow-hidden`}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="text-2xl">{getGatewayIcon(gateway.gateway_type)}</span>
+              <div className={`absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity`}>
+                <span className="text-6xl grayscale">{getGatewayIcon(gateway.gateway_type)}</span>
+              </div>
+
+              <div className="flex items-start justify-between mb-4 relative z-10">
+                <div className="flex items-center gap-4">
+                  <span className="text-4xl shadow-sm bg-gray-50 dark:bg-gray-700/50 rounded-xl p-2">{getGatewayIcon(gateway.gateway_type)}</span>
                   <div>
-                    <h3 className={`text-base font-semibold ${textPrimary}`}>{gateway.display_name}</h3>
-                    <p className={`text-xs ${textSecondary} mt-0.5`}>{gateway.description}</p>
+                    <h3 className={`text-lg font-bold ${textPrimary} tracking-tight`}>{gateway.display_name}</h3>
+                    {gateway.is_active ? (
+                      <span className="inline-flex items-center gap-1.5 mt-1 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-emerald-100/50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Active
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center mt-1 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                        Inactive
+                      </span>
+                    )}
                   </div>
                 </div>
-                {gateway.is_active ? (
-                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                    Active
-                  </span>
-                ) : (
-                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
-                    Inactive
-                  </span>
-                )}
               </div>
 
-              <div className={`text-xs ${textSecondary} mb-3`}>
-                <p className="font-medium mb-1">Currencies:</p>
-                <div className="flex flex-wrap gap-1">
-                  {gateway.supported_currencies.map((currency) => (
-                    <span
-                      key={currency}
-                      className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-xs dark:bg-blue-900/30 dark:text-blue-400"
-                    >
-                      {currency}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              <p className={`text-xs ${textSecondary} mb-6 line-clamp-2 min-h-[2.5em] relative z-10 font-medium leading-relaxed`}>
+                {gateway.description}
+              </p>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 mt-auto relative z-10">
                 <button
                   onClick={() => handleEdit(gateway)}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider bg-gray-50 text-gray-700 rounded-xl hover:bg-gray-100 transition dark:bg-gray-700/50 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   <Edit className="h-3.5 w-3.5" />
                   Configure
                 </button>
                 <button
                   onClick={() => handleToggleActive(gateway)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs rounded transition ${
-                    gateway.is_active
-                      ? 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50'
-                      : 'bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50'
-                  }`}
+                  className={`flex items-center justify-center p-2.5 rounded-xl transition ${gateway.is_active
+                    ? 'bg-emerald-50 text-emerald-600 hover:bg-red-50 hover:text-red-600 dark:bg-emerald-900/20 dark:text-emerald-400'
+                    : 'bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 dark:bg-gray-800 dark:text-gray-500'
+                    }`}
+                  title={gateway.is_active ? "Disable Gateway" : "Enable Gateway"}
                 >
-                  {gateway.is_active ? (
-                    <>
-                      <PowerOff className="h-3.5 w-3.5" />
-                      Disable
-                    </>
-                  ) : (
-                    <>
-                      <Power className="h-3.5 w-3.5" />
-                      Enable
-                    </>
-                  )}
+                  {gateway.is_active ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
                 </button>
                 {gateway.gateway_type === 'manual' && (
                   <button
                     onClick={() => handleDelete(gateway)}
-                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition dark:hover:bg-red-900/30"
+                    className="p-2.5 text-gray-400 hover:bg-red-50 hover:text-red-600 rounded-xl transition dark:hover:bg-red-900/30"
                     title="Delete"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 )}
               </div>
@@ -352,85 +359,82 @@ export function PaymentGateways() {
           ))}
         </div>
       ) : (
-        <div className="space-y-3">
-          {gateways.map((gateway) => (
+        <div className="flex flex-col gap-4">
+          {filteredGateways.map((gateway) => (
             <div
               key={gateway.id}
-              className={`${cardBg} rounded-lg shadow-sm border ${borderColor} p-4 transition-all hover:shadow-md ${
-                gateway.is_active ? 'ring-1 ring-green-500' : ''
-              }`}
+              className={`${cardBg} rounded-xl shadow-sm border border-transparent hover:border-gray-200 dark:hover:border-gray-700 p-5 transition-all hover:shadow-lg group flex items-center gap-6 relative overflow-hidden`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 flex-1">
-                  <span className="text-2xl">{getGatewayIcon(gateway.gateway_type)}</span>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className={`text-base font-semibold ${textPrimary}`}>{gateway.display_name}</h3>
-                      {gateway.is_active ? (
-                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                          Active
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
-                          Inactive
-                        </span>
-                      )}
-                    </div>
-                    <p className={`text-xs ${textSecondary} mt-0.5`}>{gateway.description}</p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className={`text-xs ${textSecondary}`}>Currencies:</span>
-                      <div className="flex flex-wrap gap-1">
-                        {gateway.supported_currencies.map((currency) => (
-                          <span
-                            key={currency}
-                            className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-xs dark:bg-blue-900/30 dark:text-blue-400"
-                          >
-                            {currency}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+              {/* Selection Accent */}
+              <div className={`absolute left-0 top-0 bottom-0 w-1 ${gateway.is_active ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+
+              <div className="flex-shrink-0">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${gateway.is_active ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'}`}>
+                  {getGatewayIcon(gateway.gateway_type)}
+                </div>
+              </div>
+
+              <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <div className="md:col-span-4">
+                  <h3 className={`text-base font-bold ${textPrimary} flex items-center gap-3`}>
+                    {gateway.display_name}
+                    {gateway.is_default && <span className="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full uppercase tracking-wider font-extrabold">Default</span>}
+                  </h3>
+                  <p className={`text-xs ${textSecondary} mt-1 truncate`}>{gateway.description}</p>
                 </div>
 
-                <div className="flex items-center gap-2 ml-4">
-                  <button
-                    onClick={() => handleEdit(gateway)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
-                  >
-                    <Edit className="h-3.5 w-3.5" />
-                    Configure
-                  </button>
-                  <button
-                    onClick={() => handleToggleActive(gateway)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition ${
-                      gateway.is_active
-                        ? 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50'
-                        : 'bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50'
-                    }`}
-                  >
-                    {gateway.is_active ? (
-                      <>
-                        <PowerOff className="h-3.5 w-3.5" />
-                        Disable
-                      </>
-                    ) : (
-                      <>
-                        <Power className="h-3.5 w-3.5" />
-                        Enable
-                      </>
-                    )}
-                  </button>
-                  {gateway.gateway_type === 'manual' && (
-                    <button
-                      onClick={() => handleDelete(gateway)}
-                      className="p-1.5 text-red-600 hover:bg-red-50 rounded transition dark:hover:bg-red-900/30"
-                      title="Delete"
+                <div className="md:col-span-4 hidden md:flex flex-wrap gap-1.5">
+                  {gateway.supported_currencies.map((currency) => (
+                    <span
+                      key={currency}
+                      className="px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded text-[10px] font-bold dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                      {currency}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="md:col-span-2 flex items-center">
+                  {gateway.is_active ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 ring-1 ring-emerald-500/20">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      Active
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 ring-1 ring-gray-200 dark:ring-gray-700">
+                      Inactive
+                    </span>
                   )}
                 </div>
+              </div>
+
+              <div className="flex items-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity ml-auto">
+                <button
+                  onClick={() => handleEdit(gateway)}
+                  className="p-2 text-gray-500 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition dark:text-gray-400 dark:hover:bg-cyan-900/20"
+                  title="Configure"
+                >
+                  <Edit className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => handleToggleActive(gateway)}
+                  className={`p-2 rounded-lg transition ${gateway.is_active
+                    ? 'text-emerald-600 hover:bg-red-50 hover:text-red-600 dark:text-emerald-400'
+                    : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:text-gray-500'
+                    }`}
+                  title={gateway.is_active ? "Disable" : "Enable"}
+                >
+                  {gateway.is_active ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
+                </button>
+                {gateway.gateway_type === 'manual' && (
+                  <button
+                    onClick={() => handleDelete(gateway)}
+                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition dark:hover:bg-red-900/20"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -469,9 +473,8 @@ export function PaymentGateways() {
                     onChange={(e) =>
                       setEditingGateway({ ...editingGateway, display_name: e.target.value })
                     }
-                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                      isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                    }`}
+                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                      }`}
                   />
                 </div>
 
@@ -485,9 +488,8 @@ export function PaymentGateways() {
                       setEditingGateway({ ...editingGateway, description: e.target.value })
                     }
                     rows={2}
-                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                      isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                    }`}
+                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                      }`}
                   />
                 </div>
 
@@ -501,11 +503,10 @@ export function PaymentGateways() {
                       <input
                         type="text"
                         required
-                        value={editingGateway.configuration.integration_id || ''}
+                        value={editingGateway.configuration?.integration_id || ''}
                         onChange={(e) => updateConfigField('integration_id', e.target.value)}
-                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                          isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                        }`}
+                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                          }`}
                         placeholder="Enter your PayNow Integration ID"
                       />
                     </div>
@@ -516,11 +517,10 @@ export function PaymentGateways() {
                       <input
                         type="password"
                         required
-                        value={editingGateway.configuration.integration_key || ''}
+                        value={editingGateway.configuration?.integration_key || ''}
                         onChange={(e) => updateConfigField('integration_key', e.target.value)}
-                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                          isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                        }`}
+                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                          }`}
                         placeholder="Enter your PayNow Integration Key"
                       />
                     </div>
@@ -531,11 +531,10 @@ export function PaymentGateways() {
                       <input
                         type="url"
                         required
-                        value={editingGateway.configuration.return_url || ''}
+                        value={editingGateway.configuration?.return_url || ''}
                         onChange={(e) => updateConfigField('return_url', e.target.value)}
-                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                          isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                        }`}
+                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                          }`}
                         placeholder="https://yourdomain.com/payment/return"
                       />
                     </div>
@@ -546,11 +545,10 @@ export function PaymentGateways() {
                       <input
                         type="url"
                         required
-                        value={editingGateway.configuration.result_url || ''}
+                        value={editingGateway.configuration?.result_url || ''}
                         onChange={(e) => updateConfigField('result_url', e.target.value)}
-                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                          isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                        }`}
+                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                          }`}
                         placeholder="https://yourdomain.com/payment/result"
                       />
                     </div>
@@ -567,11 +565,10 @@ export function PaymentGateways() {
                       <input
                         type="text"
                         required
-                        value={editingGateway.configuration.client_id || ''}
+                        value={editingGateway.configuration?.client_id || ''}
                         onChange={(e) => updateConfigField('client_id', e.target.value)}
-                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                          isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                        }`}
+                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                          }`}
                         placeholder="Enter your PayPal Client ID"
                       />
                     </div>
@@ -582,22 +579,20 @@ export function PaymentGateways() {
                       <input
                         type="password"
                         required
-                        value={editingGateway.configuration.client_secret || ''}
+                        value={editingGateway.configuration?.client_secret || ''}
                         onChange={(e) => updateConfigField('client_secret', e.target.value)}
-                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                          isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                        }`}
+                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                          }`}
                         placeholder="Enter your PayPal Client Secret"
                       />
                     </div>
                     <div>
                       <label className={`block text-xs font-medium ${textPrimary} mb-1.5`}>Mode *</label>
                       <select
-                        value={editingGateway.configuration.mode || 'sandbox'}
+                        value={editingGateway.configuration?.mode || 'sandbox'}
                         onChange={(e) => updateConfigField('mode', e.target.value)}
-                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                          isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                        }`}
+                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                          }`}
                       >
                         <option value="sandbox">Sandbox (Testing)</option>
                         <option value="live">Live (Production)</option>
@@ -616,11 +611,10 @@ export function PaymentGateways() {
                       <input
                         type="text"
                         required
-                        value={editingGateway.configuration.publishable_key || ''}
+                        value={editingGateway.configuration?.publishable_key || ''}
                         onChange={(e) => updateConfigField('publishable_key', e.target.value)}
-                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                          isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                        }`}
+                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                          }`}
                         placeholder="pk_test_..."
                       />
                     </div>
@@ -631,13 +625,58 @@ export function PaymentGateways() {
                       <input
                         type="password"
                         required
-                        value={editingGateway.configuration.secret_key || ''}
+                        value={editingGateway.configuration?.secret_key || ''}
                         onChange={(e) => updateConfigField('secret_key', e.target.value)}
-                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                          isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                        }`}
+                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                          }`}
                         placeholder="sk_test_..."
                       />
+                    </div>
+                  </div>
+                )}
+
+                {editingGateway.gateway_type === 'iveri' && (
+                  <div className="space-y-3">
+                    <h3 className={`text-sm font-semibold ${textPrimary}`}>iVeri Configuration</h3>
+                    <div>
+                      <label className={`block text-xs font-medium ${textPrimary} mb-1.5`}>
+                        Application ID *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={editingGateway.configuration?.application_id || ''}
+                        onChange={(e) => updateConfigField('application_id', e.target.value)}
+                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                          }`}
+                        placeholder="{3b80...}"
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-xs font-medium ${textPrimary} mb-1.5`}>
+                        Certificate ID *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={editingGateway.configuration?.certificate_id || ''}
+                        onChange={(e) => updateConfigField('certificate_id', e.target.value)}
+                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                          }`}
+                        placeholder="{4c96...}"
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-xs font-medium ${textPrimary} mb-1.5`}>Mode *</label>
+                      <select
+                        value={editingGateway.configuration?.mode || 'Live'}
+                        onChange={(e) => updateConfigField('mode', e.target.value)}
+                        className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                          }`}
+                      >
+                        <option value="Live">Live (Production)</option>
+                        <option value="Test">Test (Sandbox)</option>
+                      </select>
                     </div>
                   </div>
                 )}
@@ -674,9 +713,8 @@ export function PaymentGateways() {
                           value={instruction.title}
                           onChange={(e) => updateInstructionStep(index, 'title', e.target.value)}
                           placeholder="Step title"
-                          className={`w-full px-2.5 py-1.5 mb-2 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                            isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                          }`}
+                          className={`w-full px-2.5 py-1.5 mb-2 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                            }`}
                         />
                         <textarea
                           value={instruction.description}
@@ -685,14 +723,36 @@ export function PaymentGateways() {
                           }
                           placeholder="Step description"
                           rows={2}
-                          className={`w-full px-2.5 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                            isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                          }`}
+                          className={`w-full px-2.5 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                            }`}
                         />
                       </div>
                     ))}
                   </div>
                 )}
+
+                <div className="pt-2">
+                  <label className={`flex items-center gap-3 cursor-pointer group`}>
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        className="sr-only"
+                        checked={editingGateway.is_active}
+                        onChange={(e) => setEditingGateway({ ...editingGateway, is_active: e.target.checked })}
+                      />
+                      <div className={`block w-10 h-6 rounded-full transition-colors ${editingGateway.is_active ? 'bg-emerald-500' : 'bg-gray-400'}`}></div>
+                      <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${editingGateway.is_active ? 'translate-x-4' : ''}`}></div>
+                    </div>
+                    <div>
+                      <span className={`block text-xs font-bold ${textPrimary} group-hover:text-cyan-600 transition-colors`}>
+                        {editingGateway.is_active ? 'Gateway is Active' : 'Gateway is Inactive'}
+                      </span>
+                      <span className={`text-[10px] ${textSecondary}`}>
+                        Toggle to enable or disable this payment method for checkouts
+                      </span>
+                    </div>
+                  </label>
+                </div>
 
                 <div>
                   <label className={`block text-xs font-medium ${textPrimary} mb-1.5`}>
@@ -704,9 +764,8 @@ export function PaymentGateways() {
                       setEditingGateway({ ...editingGateway, instructions: e.target.value })
                     }
                     rows={3}
-                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                      isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                    }`}
+                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                      }`}
                     placeholder="Additional instructions for users"
                   />
                 </div>
@@ -761,9 +820,8 @@ export function PaymentGateways() {
                     name="gateway_name"
                     required
                     pattern="[a-z_]+"
-                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                      isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                    }`}
+                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                      }`}
                     placeholder="bank_transfer"
                   />
                 </div>
@@ -776,9 +834,8 @@ export function PaymentGateways() {
                     type="text"
                     name="display_name"
                     required
-                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                      isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                    }`}
+                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                      }`}
                     placeholder="Bank Transfer"
                   />
                 </div>
@@ -790,9 +847,8 @@ export function PaymentGateways() {
                   <textarea
                     name="description"
                     rows={2}
-                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                      isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                    }`}
+                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                      }`}
                     placeholder="Pay via direct bank transfer"
                   />
                 </div>
@@ -805,9 +861,8 @@ export function PaymentGateways() {
                     name="instructions"
                     required
                     rows={4}
-                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                      isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                    }`}
+                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                      }`}
                     placeholder="To pay via bank transfer:&#10;1. Transfer to: Account Name&#10;2. Bank: Bank Name&#10;3. Account Number: 1234567890&#10;4. Reference: Your Order Number"
                   />
                 </div>
@@ -819,9 +874,8 @@ export function PaymentGateways() {
                   <input
                     type="url"
                     name="logo_url"
-                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                      isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                    }`}
+                    className={`w-full px-3 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                      }`}
                     placeholder="https://example.com/logo.png"
                   />
                 </div>

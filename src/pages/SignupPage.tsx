@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import { supabase } from '../lib/supabase';
 import { Package } from 'lucide-react';
+import { PuzzleCaptcha } from '../components/PuzzleCaptcha';
 
 export function SignupPage() {
   const [email, setEmail] = useState('');
@@ -11,10 +13,13 @@ export function SignupPage() {
   const [role, setRole] = useState('customer');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isHuman, setIsHuman] = useState(false);
   const [acceptedCustomerTerms, setAcceptedCustomerTerms] = useState(false);
   const [acceptedCustomerPrivacy, setAcceptedCustomerPrivacy] = useState(false);
+  const [contractAcceptance, setContractAcceptance] = useState(false);
   const [contracts, setContracts] = useState<any[]>([]);
   const { signUp } = useAuth();
+  const { settings } = useSiteSettings();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -23,7 +28,7 @@ export function SignupPage() {
 
   const fetchContracts = async () => {
     try {
-      const { data, error} = await supabase
+      const { data, error } = await supabase
         .from('contracts')
         .select('*')
         .in('contract_type', ['customer_terms', 'customer_privacy'])
@@ -40,6 +45,12 @@ export function SignupPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    if (!isHuman) {
+      setError('Please verify that you are a human');
+      setLoading(false);
+      return;
+    }
 
     if (role === 'customer' && (!acceptedCustomerTerms || !acceptedCustomerPrivacy)) {
       setError('Please accept both the Customer Terms & Conditions and Privacy Policy');
@@ -82,11 +93,18 @@ export function SignupPage() {
     <div className="min-h-screen bg-gradient-to-br from-cyan-50 to-green-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <Package className="h-12 w-12 text-cyan-600" />
+          <div className="flex justify-center mb-6">
+            <img
+              src={settings.site_logo}
+              alt={settings.site_name}
+              className="h-12 w-auto object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'; // Hide if fails
+              }}
+            />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
-          <p className="text-gray-600">Join ZimAIO today</p>
+          <p className="text-gray-600">Join {settings.site_name} today</p>
         </div>
 
         {error && (
@@ -167,7 +185,7 @@ export function SignupPage() {
                 />
                 <label className="ml-2 text-sm text-gray-600">
                   I agree to the{' '}
-                  <Link to="/customer-terms" target="_blank" className="text-cyan-600 hover:text-cyan-700 font-semibold underline">
+                  <Link to="/contract/customer_terms" target="_blank" className="text-cyan-600 hover:text-cyan-700 font-semibold underline">
                     Customer Terms & Conditions
                   </Link>
                 </label>
@@ -183,13 +201,17 @@ export function SignupPage() {
                 />
                 <label className="ml-2 text-sm text-gray-600">
                   I have read and accept the{' '}
-                  <Link to="/customer-privacy" target="_blank" className="text-cyan-600 hover:text-cyan-700 font-semibold underline">
+                  <Link to="/contract/customer_privacy" target="_blank" className="text-cyan-600 hover:text-cyan-700 font-semibold underline">
                     Customer Privacy Policy
                   </Link>
                 </label>
               </div>
             </div>
           )}
+
+          <div className="mb-6">
+            <PuzzleCaptcha onVerify={setIsHuman} />
+          </div>
 
           <button
             type="submit"

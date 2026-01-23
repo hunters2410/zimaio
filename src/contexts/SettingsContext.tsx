@@ -24,13 +24,33 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         fetchSettings();
+
+        // Subscribe to realtime changes
+        const subscription = supabase
+            .channel('vat_settings_changes')
+            .on('postgres_changes',
+                { event: '*', schema: 'public', table: 'vat_settings' },
+                () => {
+                    fetchSettings();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            subscription.unsubscribe();
+        };
     }, []);
 
     const fetchSettings = async () => {
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from('vat_settings')
             .select('*')
             .maybeSingle();
+
+        if (error) {
+            console.error('Error fetching VAT settings:', error);
+            return;
+        }
 
         if (data) {
             setSettings({

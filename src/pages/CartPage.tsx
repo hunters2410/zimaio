@@ -19,7 +19,7 @@ export function CartPage() {
     };
   }, { totalCommission: 0, totalTax: 0, totalWithTax: 0 });
 
-  const shipping = subtotal > 0 ? 10 : 0;
+  const shipping = 0; // Shipping is calculated at checkout
   const total = totalWithTax + shipping;
 
   if (cartItems.length === 0) {
@@ -120,7 +120,7 @@ export function CartPage() {
 
           <div className="lg:col-span-1">
             <div className="bg-white rounded-[2.5rem] border border-gray-100 p-8 shadow-sm sticky top-24">
-              <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight mb-8">Secure Checkout</h3>
+              <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight mb-8">Secure Checkout</h3>
 
               <div className="space-y-4 mb-10">
                 <div className="flex justify-between items-center text-sm font-bold uppercase tracking-widest text-gray-400">
@@ -129,20 +129,20 @@ export function CartPage() {
                 </div>
                 {settings?.commission_enabled && (
                   <div className="flex justify-between items-center text-sm font-bold uppercase tracking-widest text-gray-400">
-                    <span>Admin Commission</span>
+                    <span>Handling Fee</span>
                     <span className="text-gray-900">{formatPrice(totalCommission)}</span>
                   </div>
                 )}
-                <div className="flex justify-between items-center text-sm font-bold uppercase tracking-widest text-gray-400">
-                  <span>Shipping Fee</span>
-                  <span className="text-gray-900">{formatPrice(shipping)}</span>
-                </div>
                 {settings?.is_enabled && (
                   <div className="flex justify-between items-center text-sm font-bold uppercase tracking-widest text-gray-400">
                     <span>VAT ({settings.default_rate}%)</span>
                     <span className="text-gray-900">{formatPrice(totalTax)}</span>
                   </div>
                 )}
+                <div className="flex justify-between items-center text-sm font-bold uppercase tracking-widest text-gray-400">
+                  <span>Shipping Fee</span>
+                  <span className="text-gray-400 italic text-[10px]">Calculated at checkout</span>
+                </div>
                 <div className="border-t border-gray-100 pt-6 flex justify-between items-end">
                   <span className="text-xs font-black text-gray-900 uppercase tracking-[0.2em]">Grand Total</span>
                   <span className="text-3xl font-black text-emerald-600 leading-none">{formatPrice(total)}</span>

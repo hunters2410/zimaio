@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Store, Check, X, Star, Search, Mail, Calendar, DollarSign, Plus, Edit, Trash2, Eye, UserX, UserCheck, FileText } from 'lucide-react';
+import { Store, Check, X, Star, Search, Mail, Calendar, DollarSign, Plus, Edit, Trash2, Eye, UserX, UserCheck, FileText, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { AdminLayout } from '../../components/AdminLayout';
 
@@ -118,7 +118,8 @@ export function VendorManagement() {
           full_name,
           phone,
           is_active
-        )
+        ),
+        orders(subtotal, status, payment_status)
       `)
       .order('created_at', { ascending: false });
 
@@ -138,8 +139,23 @@ export function VendorManagement() {
       query = query.lte('created_at', endDateTime.toISOString());
     }
 
-    const { data } = await query;
-    setVendors(data || []);
+    const { data, error } = await query;
+    if (error) {
+      console.error('Error fetching vendors:', error);
+      setMessage({ type: 'error', text: 'Error fetching vendors: ' + error.message });
+    } else {
+      const processedVendors = (data || []).map((v: any) => ({
+        ...v,
+        total_sales: (v.orders as any[])?.reduce((sum, order) => {
+          // Count paid, delivered, or completed orders
+          if (order.payment_status === 'paid' || ['delivered', 'completed'].includes(order.status)) {
+            return sum + (Number(order.subtotal) || 0);
+          }
+          return sum;
+        }, 0) || 0
+      }));
+      setVendors(processedVendors);
+    }
     setLoading(false);
   };
 
@@ -149,7 +165,11 @@ export function VendorManagement() {
       .update({ is_featured: !currentStatus })
       .eq('id', vendorId);
 
-    if (!error) {
+    if (error) {
+      console.error('Error toggling featured status:', error);
+      setMessage({ type: 'error', text: 'Failed to update: ' + error.message });
+    } else {
+      setMessage({ type: 'success', text: 'Vendor featured status updated successfully!' });
       fetchVendors();
     }
   };
@@ -160,7 +180,11 @@ export function VendorManagement() {
       .update({ is_verified: !currentStatus })
       .eq('id', vendorId);
 
-    if (!error) {
+    if (error) {
+      console.error('Error toggling verified status:', error);
+      setMessage({ type: 'error', text: 'Failed to update: ' + error.message });
+    } else {
+      setMessage({ type: 'success', text: 'Vendor verification status updated successfully!' });
       fetchVendors();
     }
   };
@@ -171,7 +195,11 @@ export function VendorManagement() {
       .update({ is_approved: !currentStatus })
       .eq('id', vendorId);
 
-    if (!error) {
+    if (error) {
+      console.error('Error toggling approved status:', error);
+      setMessage({ type: 'error', text: 'Failed to update: ' + error.message });
+    } else {
+      setMessage({ type: 'success', text: 'Vendor approval status updated successfully!' });
       fetchVendors();
     }
   };
@@ -182,7 +210,11 @@ export function VendorManagement() {
       .update({ is_active: !currentStatus })
       .eq('id', userId);
 
-    if (!error) {
+    if (error) {
+      console.error('Error toggling active status:', error);
+      setMessage({ type: 'error', text: 'Failed to update: ' + error.message });
+    } else {
+      setMessage({ type: 'success', text: 'User account status updated successfully!' });
       fetchVendors();
     }
   };
@@ -301,7 +333,7 @@ export function VendorManagement() {
       .eq('id', selectedVendor.user_id);
 
     if (profileError) {
-      alert('Failed to update profile: ' + profileError.message);
+      setMessage({ type: 'error', text: 'Failed to update user profile: ' + profileError.message });
       setLoading(false);
       return;
     }
@@ -324,9 +356,9 @@ export function VendorManagement() {
       return;
     }
 
-    setMessage({ type: 'success', text: 'Vendor updated successfully!' });
-    // setShowEditModal(false); // Keep modal open
-    // setSelectedVendor(null); // Keep selected vendor
+    setMessage({ type: 'success', text: 'Vendor ' + formData.shop_name + ' updated successfully!' });
+    setShowEditModal(false);
+    setSelectedVendor(null);
     fetchVendors();
   };
 
@@ -405,6 +437,19 @@ export function VendorManagement() {
           Register Vendor
         </button>
       </div>
+
+      {message && (
+        <div className={`mb-6 p-4 rounded-lg border flex items-center justify-between ${message.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'
+          }`}>
+          <div className="flex items-center">
+            {message.type === 'success' ? <Check className="h-5 w-5 mr-3" /> : <AlertCircle className="h-5 w-5 mr-3" />}
+            <span className="font-medium text-sm">{message.text}</span>
+          </div>
+          <button onClick={() => setMessage(null)} className="text-gray-400 hover:text-gray-600 transition">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -672,22 +717,22 @@ export function VendorManagement() {
 
       {showRegisterModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">Register New Vendor</h2>
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Register Vendor</h2>
               <button
                 onClick={() => setShowRegisterModal(false)}
                 className="text-gray-400 hover:text-gray-600 transition"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               </button>
             </div>
             {message && (
-              <div className={`mx-6 mt-6 p-4 rounded-lg flex items-center gap-2 ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+              <div className={`mx-4 mt-4 p-3 rounded-lg flex items-center gap-2 text-xs font-bold ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                 {message.text}
               </div>
             )}
-            <form onSubmit={handleRegisterVendor} className="p-5">
+            <form onSubmit={handleRegisterVendor} className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
@@ -802,18 +847,18 @@ export function VendorManagement() {
                   <p className="mt-1 text-[10px] text-gray-400">Select the subscription package for this vendor</p>
                 </div>
               </div>
-              <div className="flex justify-end gap-3 mt-6">
+              <div className="flex justify-end gap-2 mt-5">
                 <button
                   type="button"
                   onClick={() => setShowRegisterModal(false)}
-                  className="px-4 py-1.5 text-sm font-bold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                  className="px-3 py-1.5 text-sm font-bold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-4 py-1.5 text-sm font-bold bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+                  className="px-3 py-1.5 text-sm font-bold bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
                 >
                   {loading ? 'Creating...' : 'Register Vendor'}
                 </button>
@@ -825,120 +870,120 @@ export function VendorManagement() {
 
       {showEditModal && selectedVendor && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">Edit Vendor</h2>
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Edit Vendor</h2>
               <button
                 onClick={() => setShowEditModal(false)}
                 className="text-gray-400 hover:text-gray-600 transition"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               </button>
             </div>
             {message && (
-              <div className={`mx-6 mt-6 p-4 rounded-lg flex items-center gap-2 ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+              <div className={`mx-4 mt-4 p-3 rounded-lg flex items-center gap-2 text-xs font-bold ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
                 {message.text}
               </div>
             )}
-            <form onSubmit={handleEditVendor} className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleEditVendor} className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email (readonly)</label>
+                  <label className="block text-xs font-bold uppercase text-gray-400 mb-1">Email (readonly)</label>
                   <input
                     type="email"
                     disabled
                     value={formData.email}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                  <label className="block text-xs font-bold uppercase text-gray-400 mb-1">Full Name</label>
                   <input
                     type="text"
                     required
                     value={formData.full_name}
                     onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <label className="block text-xs font-bold uppercase text-gray-400 mb-1">Phone</label>
                   <input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Shop Name</label>
+                  <label className="block text-xs font-bold uppercase text-gray-400 mb-1">Shop Name</label>
                   <input
                     type="text"
                     required
                     value={formData.shop_name}
                     onChange={(e) => setFormData({ ...formData, shop_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Business Email</label>
+                  <label className="block text-xs font-bold uppercase text-gray-400 mb-1">Business Email</label>
                   <input
                     type="email"
                     value={formData.business_email}
                     onChange={(e) => setFormData({ ...formData, business_email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Business Phone</label>
+                  <label className="block text-xs font-bold uppercase text-gray-400 mb-1">Business Phone</label>
                   <input
                     type="tel"
                     value={formData.business_phone}
                     onChange={(e) => setFormData({ ...formData, business_phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tax ID</label>
+                  <label className="block text-xs font-bold uppercase text-gray-400 mb-1">Tax ID</label>
                   <input
                     type="text"
                     value={formData.tax_id}
                     onChange={(e) => setFormData({ ...formData, tax_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Business Address</label>
+                  <label className="block text-xs font-bold uppercase text-gray-400 mb-1">Business Address</label>
                   <textarea
-                    rows={2}
+                    rows={1}
                     value={formData.business_address}
                     onChange={(e) => setFormData({ ...formData, business_address: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Shop Description</label>
+                  <label className="block text-xs font-bold uppercase text-gray-400 mb-1">Shop Description</label>
                   <textarea
-                    rows={3}
+                    rows={2}
                     value={formData.shop_description}
                     onChange={(e) => setFormData({ ...formData, shop_description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
               </div>
-              <div className="flex justify-end gap-3 mt-6">
+              <div className="flex justify-end gap-2 mt-5">
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                  className="px-3 py-1.5 text-sm font-bold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+                  className="px-3 py-1.5 text-sm font-bold bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
                 >
                   {loading ? 'Saving...' : 'Save Changes'}
                 </button>

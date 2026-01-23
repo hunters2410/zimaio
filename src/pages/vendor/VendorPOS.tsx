@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCurrency } from '../../contexts/CurrencyContext';
 import { useSettings } from '../../contexts/SettingsContext';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import {
     Search,
     ShoppingCart,
@@ -115,7 +115,7 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                 // images is an array, we'll take the first one as image_url
                 const { data: prods, error } = await supabase
                     .from('products')
-                    .select('id, name, base_price, stock_quantity, images, sku, commission_rate')
+                    .select('id, name, base_price, stock_quantity, images, sku')
                     .eq('vendor_id', currentVendorId)
                     .eq('is_active', true)
                     .gt('stock_quantity', 0)
@@ -138,8 +138,9 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                 });
 
                 setProducts(mappedProducts);
-            } catch (err) {
+            } catch (err: any) {
                 console.error('Error fetching POS products:', err);
+                alert('Terminal Error: Could not fetch products. ' + err.message);
             } finally {
                 setLoading(false);
             }
@@ -161,9 +162,7 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
         });
     };
 
-    const removeFromCart = (productId: string) => {
-        setCart(prev => prev.filter(item => item.id !== productId));
-    };
+
 
     const updateQuantity = (productId: string, delta: number) => {
         setCart(prev => prev.map(item => {
@@ -176,7 +175,6 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
     };
 
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const itemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
     const filteredProducts = products.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -196,62 +194,47 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
             let orderCommTotal = 0;
             let orderVatTotal = 0;
 
-            cart.forEach(item => {
-                const info = calculatePrice(item.base_price || item.price); // fallback
+            const purchaseItems = cart.map(item => {
+                const info = calculatePrice(item.base_price || item.price);
                 orderBaseTotal += (item.base_price || item.price) * item.quantity;
                 orderCommTotal += info.commission * item.quantity;
                 orderVatTotal += info.vat * item.quantity;
+
+                return {
+                    id: item.id,
+                    name: item.name,
+                    quantity: item.quantity,
+                    price: item.price,
+                    base_price: item.base_price || item.price,
+                    commission: info.commission,
+                    vat: info.vat
+                };
             });
 
-            // 1. Create order
-            const { data: order, error: orderError } = await supabase
-                .from('orders')
-                .insert({
-                    order_number: orderNumber,
-                    vendor_id: vendorId,
-                    customer_id: null, // Walk-in
-                    total: total,
-                    subtotal: orderBaseTotal,
-                    commission_amount: orderCommTotal,
-                    vat_amount: orderVatTotal,
-                    status: 'delivered',
-                    payment_status: 'paid',
-                    payment_method: paymentMethod,
-                    shipping_address: { type: 'POS', details: 'Walk-in Customer / POS Store' },
-                    items: cart.map(item => {
-                        const info = calculatePrice(item.base_price || item.price);
-                        return {
-                            id: item.id,
-                            name: item.name,
-                            quantity: item.quantity,
-                            price: item.price,
-                            base_price: item.base_price || item.price,
-                            commission: info.commission,
-                            vat: info.vat
-                        };
-                    })
-                })
-                .select()
-                .single();
+            // Construct payload for RPC
+            const orderPayload = {
+                order_number: orderNumber,
+                vendor_id: vendorId,
+                customer_id: null,
+                total: total,
+                subtotal: orderBaseTotal,
+                commission_amount: orderCommTotal,
+                vat_amount: orderVatTotal,
+                status: 'delivered',
+                payment_status: 'paid',
+                payment_method: paymentMethod,
+                shipping_address: { type: 'POS', details: 'Walk-in Customer / POS Store' },
+                items: purchaseItems
+            };
 
-            if (orderError) throw orderError;
+            // Call the RPC 
+            const { data: order, error } = await supabase.rpc('create_pos_order', {
+                order_payload: orderPayload,
+                items_payload: purchaseItems
+            });
 
-            // 2. Create order items and update stock
-            for (const item of cart) {
-                await supabase.from('order_items').insert({
-                    order_id: order.id,
-                    product_id: item.id,
-                    quantity: item.quantity,
-                    unit_price: item.price,
-                    total_price: item.price * item.quantity
-                });
-
-                // Decrement stock
-                await supabase.rpc('decrement_stock', {
-                    product_id: item.id,
-                    amount: item.quantity
-                });
-            }
+            if (error) throw error;
+            if (!order) throw new Error('Failed to create order');
 
             setOrderComplete(order);
             setCart([]);
@@ -259,40 +242,46 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
             // Refresh products to show new stock
             fetchVendorAndProducts();
         } catch (err: any) {
+            console.error('Checkout error:', err);
             alert('Checkout failed: ' + err.message);
         } finally {
             setSubmitting(false);
         }
     };
 
-    const handleDownloadPDF = async () => {
-        const element = document.getElementById('printable-receipt');
-        if (!element || !orderComplete) return;
+
+
+    const handleDownloadReceipt = async () => {
+        if (!orderComplete) return;
+        const receiptElement = document.getElementById('printable-receipt');
+        if (!receiptElement) return;
 
         try {
-            const canvas = await html2canvas(element, {
-                scale: 2,
-                logging: false,
-                useCORS: true,
-                backgroundColor: '#ffffff'
+            const canvas = await html2canvas(receiptElement, {
+                scale: 3,
+                backgroundColor: '#ffffff',
+                useCORS: true
             });
+
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
-                format: [80, 150] // Receipt size
+                format: [80, 230]
             });
 
-            const imgProps = pdf.getImageProperties(imgData);
             const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`receipt-${orderComplete.order_number}.pdf`);
+            pdf.save(`Receipt-${orderComplete.order_number}.pdf`);
         } catch (error) {
-            console.error('PDF Generation Error:', error);
+            console.error('Error downloading receipt:', error);
+            alert('Could not download receipt. Please try printing instead.');
         }
     };
+
+    const [activeTab, setActiveTab] = useState('register');
 
     if (loading) return (
         <div className="flex items-center justify-center h-[600px]">
@@ -301,346 +290,301 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
     );
 
     return (
-        <div className="h-[calc(100vh-140px)] flex flex-col md:flex-row gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-
-            {/* Products Side */}
-            <div className="flex-1 flex flex-col bg-white rounded-[40px] border border-gray-100 overflow-hidden shadow-2xl shadow-gray-200/50">
-                <div className="p-8 border-b border-gray-50 flex flex-col gap-6 bg-gray-50/30">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center text-emerald-600">
-                                <Scan size={24} strokeWidth={2.5} />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Product Catalog</h2>
-                                <p className="text-[10px] font-bold text-gray-500">Select items to add to the point of sale cart.</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl text-[10px] font-black uppercase text-gray-400 border border-gray-100">
-                            <Package size={14} />
-                            {products.length} Items Available
-                        </div>
-                    </div>
-
-                    <div className="relative group">
-                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
-                        <input
-                            ref={searchInputRef}
-                            type="text"
-                            placeholder="Search by name or SKU... (Ctrl+F)"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-white border-gray-100 border focus:border-emerald-500 rounded-[24px] py-5 pl-14 pr-6 text-sm font-bold transition-all outline-none shadow-sm"
-                        />
-                    </div>
+        <div className="flex h-screen bg-slate-50 overflow-hidden font-sans text-slate-900">
+            {/* Left Navigation Sidebar */}
+            <div className="w-20 md:w-24 bg-slate-900 flex flex-col items-center py-6 gap-8 z-20 shadow-xl">
+                <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                    <Scan size={20} strokeWidth={3} />
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-8 bg-white">
-                    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {filteredProducts.map(product => (
-                            <button
-                                key={product.id}
-                                onClick={() => addToCart(product)}
-                                className="group flex flex-col items-start bg-gray-50/50 hover:bg-emerald-50 rounded-[32px] p-2 transition-all border border-transparent hover:border-emerald-100 active:scale-95 text-left"
-                            >
-                                <div className="w-full aspect-square rounded-[24px] overflow-hidden mb-4 shadow-sm bg-white">
-                                    {product.image_url ? (
-                                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-gray-200 bg-gray-50 font-black text-lg">ZIM</div>
-                                    )}
-                                </div>
-                                <div className="px-3 pb-3 w-full">
-                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 truncate">{product.sku || 'NO-SKU'}</p>
-                                    <h3 className="font-black text-gray-900 text-sm leading-tight mb-2 line-clamp-2 h-10">{product.name}</h3>
-                                    <div className="flex items-center justify-between w-full">
-                                        <span className="text-emerald-600 font-black text-sm tabular-nums">{formatPrice(product.price)}</span>
-                                        <span className="text-[9px] font-bold text-gray-400 uppercase bg-white px-2 py-1 rounded-lg border border-gray-100">
-                                            Stock: {product.stock_quantity}
-                                        </span>
-                                    </div>
-                                </div>
-                            </button>
-                        ))}
-                        {filteredProducts.length === 0 && (
-                            <div className="col-span-full py-20 text-center">
-                                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-300 mb-4">
-                                    <Search size={32} />
-                                </div>
-                                <p className="text-sm font-bold text-gray-400 italic">No products found {searchTerm ? `for "${searchTerm}"` : ""}</p>
-                                {!searchTerm && onTabChange && (
-                                    <button
-                                        onClick={() => onTabChange('products')}
-                                        className="mt-6 inline-flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition"
-                                    >
-                                        <Plus size={16} />
-                                        Add Your First Product
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                <div className="flex flex-col gap-4 w-full px-3">
+                    <button
+                        onClick={() => setActiveTab('register')}
+                        className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${activeTab === 'register' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <ShoppingCart size={20} />
+                        <span className="text-[9px] font-black uppercase tracking-wider">Sell</span>
+                    </button>
+                    <button
+                        onClick={() => onTabChange && onTabChange('orders')}
+                        className="p-3 rounded-xl flex flex-col items-center gap-1 text-slate-500 hover:text-white hover:bg-white/5 transition-all"
+                    >
+                        <Package size={20} />
+                        <span className="text-[9px] font-black uppercase tracking-wider">Orders</span>
+                    </button>
+                    <button className="p-3 rounded-xl flex flex-col items-center gap-1 text-slate-500 hover:text-white hover:bg-white/5 transition-all">
+                        <User size={20} />
+                        <span className="text-[9px] font-black uppercase tracking-wider">Cust.</span>
+                    </button>
+                </div>
+
+                <div className="mt-auto flex flex-col gap-4 w-full px-3">
+                    <button className="p-3 rounded-xl flex flex-col items-center gap-1 text-slate-500 hover:text-white hover:bg-white/5 transition-all">
+                        <Printer size={20} />
+                    </button>
                 </div>
             </div>
 
-            {/* Cart Side */}
-            <div className="w-full md:w-[450px] bg-white rounded-[40px] flex flex-col shadow-2xl shadow-gray-200/50 border border-gray-100 p-2">
-                <div className="p-8 pb-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4 text-gray-900">
-                        <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 border border-emerald-100">
-                            <ShoppingCart size={24} strokeWidth={2.5} />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-black uppercase tracking-tight">Active Cart</h2>
-                            <p className="text-[10px] font-bold text-gray-400">{itemsCount} Items Added</p>
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col min-w-0">
+                {/* Top Header */}
+                <div className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 md:px-8 shadow-sm z-10">
+                    <div className="flex items-center gap-4">
+                        <h1 className="text-xl font-black uppercase tracking-tight text-slate-900">{shopName || 'POS Terminal'}</h1>
+                        <div className="h-6 w-px bg-slate-200"></div>
+                        <div className="flex items-center gap-2 text-slate-400">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span className="text-xs font-bold uppercase tracking-wider">Online</span>
                         </div>
                     </div>
-                    <button
-                        onClick={() => setCart([])}
-                        className="p-3 text-gray-400 hover:text-red-500 transition-colors hover:bg-red-50 rounded-xl"
-                    >
-                        <Trash2 size={20} />
-                    </button>
+
+                    <div className="flex items-center gap-4">
+                        <div className="hidden md:flex items-center bg-slate-100 rounded-full px-4 py-2 border border-slate-200">
+                            <Search className="h-4 w-4 text-slate-400 mr-2" />
+                            <input
+                                type="text"
+                                placeholder="Global Search..."
+                                className="bg-transparent border-none outline-none text-xs font-bold text-slate-700 w-48 placeholder:text-slate-400"
+                            />
+                        </div>
+                        <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
+                            <div className="text-right hidden md:block">
+                                <p className="text-xs font-black text-slate-900">{profile?.full_name}</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">{profile?.role}</p>
+                            </div>
+                            <div className="w-9 h-9 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-black text-xs border border-indigo-200">
+                                {profile?.email?.charAt(0).toUpperCase()}
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 custom-scrollbar">
-                    {cart.map(item => (
-                        <div key={item.id} className="bg-white border border-gray-100 rounded-3xl p-4 flex gap-4 group hover:border-emerald-100 hover:shadow-lg hover:shadow-emerald-50/50 transition-all">
-                            <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-sm bg-gray-50 shrink-0 border border-gray-100">
-                                <img src={item.image_url} className="w-full h-full object-cover" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-emerald-700 transition-colors uppercase tracking-tight">{item.name}</h4>
-                                <p className="text-[10px] text-gray-400 mb-3 font-black">{formatPrice(item.price)} each</p>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 bg-gray-50 rounded-xl p-1 border border-gray-100">
-                                        <button onClick={() => updateQuantity(item.id, -1)} className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-white rounded-lg transition-all shadow-sm"><Minus size={12} /></button>
-                                        <span className="text-[11px] font-black text-gray-900 w-6 text-center tabular-nums">{item.quantity}</span>
-                                        <button onClick={() => updateQuantity(item.id, 1)} className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-white rounded-lg transition-all shadow-sm"><Plus size={12} /></button>
+                {/* Content Body (Register View) */}
+                <div className="flex-1 overflow-hidden p-4 md:p-6">
+                    {activeTab === 'register' && (
+                        <div className="h-full flex flex-col lg:flex-row gap-6">
+                            {/* Products Side */}
+                            <div className="flex-1 flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                                <div className="p-4 border-b border-slate-100 flex gap-4">
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                        <input
+                                            ref={searchInputRef}
+                                            type="text"
+                                            placeholder="Search products..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full bg-slate-50 border border-slate-200 focus:border-emerald-500 rounded-xl py-3 pl-10 pr-4 text-xs font-bold outline-none transition-all"
+                                        />
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-sm font-black text-emerald-600 tabular-nums">{formatPrice(item.price * item.quantity)}</span>
-                                        <button onClick={() => removeFromCart(item.id)} className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 p-1.5 rounded-lg"><Trash2 size={14} /></button>
+                                    <div className="flex items-center gap-2 px-4 bg-slate-50 rounded-xl border border-slate-200">
+                                        <Package size={16} className="text-slate-400" />
+                                        <span className="text-xs font-black text-slate-700">{filteredProducts.length}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-4 bg-slate-50/50">
+                                    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                        {filteredProducts.map(product => (
+                                            <button
+                                                key={product.id}
+                                                onClick={() => addToCart(product)}
+                                                className="group bg-white rounded-xl p-3 border border-slate-200 hover:border-emerald-500 hover:shadow-md transition-all text-left flex flex-col h-full"
+                                            >
+                                                <div className="w-full aspect-square rounded-lg bg-slate-100 mb-3 overflow-hidden relative">
+                                                    {product.image_url ? (
+                                                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-slate-300 font-black text-xl">IMG</div>
+                                                    )}
+                                                    <div className="absolute top-2 right-2 bg-slate-900/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded backdrop-blur-sm">
+                                                        {product.stock_quantity}
+                                                    </div>
+                                                </div>
+                                                <h3 className="font-bold text-slate-800 text-xs leading-snug line-clamp-2 mb-1 group-hover:text-emerald-600 transition-colors">{product.name}</h3>
+                                                <p className="text-[10px] font-medium text-slate-400 mb-2">{product.sku}</p>
+                                                <div className="mt-auto font-black text-sm text-slate-900">{formatPrice(product.price)}</div>
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
-                    {cart.length === 0 && (
-                        <div className="h-full flex flex-col items-center justify-center text-center px-10">
-                            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 mb-6 border border-gray-100">
-                                <ShoppingCart size={40} />
+
+                            {/* Cart Side */}
+                            <div className="w-full lg:w-[400px] bg-white rounded-2xl border border-slate-200 flex flex-col shadow-xl shadow-slate-200/50 h-[calc(100vh-140px)] lg:h-auto">
+                                <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-t-2xl">
+                                    <h2 className="text-sm font-black uppercase tracking-wide text-slate-900 flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                        Current Order
+                                    </h2>
+                                    <button onClick={() => setCart([])} className="text-slate-400 hover:text-red-500 transition-colors">
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                                    {cart.map(item => (
+                                        <div key={item.id} className="flex gap-3 bg-white border border-slate-100 p-2 rounded-xl group hover:border-slate-200 transition-all">
+                                            <div className="w-12 h-12 bg-slate-100 rounded-lg shrink-0 overflow-hidden">
+                                                <img src={item.image_url} className="w-full h-full object-cover" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between items-start">
+                                                    <p className="text-xs font-bold text-slate-900 truncate pr-2">{item.name}</p>
+                                                    <p className="text-xs font-black text-slate-900">{formatPrice(item.price * item.quantity)}</p>
+                                                </div>
+                                                <div className="flex items-center justify-between mt-2">
+                                                    <p className="text-[10px] text-slate-400">{formatPrice(item.price)} x {item.quantity}</p>
+                                                    <div className="flex items-center gap-1 bg-slate-50 rounded-lg p-0.5 border border-slate-100">
+                                                        <button onClick={() => updateQuantity(item.id, -1)} className="p-1 hover:bg-white rounded shadow-sm text-slate-500"><Minus size={10} /></button>
+                                                        <span className="text-[10px] font-bold w-4 text-center">{item.quantity}</span>
+                                                        <button onClick={() => updateQuantity(item.id, 1)} className="p-1 hover:bg-white rounded shadow-sm text-slate-500"><Plus size={10} /></button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {cart.length === 0 && (
+                                        <div className="h-full flex flex-col items-center justify-center text-slate-300">
+                                            <ShoppingCart size={32} className="mb-2 opacity-50" />
+                                            <p className="text-[10px] font-bold uppercase tracking-widest">Cart Empty</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="p-5 bg-slate-50 border-t border-slate-100 rounded-b-2xl">
+                                    <div className="space-y-2 mb-4">
+                                        <div className="flex justify-between text-xs text-slate-500">
+                                            <span>Subtotal</span>
+                                            <span className="font-bold">{formatPrice(total)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs text-slate-500">
+                                            <span>Tax</span>
+                                            <span className="font-bold">$0.00</span>
+                                        </div>
+                                        <div className="flex justify-between text-lg font-black text-slate-900 pt-2 border-t border-slate-200">
+                                            <span>Total</span>
+                                            <span className="text-emerald-600">{formatPrice(total)}</span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        disabled={cart.length === 0}
+                                        onClick={() => setCheckoutModal(true)}
+                                        className="w-full py-4 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Checkout
+                                    </button>
+                                </div>
                             </div>
-                            <h3 className="text-gray-400 font-black text-lg mb-2 uppercase tracking-wide">Empty Cart</h3>
-                            <p className="text-gray-300 text-[10px] font-bold">Select premium products from the catalog to build your order.</p>
                         </div>
                     )}
-                </div>
-
-                <div className="p-8 bg-gray-50 rounded-[36px] mt-2 border border-gray-100">
-                    <div className="space-y-4 mb-8">
-                        <div className="flex justify-between text-gray-500">
-                            <span className="text-[11px] font-black uppercase tracking-widest">Subtotal</span>
-                            <span className="font-bold tabular-nums text-xs text-gray-900">{formatPrice(total)}</span>
-                        </div>
-                        <div className="flex justify-between text-gray-500">
-                            <span className="text-[11px] font-black uppercase tracking-widest">Platform Fee (0%)</span>
-                            <span className="font-bold tabular-nums text-xs text-gray-900">$0.00</span>
-                        </div>
-                        <div className="h-px bg-gray-200" />
-                        <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                            <span className="text-xs font-black text-gray-600 uppercase tracking-widest">Grand Total</span>
-                            <span className="text-2xl font-black text-emerald-600 tabular-nums">{formatPrice(total)}</span>
-                        </div>
-                    </div>
-
-                    <button
-                        disabled={cart.length === 0}
-                        onClick={() => setCheckoutModal(true)}
-                        className="w-full bg-gray-900 hover:bg-black text-white py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all shadow-xl shadow-gray-200 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed"
-                    >
-                        Terminal Checkout
-                    </button>
                 </div>
             </div>
 
             {/* Checkout Modal */}
             {checkoutModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white w-full max-w-lg rounded-[40px] overflow-hidden shadow-2xl animate-in zoom-in duration-300">
-                        <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
-                            <div>
-                                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Final Settlement</h3>
-                                <p className="text-[10px] font-bold text-gray-500">Confirm payment method and finalize transaction.</p>
-                            </div>
-                            <button onClick={() => setCheckoutModal(false)} className="p-3 text-gray-400 hover:text-gray-900 transition-colors bg-white rounded-2xl shadow-sm border border-gray-100">
-                                <X size={20} />
-                            </button>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-md rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 border border-slate-200">
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Checkout</h3>
+                            <button onClick={() => setCheckoutModal(false)} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
                         </div>
-
-                        <div className="p-8 space-y-8">
-                            <div className="space-y-4">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Select Payment Method</p>
-                                <div className="grid grid-cols-3 gap-4">
-                                    {[
-                                        { id: 'cash', label: 'Cash', icon: <Banknote /> },
-                                        { id: 'card', label: 'Card', icon: <CreditCard /> },
-                                        { id: 'transfer', label: 'Transfer', icon: <User /> }
-                                    ].map(method => (
-                                        <button
-                                            key={method.id}
-                                            onClick={() => setPaymentMethod(method.id as any)}
-                                            className={`flex flex-col items-center gap-3 p-6 rounded-[28px] border-2 transition-all active:scale-95 ${paymentMethod === method.id
-                                                ? 'border-emerald-500 bg-emerald-50 text-emerald-600 shadow-lg shadow-emerald-100'
-                                                : 'border-gray-50 bg-gray-50 text-gray-400 hover:border-gray-200'
-                                                }`}
-                                        >
-                                            <div className={paymentMethod === method.id ? 'text-emerald-500' : 'text-gray-400'}>
-                                                {method.icon}
-                                            </div>
-                                            <span className="text-[10px] font-black uppercase tracking-wider">{method.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
+                        <div className="p-6 space-y-6">
+                            <div className="grid grid-cols-3 gap-3">
+                                {[
+                                    { id: 'cash', label: 'Cash', icon: <Banknote size={20} /> },
+                                    { id: 'card', label: 'Card', icon: <CreditCard size={20} /> },
+                                    { id: 'transfer', label: 'Other', icon: <User size={20} /> }
+                                ].map(method => (
+                                    <button
+                                        key={method.id}
+                                        onClick={() => setPaymentMethod(method.id as any)}
+                                        className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${paymentMethod === method.id ? 'border-emerald-500 bg-emerald-50 text-emerald-600' : 'border-slate-100 bg-slate-50 text-slate-400'}`}
+                                    >
+                                        {method.icon}
+                                        <span className="text-[10px] font-black uppercase">{method.label}</span>
+                                    </button>
+                                ))}
                             </div>
 
-                            <div className="bg-gray-50 p-8 rounded-[32px] text-center space-y-2 border border-gray-100">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Payable Amount</p>
-                                <h4 className="text-4xl font-black text-gray-900 tabular-nums">{formatPrice(total)}</h4>
+                            <div className="text-center py-4">
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Amount Due</p>
+                                <p className="text-4xl font-black text-slate-900 mt-1">{formatPrice(total)}</p>
                             </div>
 
-                            <button
-                                onClick={handleCheckout}
-                                disabled={submitting}
-                                className="w-full bg-gray-900 text-white py-6 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] hover:bg-black transition-all shadow-xl shadow-gray-200 active:scale-95 disabled:opacity-50"
-                            >
-                                {submitting ? 'Authenticating Transaction...' : 'Complete Payment'}
+                            <button onClick={handleCheckout} disabled={submitting} className="w-full py-4 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200">
+                                {submitting ? 'Processing...' : 'Complete Sale'}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Success Modal & Receipt */}
+            {/* Success Modal & Receipt - Simplified */}
+            {/* Success Modal & Receipt - Professional Design */}
             {orderComplete && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm animate-in fade-in overflow-y-auto py-6">
-                    <div className="bg-white w-full max-w-[340px] rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in flex flex-col">
-                        <div className="p-5 text-center space-y-3 bg-emerald-50 shrink-0 relative">
-                            <button
-                                onClick={() => setOrderComplete(null)}
-                                className="absolute top-4 right-4 p-1.5 text-emerald-400 hover:text-emerald-700 transition-colors rounded-xl hover:bg-white/50 border border-emerald-100/50"
-                            >
-                                <X size={18} />
-                            </button>
-                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto text-emerald-500 shadow-sm border border-emerald-100">
-                                <CheckCircle size={24} strokeWidth={2.5} />
+                <div className="fixed inset-0 z-[110] flex items-center justify-center px-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-white w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                        <div className="bg-emerald-500 p-6 text-center text-white shrink-0">
+                            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
+                                <CheckCircle size={24} />
                             </div>
-                            <div>
-                                <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight">Sale Completed</h3>
-                                <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest mt-0.5">Transaction Verified</p>
-                            </div>
+                            <h2 className="text-xl font-black uppercase tracking-tight">Payment Success</h2>
                         </div>
 
-                        {/* Printable Receipt Area */}
-                        <div className="p-5 bg-white overflow-y-auto max-h-[40vh] custom-scrollbar" id="printable-receipt">
-                            <div className="border-2 border-dashed border-gray-100 rounded-2xl p-4 space-y-4">
-                                <div className="text-center space-y-0.5">
-                                    <h2 className="text-base font-black uppercase tracking-tighter text-gray-900 leading-none">{shopName || 'ZimAI Store'}</h2>
-                                    <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Transaction Receipt</p>
+                        <div className="p-6 overflow-y-auto bg-slate-50 flex flex-col items-center">
+                            {/* Receipt Container - This is captured for PDF */}
+                            <div id="printable-receipt" className="bg-white p-6 w-full shadow-sm border border-gray-100 text-center relative mb-6">
+                                {/* Receipt Header */}
+                                <div className="border-b-2 border-dashed border-gray-200 pb-4 mb-4 text-center">
+                                    <h3 className="font-black text-slate-900 uppercase text-lg leading-none mb-1">{shopName || 'Store Receipt'}</h3>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{new Date().toLocaleString()}</p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Order #{orderComplete.order_number}</p>
                                 </div>
 
-                                <div className="flex justify-between border-y border-gray-50 py-2.5">
-                                    <div className="space-y-0.5">
-                                        <p className="text-[7px] font-black text-gray-400 uppercase">Order</p>
-                                        <p className="text-[9px] font-black text-gray-900">#{orderComplete.order_number}</p>
-                                    </div>
-                                    <div className="text-right space-y-0.5">
-                                        <p className="text-[7px] font-black text-gray-400 uppercase">Date</p>
-                                        <p className="text-[9px] font-black text-gray-900">{new Date(orderComplete.created_at).toLocaleDateString()}</p>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <p className="text-[7px] font-black text-gray-400 uppercase">Items</p>
-                                    <div className="space-y-1.5">
-                                        {orderComplete.items?.map((item: any, idx: number) => (
-                                            <div key={idx} className="flex justify-between items-start gap-3">
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-[9px] font-black text-gray-900 uppercase leading-none truncate">{item.name}</p>
-                                                    <p className="text-[8px] font-bold text-gray-400 mt-0.5">{item.quantity} × {formatPrice(item.price)}</p>
-                                                </div>
-                                                <p className="text-[9px] font-black text-gray-900 shrink-0">{formatPrice(item.price * item.quantity)}</p>
+                                {/* Items List */}
+                                <div className="space-y-3 mb-4 text-left min-h-[60px]">
+                                    {orderComplete.items?.map((item: any, idx: number) => (
+                                        <div key={idx} className="flex justify-between items-start text-xs font-bold text-slate-700">
+                                            <div className="flex flex-col">
+                                                <span>{item.name}</span>
+                                                <span className="text-[10px] text-slate-400">x{item.quantity} @ {formatPrice(item.price)}</span>
                                             </div>
-                                        ))}
-                                    </div>
+                                            <span>{formatPrice(item.price * item.quantity)}</span>
+                                        </div>
+                                    ))}
                                 </div>
 
-                                <div className="pt-3 border-t-2 border-dashed border-gray-100 space-y-1.5">
-                                    <div className="flex justify-between items-center text-[9px] font-bold text-gray-400 uppercase tracking-wider leading-none">
+                                {/* Totals */}
+                                <div className="border-t-2 border-dashed border-gray-200 pt-4 space-y-1">
+                                    <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                         <span>Subtotal</span>
-                                        <span className="text-gray-900">{formatPrice(orderComplete.total)}</span>
+                                        <span>{formatPrice(orderComplete.subtotal)}</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-[9px] font-bold text-gray-400 uppercase tracking-wider leading-none">
-                                        <span>Method</span>
-                                        <span className="text-gray-900 uppercase text-[8px]">{orderComplete.payment_method || 'Cash'}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center pt-1.5 px-0.5">
-                                        <span className="text-[10px] font-black text-gray-900 uppercase tracking-widest">Paid</span>
-                                        <span className="text-lg font-black text-emerald-600 font-mono tracking-tighter">{formatPrice(orderComplete.total)}</span>
+                                    <div className="flex justify-between text-base font-black text-slate-900 uppercase tracking-tight mt-2">
+                                        <span>Total Paid</span>
+                                        <span>{formatPrice(orderComplete.total)}</span>
                                     </div>
                                 </div>
 
-                                <div className="pt-3 text-center">
-                                    <p className="text-[8px] font-black text-gray-300 uppercase tracking-[0.2em]">Thank you</p>
-                                    <div className="mt-2.5 flex justify-center opacity-5">
-                                        <Scan size={24} />
-                                    </div>
+                                {/* Footer */}
+                                <div className="mt-6 pt-4 border-t border-gray-100 text-center">
+                                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Thank you for your business!</p>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="p-5 pt-0 space-y-2.5 shrink-0">
-                            <div className="grid grid-cols-2 gap-2.5">
-                                <button
-                                    onClick={() => {
-                                        const style = document.createElement('style');
-                                        style.innerHTML = `
-                                            @media print {
-                                                body * { visibility: hidden; }
-                                                #printable-receipt, #printable-receipt * { visibility: visible; }
-                                                #printable-receipt { 
-                                                    position: absolute; 
-                                                    left: 0; 
-                                                    top: 0; 
-                                                    width: 100%;
-                                                    padding: 0;
-                                                    margin: 0;
-                                                }
-                                            }
-                                        `;
-                                        document.head.appendChild(style);
-                                        window.print();
-                                        document.head.removeChild(style);
-                                    }}
-                                    className="flex items-center justify-center gap-2 bg-gray-900 text-white py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg active:scale-95"
-                                >
-                                    <Printer size={12} />
-                                    Print
+                            {/* Actions */}
+                            <div className="grid grid-cols-2 gap-3 w-full">
+                                <button onClick={handleDownloadReceipt} className="py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-black transition-all flex items-center justify-center gap-2">
+                                    <Download size={16} /> Save PDF
                                 </button>
-                                <button
-                                    onClick={handleDownloadPDF}
-                                    className="flex items-center justify-center gap-2 bg-emerald-600 text-white py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 active:scale-95"
-                                >
-                                    <Download size={12} />
-                                    PDF
+                                <button onClick={() => window.print()} className="py-3 bg-white border border-gray-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-gray-50 transition-all flex items-center justify-center gap-2">
+                                    <Printer size={16} /> Print
+                                </button>
+                                <button onClick={() => setOrderComplete(null)} className="col-span-2 py-3 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-emerald-100 transition-all">
+                                    Start New Order
                                 </button>
                             </div>
-                            <button
-                                onClick={() => setOrderComplete(null)}
-                                className="w-full bg-emerald-50 text-emerald-600 py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all active:scale-95 border border-emerald-100/50"
-                            >
-                                New Sale
-                            </button>
                         </div>
                     </div>
                 </div>

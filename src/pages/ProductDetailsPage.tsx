@@ -79,7 +79,7 @@ export function ProductDetailsPage() {
     const { slug } = useParams<{ slug: string }>();
     const { user } = useAuth();
     const { formatPrice } = useCurrency();
-    const { calculatePrice } = useSettings();
+    const { calculatePrice, settings } = useSettings();
     const navigate = useNavigate();
 
     const [product, setProduct] = useState<Product | null>(null);
@@ -177,7 +177,7 @@ export function ProductDetailsPage() {
                     .eq('is_active', true);
                 if (shipping) {
                     setShippingMethods(shipping);
-                    setSelectedShipping(shipping[0] || null);
+                    // setSelectedShipping(shipping[0] || null); // Removed auto-select as per user request
                 }
 
                 // Fetch reviews
@@ -406,7 +406,7 @@ export function ProductDetailsPage() {
                         </div>
 
                         {/* Vendor Link */}
-                        <Link to={`/shop/${product.vendor.user_id}`} className="flex items-center gap-1.5 text-blue-500 hover:underline group">
+                        <Link to={`/shop/${product.vendor?.user_id}`} className="flex items-center gap-1.5 text-blue-500 hover:underline group">
                             <Store className="w-4 h-4" />
                             <span className="text-sm font-bold">{product.vendor?.shop_name || 'Unknown Vendor'}</span>
                             {product.vendor?.is_verified && (
@@ -426,6 +426,9 @@ export function ProductDetailsPage() {
                                 <div className="flex-1 max-w-[180px] ml-4">
                                     <div className="flex justify-between text-[10px] font-bold text-gray-400 italic mb-1">
                                         <span>{product.sales_count || 0} of {(product.sales_count || 0) + (product.stock_quantity || 0)} sold</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold mb-2">
+                                        <span>VAT & Handling Fees: {formatPrice(calculatePrice(product.base_price).vat + calculatePrice(product.base_price).commission)}</span>
                                     </div>
                                     <div className="h-4 bg-gray-100 rounded-full overflow-hidden shadow-inner flex">
                                         <div
@@ -558,11 +561,29 @@ export function ProductDetailsPage() {
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-4">
-                                <span className="text-xs font-black text-gray-500 uppercase">Total:</span>
-                                <span className="text-xl font-black text-gray-700 font-mono">
-                                    {formatPrice((calculatePrice(product.base_price).total * quantity) + (selectedShipping?.base_cost || 0))}
-                                </span>
+                            <div className="space-y-2 pt-4 border-t border-gray-100 mt-4">
+                                <div className="flex justify-between text-xs text-gray-500 font-medium">
+                                    <span>Subtotal:</span>
+                                    <span>{formatPrice(calculatePrice(product.base_price).total * quantity)}</span>
+                                </div>
+                                {settings?.is_enabled && (
+                                    <div className="flex justify-between text-xs text-gray-500 font-medium">
+                                        <span>Includes VAT ({settings.default_rate}%):</span>
+                                        <span>{formatPrice(calculatePrice(product.base_price).vat * quantity)}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between text-xs text-gray-500 font-medium">
+                                    <span>Shipping:</span>
+                                    <span className={selectedShipping ? "text-gray-900" : "text-orange-500 font-bold"}>
+                                        {selectedShipping ? formatPrice(selectedShipping.base_cost) : 'Select Shipping'}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                                    <span className="text-sm font-black text-gray-900 uppercase">Total:</span>
+                                    <span className="text-2xl font-black text-emerald-600 font-mono">
+                                        {formatPrice((calculatePrice(product.base_price).total * quantity) + (selectedShipping?.base_cost || 0))}
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
@@ -787,6 +808,34 @@ export function ProductDetailsPage() {
                     onClose={() => setShowChat(false)}
                 />
             )}
+            {/* Sticky Mobile Action Bar */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-3 px-4 z-40 lg:hidden safe-area-bottom shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                <div className="flex gap-3">
+                    <button
+                        onClick={handleStartChat}
+                        className="flex flex-col items-center justify-center p-2 text-gray-500 hover:text-emerald-600 transition-colors"
+                    >
+                        <MessageCircle className="w-5 h-5 mb-0.5" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Chat</span>
+                    </button>
+                    <div className="h-auto w-px bg-gray-100 mx-1"></div>
+                    <button
+                        onClick={handleAddToCart}
+                        className={`flex-1 py-3 rounded-lg font-black uppercase text-[10px] tracking-widest transition-all ${addedToCart
+                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                            : 'bg-white border-2 border-orange-500 text-orange-500 active:bg-orange-50'
+                            }`}
+                    >
+                        {addedToCart ? 'In Cart' : 'Add to Cart'}
+                    </button>
+                    <button
+                        onClick={handleBuyNow}
+                        className="flex-1 bg-[#FF7F01] hover:bg-[#e67300] text-white py-3 rounded-lg font-black uppercase text-[10px] tracking-widest shadow-lg shadow-orange-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                    >
+                        Buy Now
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Package, Filter, Edit, Trash2, CheckCircle, XCircle, Power, PowerOff, AlertCircle, X, Save, Grid3x3, List } from 'lucide-react';
+import { Filter, Edit, Power, PowerOff, AlertCircle, X, CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface Product {
@@ -236,31 +236,28 @@ export function ProductsManagement() {
     <AdminLayout>
       <div className="mb-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Package className="h-6 w-6 text-cyan-600" />
-            <div>
-              <h1 className={`text-2xl font-bold ${textPrimary}`}>Product Management</h1>
-              <p className={`text-sm ${textSecondary}`}>Manage all vendor products</p>
-            </div>
+          <div>
+            <h1 className={`text-xl font-bold ${textPrimary} mb-1`}>Products Management</h1>
+            <p className={`text-sm ${textSecondary}`}>Manage all vendor products</p>
           </div>
-          <div className={`flex items-center border ${borderColor} rounded-lg p-1`}>
+          <div className={`flex items-center border ${borderColor} rounded p-0.5 bg-white dark:bg-gray-900`}>
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded transition ${viewMode === 'grid'
-                ? 'bg-cyan-600 text-white'
-                : `${textSecondary} hover:bg-gray-100 dark:hover:bg-gray-700`
+              className={`px-2 py-1 rounded text-xs transition ${viewMode === 'grid'
+                ? `${textPrimary} bg-gray-100 dark:bg-gray-700`
+                : `${textSecondary} hover:bg-gray-50 dark:hover:bg-gray-700`
                 }`}
             >
-              <Grid3x3 className="h-4 w-4" />
+              Grid
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded transition ${viewMode === 'list'
-                ? 'bg-cyan-600 text-white'
-                : `${textSecondary} hover:bg-gray-100 dark:hover:bg-gray-700`
+              className={`px-2 py-1 rounded text-xs transition ${viewMode === 'list'
+                ? `${textPrimary} bg-gray-100 dark:bg-gray-700`
+                : `${textSecondary} hover:bg-gray-50 dark:hover:bg-gray-700`
                 }`}
             >
-              <List className="h-4 w-4" />
+              List
             </button>
           </div>
         </div>
@@ -285,39 +282,38 @@ export function ProductsManagement() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className={`${cardBg} rounded-lg shadow-sm border ${borderColor} p-4`}>
-          <p className={`text-xs ${textSecondary} mb-1`}>Total Products</p>
-          <p className={`text-2xl font-bold ${textPrimary}`}>{stats.total}</p>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+        <div className="bg-white rounded border border-gray-200 p-3">
+          <p className="text-xs text-gray-600 mb-1">Total</p>
+          <p className="text-lg font-bold text-gray-900">{stats.total}</p>
         </div>
-        <div className={`${cardBg} rounded-lg shadow-sm border ${borderColor} p-4`}>
-          <p className={`text-xs ${textSecondary} mb-1`}>Active</p>
-          <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+        <div className="bg-white rounded border border-gray-200 p-3">
+          <p className="text-xs text-gray-600 mb-1">Active</p>
+          <p className="text-lg font-bold text-gray-900">{stats.active}</p>
         </div>
-        <div className={`${cardBg} rounded-lg shadow-sm border ${borderColor} p-4`}>
-          <p className={`text-xs ${textSecondary} mb-1`}>Approved</p>
-          <p className="text-2xl font-bold text-blue-600">{stats.approved}</p>
+        <div className="bg-white rounded border border-gray-200 p-3">
+          <p className="text-xs text-gray-600 mb-1">Approved</p>
+          <p className="text-lg font-bold text-gray-900">{stats.approved}</p>
         </div>
-        <div className={`${cardBg} rounded-lg shadow-sm border ${borderColor} p-4`}>
-          <p className={`text-xs ${textSecondary} mb-1`}>Pending Approval</p>
-          <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+        <div className="bg-white rounded border border-gray-200 p-3">
+          <p className="text-xs text-gray-600 mb-1">Pending</p>
+          <p className="text-lg font-bold text-gray-900">{stats.pending}</p>
         </div>
       </div>
 
-      <div className={`${cardBg} rounded-lg shadow-sm border ${borderColor} p-4 mb-4`}>
-        <div className="flex items-center gap-2 mb-3">
-          <Filter className="h-4 w-4 text-cyan-600" />
-          <span className={`text-sm font-medium ${textPrimary}`}>Filters</span>
+      <div className="bg-white rounded border border-gray-200 p-3 mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Filter className="h-3 w-3 text-gray-400" />
+          <span className="text-xs font-bold text-gray-900">Filters</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-2">
           <div>
-            <label className={`block text-xs font-medium ${textPrimary} mb-1`}>Vendor</label>
+            <label className="block text-xs text-gray-600 mb-0.5">Vendor</label>
             <select
               value={filterVendor}
               onChange={(e) => setFilterVendor(e.target.value)}
-              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                }`}
+              className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none bg-white text-gray-900"
             >
               <option value="all">All Vendors</option>
               {vendors.map(vendor => (
@@ -327,12 +323,11 @@ export function ProductsManagement() {
           </div>
 
           <div>
-            <label className={`block text-xs font-medium ${textPrimary} mb-1`}>Status</label>
+            <label className="block text-xs text-gray-600 mb-0.5">Status</label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                }`}
+              className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none bg-white text-gray-900"
             >
               <option value="all">All</option>
               <option value="active">Active</option>
@@ -341,12 +336,11 @@ export function ProductsManagement() {
           </div>
 
           <div>
-            <label className={`block text-xs font-medium ${textPrimary} mb-1`}>Approval</label>
+            <label className="block text-xs text-gray-600 mb-0.5">Approval</label>
             <select
               value={filterApproval}
               onChange={(e) => setFilterApproval(e.target.value)}
-              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                }`}
+              className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none bg-white text-gray-900"
             >
               <option value="all">All</option>
               <option value="approved">Approved</option>
@@ -355,66 +349,63 @@ export function ProductsManagement() {
           </div>
 
           <div>
-            <label className={`block text-xs font-medium ${textPrimary} mb-1`}>From Date</label>
+            <label className="block text-xs text-gray-600 mb-0.5">From</label>
             <input
               type="date"
               value={filterDateFrom}
               onChange={(e) => setFilterDateFrom(e.target.value)}
-              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                }`}
+              className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none bg-white text-gray-900"
             />
           </div>
 
           <div>
-            <label className={`block text-xs font-medium ${textPrimary} mb-1`}>To Date</label>
+            <label className="block text-xs text-gray-600 mb-0.5">To</label>
             <input
               type="date"
               value={filterDateTo}
               onChange={(e) => setFilterDateTo(e.target.value)}
-              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                }`}
+              className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none bg-white text-gray-900"
             />
           </div>
 
           <div>
-            <label className={`block text-xs font-medium ${textPrimary} mb-1`}>Search</label>
+            <label className="block text-xs text-gray-600 mb-0.5">Search</label>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Name, SKU..."
-              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                }`}
+              placeholder="Name..."
+              className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none bg-white text-gray-900"
             />
           </div>
         </div>
 
-        <div className="flex justify-end mt-3">
+        <div className="flex justify-end mt-2">
           <button
             onClick={resetFilters}
-            className="text-xs text-cyan-600 hover:text-cyan-700 font-medium"
+            className="text-xs text-gray-600 hover:text-gray-900 font-medium"
           >
-            Reset Filters
+            Reset
           </button>
         </div>
       </div>
 
       {viewMode === 'list' ? (
-        <div className={`${cardBg} rounded-lg shadow-sm border ${borderColor}`}>
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className={`border-b ${borderColor}`}>
+            <table className="w-full text-left border-collapse">
+              <thead className="border-b border-slate-200 bg-slate-50">
                 <tr>
-                  <th className={`px-4 py-3 text-left text-xs font-medium ${textSecondary}`}>Product</th>
-                  <th className={`px-4 py-3 text-left text-xs font-medium ${textSecondary}`}>Vendor</th>
-                  <th className={`px-4 py-3 text-left text-xs font-medium ${textSecondary}`}>Price</th>
-                  <th className={`px-4 py-3 text-left text-xs font-medium ${textSecondary}`}>Stock</th>
-                  <th className={`px-4 py-3 text-left text-xs font-medium ${textSecondary}`}>Status</th>
-                  <th className={`px-4 py-3 text-left text-xs font-medium ${textSecondary}`}>Approval</th>
-                  <th className={`px-4 py-3 text-left text-xs font-medium ${textSecondary}`}>Actions</th>
+                  <th className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-700 border-r border-slate-200">Product</th>
+                  <th className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-700 border-r border-slate-200">Vendor</th>
+                  <th className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-700 border-r border-slate-200">Price</th>
+                  <th className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-700 border-r border-slate-200">Stock</th>
+                  <th className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-700 border-r border-slate-200">Status</th>
+                  <th className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-700 border-r border-slate-200">Approval</th>
+                  <th className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-700 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="divide-y divide-slate-100">
                 {filteredProducts.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-4 py-8 text-center">
@@ -423,69 +414,57 @@ export function ProductsManagement() {
                   </tr>
                 ) : (
                   filteredProducts.map((product) => (
-                    <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                      <td className={`px-4 py-3 text-sm ${textPrimary}`}>
+                    <tr key={product.id} className="hover:bg-gray-50 transition-colors bg-white">
+                      <td className="px-3 py-2 border-r border-gray-200 text-xs">
                         <div>
-                          <p className="font-medium">{product.name}</p>
-                          <p className={`text-xs ${textSecondary}`}>{product.sku}</p>
+                          <p className="font-bold text-gray-900">{product.name}</p>
+                          <p className="text-xs text-gray-500">{product.sku}</p>
                         </div>
                       </td>
-                      <td className={`px-4 py-3 text-sm ${textSecondary}`}>
+                      <td className="px-3 py-2 border-r border-gray-200 text-xs text-gray-600">
                         {product.vendor?.shop_name || 'Unknown'}
                       </td>
-                      <td className={`px-4 py-3 text-sm font-semibold ${textPrimary}`}>
+                      <td className="px-3 py-2 border-r border-gray-200 text-xs font-bold text-gray-900">
                         ${product.base_price.toFixed(2)}
                       </td>
-                      <td className={`px-4 py-3 text-sm ${textPrimary}`}>
+                      <td className="px-3 py-2 border-r border-gray-200 text-xs text-gray-900">
                         {product.stock_quantity}
                       </td>
-                      <td className="px-4 py-3 text-xs">
+                      <td className="px-3 py-2 border-r border-gray-200">
                         {product.is_active ? (
-                          <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-medium">
+                          <span className="px-2 py-0.5 rounded bg-green-100 text-green-800 border border-green-200 text-xs">
                             Active
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 font-medium">
+                          <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200 text-xs">
                             Inactive
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-xs">
+                      <td className="px-3 py-2 border-r border-gray-200">
                         {product.admin_approved ? (
-                          <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 font-medium">
+                          <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-200 text-xs">
                             Approved
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 font-medium">
+                          <span className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-700 border border-yellow-200 text-xs">
                             Pending
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
+                      <td className="px-3 py-2 text-right">
+                        <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => setEditingProduct(product)}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded transition dark:hover:bg-blue-900/30"
-                            title="Edit"
+                            className="p-1 px-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 rounded text-xs"
                           >
-                            <Edit className="h-3.5 w-3.5" />
+                            <Edit className="h-3 w-3" />
                           </button>
                           <button
                             onClick={() => handleToggleActive(product)}
-                            className={`p-1 rounded transition ${product.is_active
-                              ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30'
-                              : 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30'
-                              }`}
-                            title={product.is_active ? 'Deactivate' : 'Activate'}
+                            className="p-1 px-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded text-xs"
                           >
-                            {product.is_active ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
-                          </button>
-                          <button
-                            onClick={() => handleDelete(product)}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded transition dark:hover:bg-red-900/30"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            {product.is_active ? <PowerOff className="h-3 w-3" /> : <Power className="h-3 w-3" />}
                           </button>
                         </div>
                       </td>
@@ -566,101 +545,69 @@ export function ProductsManagement() {
       )}
 
       {editingProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className={`${cardBg} rounded-lg shadow-xl max-w-2xl w-full my-8`}>
-            <div className={`p-4 border-b ${borderColor} flex items-center justify-between`}>
-              <h2 className={`text-lg font-bold ${textPrimary}`}>Edit Product</h2>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded shadow-lg max-w-lg w-full overflow-hidden border border-gray-200">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-gray-900">Edit Product</h2>
               <button
                 onClick={() => setEditingProduct(null)}
-                className={`${textSecondary} hover:text-gray-600 transition`}
-              >
-                <X className="h-5 w-5" />
+                className="p-1.5 hover:bg-gray-100 rounded transition">
+                <X className="h-4 w-4 text-gray-400" />
               </button>
             </div>
 
             <div className="p-4 space-y-3">
               <div>
-                <label className={`block text-[10px] font-medium ${textPrimary} mb-1.5`}>Product Name</label>
+                <label className="block text-xs text-gray-600 mb-1">Name</label>
                 <input
                   type="text"
                   value={editingProduct.name}
                   onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                  className={`w-full px-3 py-1.5 text-[13px] border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                    }`}
+                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded focus:outline-none bg-white text-gray-900"
                 />
               </div>
 
               <div>
-                <label className={`block text-[10px] font-medium ${textPrimary} mb-1.5`}>Description</label>
+                <label className="block text-xs text-gray-600 mb-1">Description</label>
                 <textarea
                   value={editingProduct.description || ''}
                   onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
-                  rows={3}
-                  className={`w-full px-3 py-1.5 text-[13px] border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                    }`}
+                  rows={2}
+                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded focus:outline-none bg-white text-gray-900"
                 />
               </div>
 
-              {message && (
-                <div
-                  className={`p-3 rounded-lg flex items-start space-x-2 text-sm ${message.type === 'success'
-                    ? 'bg-green-50 border border-green-200 text-green-800'
-                    : 'bg-red-50 border border-red-200 text-red-800'
-                    }`}
-                >
-                  <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                  <span>{message.text}</span>
-                </div>
-              )}
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={`block text-[10px] font-medium ${textPrimary} mb-1.5`}>Base Price</label>
+                  <label className="block text-xs text-gray-600 mb-1">Price</label>
                   <input
                     type="number"
                     step="0.01"
                     value={editingProduct.base_price}
                     onChange={(e) => setEditingProduct({ ...editingProduct, base_price: parseFloat(e.target.value) })}
-                    className={`w-full px-3 py-1.5 text-[13px] border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                      }`}
+                    className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded focus:outline-none bg-white text-gray-900"
                   />
                 </div>
 
                 <div>
-                  <label className={`block text-[10px] font-medium ${textPrimary} mb-1.5`}>Stock Quantity</label>
+                  <label className="block text-xs text-gray-600 mb-1">Stock</label>
                   <input
                     type="number"
                     value={editingProduct.stock_quantity}
                     onChange={(e) => setEditingProduct({ ...editingProduct, stock_quantity: parseInt(e.target.value) })}
-                    className={`w-full px-3 py-1.5 text-[13px] border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                      }`}
+                    className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded focus:outline-none bg-white text-gray-900"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <label className={`text-sm font-medium ${textPrimary}`}>Featured Product</label>
-                <button
-                  onClick={() => setEditingProduct({ ...editingProduct, is_featured: !editingProduct.is_featured })}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${editingProduct.is_featured ? 'bg-cyan-600' : 'bg-gray-300'
-                    }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${editingProduct.is_featured ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                  />
-                </button>
-              </div>
-
               <div>
-                <label className={`block text-[10px] font-medium ${textPrimary} mb-1.5`}>Admin Notes</label>
+                <label className="block text-xs text-gray-600 mb-1">Admin Notes</label>
                 <textarea
                   value={editingProduct.admin_notes || ''}
                   onChange={(e) => setEditingProduct({ ...editingProduct, admin_notes: e.target.value })}
                   rows={2}
-                  placeholder="Internal notes about this product..."
-                  className={`w-full px-3 py-1.5 text-[13px] border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                    }`}
+                  placeholder="Notes..."
+                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded focus:outline-none bg-white text-gray-900"
                 />
               </div>
 
@@ -669,26 +616,23 @@ export function ProductsManagement() {
                   <>
                     <button
                       onClick={() => handleApproveReject(editingProduct.id, true, editingProduct.admin_notes || undefined)}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-4 py-1.5 text-[13px] bg-green-600 text-white rounded hover:bg-green-700 transition"
+                      className="flex-1 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-xs font-medium"
                     >
-                      <CheckCircle className="h-4 w-4" />
                       Approve
                     </button>
                     <button
                       onClick={() => handleApproveReject(editingProduct.id, false, editingProduct.admin_notes || 'Product rejected')}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-4 py-1.5 text-[13px] bg-red-600 text-white rounded hover:bg-red-700 transition"
+                      className="flex-1 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-xs font-medium"
                     >
-                      <XCircle className="h-4 w-4" />
                       Reject
                     </button>
                   </>
                 )}
                 <button
                   onClick={handleSaveProduct}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-1.5 text-[13px] bg-gradient-to-r from-cyan-600 to-green-600 text-white rounded hover:from-cyan-700 hover:to-green-700 transition"
+                  className="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-medium"
                 >
-                  <Save className="h-4 w-4" />
-                  Save Changes
+                  Save
                 </button>
               </div>
             </div>

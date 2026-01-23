@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Percent, Save, AlertCircle, CheckCircle, X, Edit, Trash2, Plus } from 'lucide-react';
+import { Percent, Save, AlertCircle, CheckCircle, X, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface VATSettings {
@@ -146,8 +146,8 @@ export function VATManagement() {
       {message && (
         <div
           className={`mb-4 p-3 rounded-lg flex items-start space-x-2 text-sm ${message.type === 'success'
-              ? 'bg-green-50 border border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
-              : 'bg-red-50 border border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
+            ? 'bg-green-50 border border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
+            : 'bg-red-50 border border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
             }`}
         >
           {message.type === 'success' ? (
@@ -252,7 +252,7 @@ export function VATManagement() {
         <div className={`${cardBg} rounded-lg shadow-sm border ${borderColor} p-4 mb-6`}>
           <div className="flex items-center gap-2 mb-4">
             <Percent className="h-5 w-5 text-emerald-600" />
-            <h2 className={`text-base font-semibold ${textPrimary}`}>Admin Commission Settings</h2>
+            <h2 className={`text-base font-semibold ${textPrimary}`}>Handling Fee Settings</h2>
           </div>
 
           <div className="space-y-4">
@@ -296,7 +296,7 @@ export function VATManagement() {
                 className="flex items-center gap-1.5 px-4 py-1.5 text-sm bg-emerald-600 text-white rounded hover:bg-emerald-700 transition disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
-                {saving ? 'Saving...' : 'Save Commission Settings'}
+                {saving ? 'Saving...' : 'Save Handling Fee Settings'}
               </button>
             </div>
           </div>

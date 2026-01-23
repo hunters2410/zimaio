@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import { supabase } from '../lib/supabase';
 import { Package, CheckCircle, TrendingUp, Users, DollarSign, Check, ChevronDown, Search } from 'lucide-react';
+import { PuzzleCaptcha } from '../components/PuzzleCaptcha';
 
 interface VendorPackage {
   id: string;
@@ -25,6 +27,7 @@ export function VendorSignupPage() {
   const [shopName, setShopName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isHuman, setIsHuman] = useState(false);
   const [packages, setPackages] = useState<VendorPackage[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<string>('');
   const [acceptedVendorTerms, setAcceptedVendorTerms] = useState(false);
@@ -33,6 +36,7 @@ export function VendorSignupPage() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { signUp } = useAuth();
+  const { settings } = useSiteSettings();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -79,6 +83,12 @@ export function VendorSignupPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    if (!isHuman) {
+      setError('Please verify that you are a human');
+      setLoading(false);
+      return;
+    }
 
     if (!selectedPackage) {
       setError('Please select a package');
@@ -154,8 +164,17 @@ export function VendorSignupPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-gradient-to-r from-cyan-600 to-green-600 text-white py-16">
         <div className="container mx-auto px-4 text-center">
-          <Package className="h-16 w-16 mx-auto mb-4" />
-          <h1 className="text-5xl font-bold mb-4">Start Selling on ZimAIO</h1>
+          <div className="flex justify-center mb-4">
+            <img
+              src={settings.site_logo}
+              alt={settings.site_name}
+              className="h-16 w-auto object-contain brightness-0 invert"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          </div>
+          <h1 className="text-5xl font-bold mb-4">Start Selling on {settings.site_name}</h1>
           <p className="text-xl text-cyan-50 max-w-2xl mx-auto">
             Join thousands of successful vendors and grow your business with our platform
           </p>
@@ -362,7 +381,7 @@ export function VendorSignupPage() {
                   />
                   <label className="ml-2 text-sm text-gray-600">
                     I agree to the{' '}
-                    <Link to="/vendor-terms" target="_blank" className="text-cyan-600 hover:text-cyan-700 font-semibold underline">
+                    <Link to="/contract/vendor_terms" target="_blank" className="text-cyan-600 hover:text-cyan-700 font-semibold underline">
                       Vendor Terms & Conditions
                     </Link>
                   </label>
@@ -378,11 +397,15 @@ export function VendorSignupPage() {
                   />
                   <label className="ml-2 text-sm text-gray-600">
                     I have read and accept the{' '}
-                    <Link to="/vendor-privacy" target="_blank" className="text-cyan-600 hover:text-cyan-700 font-semibold underline">
+                    <Link to="/contract/vendor_privacy" target="_blank" className="text-cyan-600 hover:text-cyan-700 font-semibold underline">
                       Vendor Privacy Policy
                     </Link>
                   </label>
                 </div>
+              </div>
+
+              <div className="mb-6">
+                <PuzzleCaptcha onVerify={setIsHuman} />
               </div>
 
               <button

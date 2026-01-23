@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import { Lock, Mail } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -12,6 +13,7 @@ export function AdminAuthPage() {
   const [resetSent, setResetSent] = useState(false);
   const [showResetForm, setShowResetForm] = useState(false);
   const { signIn } = useAuth();
+  const { settings } = useSiteSettings();
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -52,9 +54,12 @@ export function AdminAuthPage() {
         <div className="text-center mb-6">
           <div className="flex justify-center mb-4">
             <img
-              src="/zimaio_mineral_edition,_no_background_v1.2.png"
-              alt="ZimAIO Logo"
-              className="h-14 w-auto"
+              src={settings.site_logo}
+              alt={settings.site_name}
+              className="h-14 w-auto object-contain"
+              onError={(e) => {
+                e.currentTarget.src = '/zimaio_mineral_edition,_no_background_v1.2.png';
+              }}
             />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">

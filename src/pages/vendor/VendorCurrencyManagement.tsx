@@ -203,7 +203,7 @@ export function VendorCurrencyManagement() {
 
         const existingRate = vendorRates.find(r => r.currency_code === currencyCode);
         if (existingRate) {
-          await supabase.from('vendor_currency_rates').update({ exchange_rate: rate, updated_at: new Date().toISOString() }).eq('id', existingRate.id);
+          await supabase.from('vendor_currency_rates').update({ exchange_rate: rate }).eq('id', existingRate.id);
         } else {
           await supabase.from('vendor_currency_rates').insert({ vendor_id: vendorId, currency_code: currencyCode, exchange_rate: rate, is_active: true });
         }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, Package, ShoppingCart, DollarSign, AlertTriangle, TrendingUp, BarChart3 } from 'lucide-react';
+import { Users, Package, ShoppingCart, DollarSign, AlertTriangle, TrendingUp, BarChart3, Globe, Percent, Truck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { AdminLayout } from '../../components/AdminLayout';
@@ -20,7 +20,8 @@ export function AdminDashboard() {
     totalRevenue: 0,
     pendingVendors: 0,
     pendingKyc: 0,
-    fraudAlerts: 0
+    fraudAlerts: 0,
+    totalVisits: 0
   });
   const [loading, setLoading] = useState(true);
   const [analyticsData, setAnalyticsData] = useState<{
@@ -49,18 +50,23 @@ export function AdminDashboard() {
         ordersRes,
         pendingVendorsRes,
         pendingKycRes,
-        fraudRes
+        fraudRes,
+        visitsRes
       ] = await Promise.all([
         supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'customer'),
         supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'vendor'),
         supabase.from('products').select('id', { count: 'exact', head: true }),
-        supabase.from('orders').select('total'),
+        supabase.from('orders').select('total, vat_amount, commission_amount, shipping_fee'),
         supabase.from('vendor_profiles').select('id', { count: 'exact', head: true }).eq('is_approved', false),
         supabase.from('vendor_profiles').select('id', { count: 'exact', head: true }).eq('kyc_status', 'pending'),
-        supabase.from('fraud_detections').select('id', { count: 'exact', head: true }).eq('status', 'pending')
+        supabase.from('fraud_detections').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('site_visits').select('id', { count: 'exact', head: true })
       ]);
 
       const totalRevenue = (ordersRes.data || []).reduce((sum, order) => sum + Number(order.total), 0);
+      const totalVat = (ordersRes.data || []).reduce((sum, order) => sum + (Number((order as any).vat_amount) || 0), 0);
+      const totalHandling = (ordersRes.data || []).reduce((sum, order) => sum + (Number((order as any).commission_amount) || 0), 0);
+      const totalLogistics = (ordersRes.data || []).reduce((sum, order) => sum + (Number(order.shipping_fee) || 0), 0);
 
       setStats({
         totalCustomers: customersRes.count || 0,
@@ -70,8 +76,12 @@ export function AdminDashboard() {
         totalRevenue,
         pendingVendors: pendingVendorsRes.count || 0,
         pendingKyc: pendingKycRes.count || 0,
-        fraudAlerts: fraudRes.count || 0
-      });
+        fraudAlerts: fraudRes.count || 0,
+        totalVisits: visitsRes.count || 0,
+        vatCollected: totalVat,
+        handlingFees: totalHandling,
+        logisticsEarnings: totalLogistics
+      } as any);
 
       setLoading(false);
     };
@@ -116,7 +126,7 @@ export function AdminDashboard() {
       </div>
 
       <div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <div className={`${cardBg} rounded-lg shadow-sm p-6`}>
             <div className="flex items-center justify-between mb-4">
               <div className="bg-blue-100 p-3 rounded-lg">
@@ -162,16 +172,56 @@ export function AdminDashboard() {
             <div className={`text-3xl font-bold ${textPrimary}`}>{stats.totalOrders}</div>
             <p className="text-sm text-cyan-600 mt-2">Total orders placed</p>
           </div>
+
+          <div className={`${cardBg} rounded-lg shadow-sm p-6`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="bg-indigo-100 p-3 rounded-lg">
+                <Globe className="h-6 w-6 text-indigo-600" />
+              </div>
+              <span className={`text-sm ${textSecondary}`}>Site Visits</span>
+            </div>
+            <div className={`text-3xl font-bold ${textPrimary}`}>{stats.totalVisits.toLocaleString()}</div>
+            <p className="text-sm text-indigo-600 mt-2">Total page visits</p>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 mb-8">
           <div className="bg-gradient-to-br from-cyan-500 to-green-600 rounded-lg shadow-sm p-6 text-white">
             <div className="flex items-center justify-between mb-4">
               <DollarSign className="h-8 w-8" />
-              <span className="text-sm text-cyan-100">Platform Revenue</span>
+              <span className="text-sm text-cyan-100">Handling Fee (Admin)</span>
             </div>
-            <div className="text-4xl font-bold mb-2">${stats.totalRevenue.toFixed(2)}</div>
-            <p className="text-cyan-100">Total transaction value</p>
+            <div className="text-4xl font-bold mb-2">${(stats as any).handlingFees?.toFixed(2) || '0.00'}</div>
+            <p className="text-cyan-100 font-medium">Earned through platform commissions</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg shadow-sm p-6 text-white">
+            <div className="flex items-center justify-between mb-4">
+              <Percent className="h-8 w-8" />
+              <span className="text-sm text-blue-100">VAT Collected</span>
+            </div>
+            <div className="text-4xl font-bold mb-2">${(stats as any).vatCollected?.toFixed(2) || '0.00'}</div>
+            <p className="text-blue-100 font-medium">Total value-added tax processed</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-lg shadow-sm p-6 text-white">
+            <div className="flex items-center justify-between mb-4">
+              <Truck className="h-8 w-8" />
+              <span className="text-sm text-emerald-100">Logistics Earnings</span>
+            </div>
+            <div className="text-4xl font-bold mb-2">${(stats as any).logisticsEarnings?.toFixed(2) || '0.00'}</div>
+            <p className="text-emerald-100 font-medium">Total shipping & delivery revenue</p>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
+          <div className={`${cardBg} rounded-lg shadow-sm p-6 border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <DollarSign className={`h-8 w-8 ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`} />
+              <span className={`text-sm ${textSecondary}`}>Platform Revenue</span>
+            </div>
+            <div className={`text-3xl font-bold ${textPrimary} mb-2`}>${stats.totalRevenue.toFixed(2)}</div>
+            <p className={textSecondary}>Total transaction value</p>
           </div>
 
           <div className={`${cardBg} rounded-lg shadow-sm p-6`}>

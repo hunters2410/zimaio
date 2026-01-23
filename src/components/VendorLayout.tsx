@@ -13,8 +13,6 @@ import {
     Zap,
     Shield,
     Package,
-    Sun,
-    Moon,
     LogOut,
     ChevronRight,
     ChevronLeft,
@@ -26,7 +24,7 @@ import {
     MessageCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
+import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import { supabase } from '../lib/supabase';
 
 interface VendorLayoutProps {
@@ -69,7 +67,8 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
 
     const navigate = useNavigate();
     const { signOut, profile } = useAuth();
-    const { theme, toggleTheme } = useTheme();
+    const { settings } = useSiteSettings();
+    // const { theme, toggleTheme } = useTheme(); // Theme removed
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
         const saved = localStorage.getItem('vendor-sidebar-collapsed');
@@ -150,15 +149,15 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
         return acc;
     }, {} as Record<string, NavItem[]>);
 
-    const isDark = theme === 'dark';
-    const bgColor = isDark ? 'bg-[#0f172a]' : 'bg-[#fcfcfc]'; // Lighter background for light mode
-    const sidebarBg = isDark ? 'bg-[#1e293b]' : 'bg-white';
-    const headerBg = isDark ? 'bg-[#1e293b]/80' : 'bg-white/80';
-    const borderColor = isDark ? 'border-slate-700' : 'border-slate-200';
-    const textPrimary = isDark ? 'text-slate-100' : 'text-slate-900';
-    const textSecondary = isDark ? 'text-slate-400' : 'text-slate-500';
-    const hoverBg = isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-50';
-    const activeItemBg = isDark ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-700';
+    const isDark = false; // Forced light mode
+    const bgColor = 'bg-[#fcfcfc]'; // Lighter background for light mode
+    const sidebarBg = 'bg-white';
+    const headerBg = 'bg-white/80';
+    const borderColor = 'border-slate-200';
+    const textPrimary = 'text-slate-900';
+    const textSecondary = 'text-slate-500';
+    const hoverBg = 'hover:bg-slate-50';
+    const activeItemBg = 'bg-emerald-50 text-emerald-700';
 
     const expandedWidth = 'w-72';
     const collapsedWidth = 'w-20';
@@ -185,11 +184,14 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
                     border-b ${borderColor}
                 `}>
                     <div className="flex items-center gap-3 overflow-hidden">
-                        <div className={`shrink-0 transition-all duration-300 ${sidebarCollapsed ? 'w-10 h-10' : 'w-40 h-12'}`}>
+                        <div className={`shrink-0 transition-all duration-300 ${sidebarCollapsed ? 'w-10 h-10' : 'w-40 h-12'} flex items-center justify-center`}>
                             <img
-                                src="/zimaio_mineral_edition,_no_background_v1.2.png"
-                                alt="ZimAIo"
+                                src={settings.site_logo}
+                                alt={settings.site_name}
                                 className="w-full h-full object-contain"
+                                onError={(e) => {
+                                    e.currentTarget.src = '/zimaio_mineral_edition,_no_background_v1.2.png';
+                                }}
                             />
                         </div>
                     </div>
@@ -402,14 +404,6 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
                             <ExternalLink className="w-4 h-4" />
                             <span>View Site</span>
                         </Link>
-
-                        <button
-                            onClick={toggleTheme}
-                            className={`p-2.5 rounded-xl ${hoverBg} text-slate-500 transition-colors`}
-                            title="Toggle Theme"
-                        >
-                            {isDark ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-600" />}
-                        </button>
 
                         <div className={`h-8 w-[1px] ${isDark ? 'bg-slate-700' : 'bg-slate-200'} mx-1`}></div>
 

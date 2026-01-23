@@ -134,6 +134,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           is_approved: true
         });
       }
+
+      if (role === 'logistic' || role === 'logistics') {
+        await supabase.from('logistics_profiles').insert({
+          user_id: data.user.id,
+          company_name: `${fullName} Logistics`,
+          business_email: email,
+          is_active: true
+        });
+      }
     }
 
     return { data, error };

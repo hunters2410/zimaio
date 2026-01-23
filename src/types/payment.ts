@@ -1,4 +1,4 @@
-export type PaymentGatewayType = 'paynow' | 'paypal' | 'stripe' | 'cash' | 'manual';
+export type PaymentGatewayType = 'paynow' | 'paypal' | 'stripe' | 'iveri' | 'cash' | 'manual';
 
 export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'refunded' | 'cancelled';
 

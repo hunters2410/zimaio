@@ -9,7 +9,7 @@ const corsHeaders = {
 
 interface PaymentRequest {
   order_id: string;
-  gateway_type: 'paynow' | 'paypal' | 'stripe' | 'cash' | 'manual';
+  gateway_type: 'paynow' | 'paypal' | 'stripe' | 'iveri' | 'cash' | 'manual';
   amount: number;
   currency: string;
   return_url?: string;
@@ -140,6 +140,173 @@ Deno.serve(async (req: Request) => {
           JSON.stringify({ error: 'Payment initialization failed' }),
           {
             status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+    } else if (gateway_type === 'iveri') {
+      const config = gateway.configuration;
+
+      // Check metadata for Subtype (Card vs EcoCash vs Lite)
+      const subtype = metadata?.payment_subtype;
+
+      if (subtype === 'card' || subtype === 'ecocash') {
+        // --- iVeri Enterprise REST API ---
+
+        const certificateId = config.certificate_id || "{4c96973f-71dd-4044-802d-6e234effe8f2}";
+        const applicationId = config.application_id;
+
+        if (!applicationId) throw new Error("iVeri Application ID missing");
+
+        // 2. Prepare Payload
+        // Enterprise REST API V2.0
+        const amountInCents = Math.round(amount * 100).toString();
+
+        const iveriPayload: any = {
+          "Version": "2.0",
+          "CertificateID": certificateId,
+          "ProductType": "Enterprise",
+          "ProductVersion": "WebAPI",
+          "Direction": "Request",
+          "Transaction": {
+            "ApplicationID": applicationId,
+            "Command": "Debit",
+            "Mode": config.mode || "Live",
+            "MerchantReference": `ORD-${order.id.slice(0, 8)}`,
+            "Currency": currency || "USD",
+            "Amount": amountInCents,
+            "ExpiryDate": metadata?.card_expiry, // MMYY
+            "PAN": metadata?.card_pan,
+          }
+        };
+
+        // Add CVV if it's a card payment
+        if (metadata?.card_cvv) {
+          iveriPayload.Transaction.CVV = metadata.card_cvv;
+        }
+
+        // 3. Make Request
+        const apiUrl = config.api_url || "https://portal.iveri.com/Enterprise/REST";
+
+        console.log(`[iVeri] Initiating ${subtype} payment. Mode: ${iveriPayload.Transaction.Mode}`);
+        console.log(`[iVeri] URL: ${apiUrl}`);
+
+        const iveriResponse = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify(iveriPayload)
+        });
+
+        if (!iveriResponse.ok) {
+          const rawError = await iveriResponse.text();
+          console.error(`[iVeri] HTTP Error ${iveriResponse.status}:`, rawError);
+          throw new Error(`iVeri API responded with status ${iveriResponse.status}`);
+        }
+
+        const iveriResult = await iveriResponse.json();
+        console.log("[iVeri] Final Response:", JSON.stringify(iveriResult));
+
+        // 4. Handle Response
+        // Expected: { "Transaction": { "Result": { "Status": "0", "Description": "Approved" } } }
+        // Status "0" is usually success. "-1" is denied.
+
+        const resultParams = iveriResult?.Transaction?.Result;
+        const status = resultParams?.Status;
+        const description = resultParams?.Description;
+
+        if (status === "0") {
+          // Success
+          await supabase
+            .from('payment_transactions')
+            .update({
+              status: 'completed',
+              transaction_reference: resultParams?.RequestID || iveriResult?.Transaction?.RequestID,
+              gateway_transaction_id: resultParams?.Source,
+              metadata: { ...metadata, iveri_result: iveriResult }
+            })
+            .eq('id', transaction.id);
+
+          // Also Update Order Status
+          await supabase
+            .from('orders')
+            .update({
+              status: 'processing',
+              payment_status: 'paid'
+            })
+            .eq('id', order_id);
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              transaction_id: transaction.id,
+              redirect_url: null, // No redirect needed
+              message: "Payment Approved"
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+
+        } else {
+          // Failed
+          await supabase
+            .from('payment_transactions')
+            .update({
+              status: 'failed',
+              error_message: description || 'Payment Denied',
+              metadata: { ...metadata, iveri_result: iveriResult }
+            })
+            .eq('id', transaction.id);
+
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: description || "Payment Declined by Gateway"
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } } // 200 OK so frontend handles logic, or 400? Let's do 200 with success:false
+          );
+        }
+
+      } else {
+        // --- iVeri Lite (Redirect) Fallback ---
+        const baseUrl = config.base_url || 'https://portal.iveri.com/Lite/Transactions/New/CheckOut';
+        const merchantId = config.application_id || config.merchant_id;
+
+        if (!merchantId) {
+          throw new Error('iVeri Application ID is missing in configuration');
+        }
+
+        const amountInCents = Math.round(amount * 100);
+
+        const params = new URLSearchParams({
+          ApplicationID: merchantId,
+          Amount: amountInCents.toString(),
+          Currency: currency || 'USD',
+          MerchantReference: `ORD-${order.id.slice(0, 8)}`,
+          ReturnURL: return_url || config.return_url || 'http://localhost:5173/checkout/success',
+          ErrorURL: return_url ? `${return_url}?error=true` : 'http://localhost:5173/checkout/error',
+        });
+
+        // Update transaction
+        await supabase
+          .from('payment_transactions')
+          .update({
+            status: 'pending', // User is redirected
+            transaction_reference: `ORD-${order.id.slice(0, 8)}`,
+          })
+          .eq('id', transaction.id);
+
+        const redirectUrl = `${baseUrl}?${params.toString()}`;
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            transaction_id: transaction.id,
+            redirect_url: redirectUrl,
+          }),
+          {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           }
         );

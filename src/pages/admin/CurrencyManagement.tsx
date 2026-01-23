@@ -51,7 +51,6 @@ export default function CurrencyManagement() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
     try {
       if (editingId) {
         const { error } = await supabase
@@ -163,8 +162,8 @@ export default function CurrencyManagement() {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="flex items-center justify-center h-48">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
         </div>
       </AdminLayout>
     );
@@ -172,247 +171,173 @@ export default function CurrencyManagement() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center">
-            <DollarSign className="w-8 h-8 mr-3 text-blue-600" />
-            Currency Management
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-2">
-            Manage currencies and exchange rates
-          </p>
-        </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Add Currency
-        </button>
-      </div>
-
-      {showForm && (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-              {editingId ? 'Edit Currency' : 'Add New Currency'}
-            </h2>
-            <button
-              onClick={resetForm}
-              className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-            >
-              <X className="w-5 h-5" />
-            </button>
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 flex items-center">
+              <DollarSign className="w-6 h-6 mr-2 text-blue-600" />
+              Currency Management
+            </h1>
+            <p className="text-slate-600 mt-1">Manage currencies and exchange rates</p>
           </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Currency Code *
-                </label>
-                <input
-                  type="text"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                  maxLength={3}
-                  required
-                  placeholder="USD"
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Currency Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  placeholder="US Dollar"
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Symbol *
-                </label>
-                <input
-                  type="text"
-                  value={formData.symbol}
-                  onChange={(e) => setFormData({ ...formData, symbol: e.target.value })}
-                  required
-                  placeholder="$"
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Exchange Rate *
-                </label>
-                <input
-                  type="number"
-                  step="0.000001"
-                  value={formData.exchange_rate}
-                  onChange={(e) => setFormData({ ...formData, exchange_rate: parseFloat(e.target.value) })}
-                  required
-                  placeholder="1.0"
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-6">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.is_active}
-                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                />
-                <span className="ml-2 text-sm text-slate-700 dark:text-slate-300">Active</span>
-              </label>
-
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.is_default}
-                  onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                />
-                <span className="ml-2 text-sm text-slate-700 dark:text-slate-300">Default Currency</span>
-              </label>
-            </div>
-
-            <div className="flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {editingId ? 'Update' : 'Create'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Code
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Symbol
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Exchange Rate
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Default
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-              {currencies.map((currency) => (
-                <tr key={currency.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm font-medium text-slate-900 dark:text-white">
-                      {currency.code}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-slate-700 dark:text-slate-300">
-                      {currency.name}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-slate-700 dark:text-slate-300">
-                      {currency.symbol}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-slate-700 dark:text-slate-300">
-                      {currency.exchange_rate}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => handleToggleActive(currency.id, currency.is_active)}
-                      className={`px-2 py-1 text-xs rounded-full ${
-                        currency.is_active
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                      }`}
-                    >
-                      {currency.is_active ? 'Active' : 'Inactive'}
-                    </button>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {currency.is_default ? (
-                      <span className="flex items-center text-sm text-green-600 dark:text-green-400">
-                        <Check className="w-4 h-4 mr-1" />
-                        Default
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => handleSetDefault(currency.id)}
-                        className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                      >
-                        Set as Default
-                      </button>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => handleEdit(currency)}
-                      className="text-blue-600 hover:text-blue-700 dark:text-blue-400 mr-3"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(currency.id)}
-                      className="text-red-600 hover:text-red-700 dark:text-red-400"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Add
+          </button>
         </div>
 
-        {currencies.length === 0 && (
-          <div className="text-center py-12 text-slate-500 dark:text-slate-400">
-            No currencies found. Add your first currency to get started.
+        {showForm && (
+          <div className="bg-gray-50 rounded p-4 border border-gray-200">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-lg font-semibold text-slate-900">
+                {editingId ? 'Edit Currency' : 'Add Currency'}
+              </h2>
+              <button onClick={resetForm} className="text-slate-500 hover:text-slate-700">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-0.5">Code *</label>
+                  <input
+                    type="text"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                    maxLength={3}
+                    required
+                    placeholder="USD"
+                    className="w-full px-2 py-1 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-0.5">Name *</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                    placeholder="US Dollar"
+                    className="w-full px-2 py-1 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-0.5">Symbol *</label>
+                  <input
+                    type="text"
+                    value={formData.symbol}
+                    onChange={(e) => setFormData({ ...formData, symbol: e.target.value })}
+                    required
+                    placeholder="$"
+                    className="w-full px-2 py-1 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-0.5">Rate *</label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    value={formData.exchange_rate}
+                    onChange={(e) => setFormData({ ...formData, exchange_rate: parseFloat(e.target.value) })}
+                    required
+                    placeholder="1.0"
+                    className="w-full px-2 py-1 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-sm"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center space-x-4">
+                <label className="flex items-center text-sm">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_active}
+                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                    className="w-3 h-3 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="ml-1 text-slate-700">Active</span>
+                </label>
+                <label className="flex items-center text-sm">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_default}
+                    onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
+                    className="w-3 h-3 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="ml-1 text-slate-700">Default</span>
+                </label>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button type="button" onClick={resetForm} className="px-3 py-1 text-slate-700 hover:bg-slate-100 rounded transition-colors text-sm">
+                  Cancel
+                </button>
+                <button type="submit" className="flex items-center px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm">
+                  <Save className="w-3 h-3 mr-1" />
+                  {editingId ? 'Update' : 'Create'}
+                </button>
+              </div>
+            </form>
           </div>
         )}
-      </div>
+
+        <div className="bg-gray-50 rounded shadow overflow-hidden border border-gray-200">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-100 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase">Code</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase">Name</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase">Symbol</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase">Rate</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase">Status</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-600 uppercase">Default</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-slate-600 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {currencies.map((currency) => (
+                  <tr key={currency.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-2 whitespace-nowrap"><span className="text-sm font-medium text-slate-900">{currency.code}</span></td>
+                    <td className="px-4 py-2 whitespace-nowrap"><span className="text-sm text-slate-700">{currency.name}</span></td>
+                    <td className="px-4 py-2 whitespace-nowrap"><span className="text-sm text-slate-700">{currency.symbol}</span></td>
+                    <td className="px-4 py-2 whitespace-nowrap"><span className="text-sm text-slate-700">{currency.exchange_rate}</span></td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <button
+                        onClick={() => handleToggleActive(currency.id, currency.is_active)}
+                        className={`px-2 py-0.5 text-xs rounded-full ${currency.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+                      >
+                        {currency.is_active ? 'Active' : 'Inactive'}
+                      </button>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      {currency.is_default ? (
+                        <span className="flex items-center text-sm text-green-600">
+                          <Check className="w-3 h-3 mr-1" /> Default
+                        </span>
+                      ) : (
+                        <button onClick={() => handleSetDefault(currency.id)} className="text-sm text-blue-600 hover:text-blue-700">
+                          Set Default
+                        </button>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
+                      <button onClick={() => handleEdit(currency)} className="text-blue-600 hover:text-blue-700 mr-2">
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+                      <button onClick={() => handleDelete(currency.id)} className="text-red-600 hover:text-red-700">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {currencies.length === 0 && (
+            <div className="text-center py-8 text-slate-500">No currencies found. Add your first currency.</div>
+          )}
+        </div>
       </div>
     </AdminLayout>
   );

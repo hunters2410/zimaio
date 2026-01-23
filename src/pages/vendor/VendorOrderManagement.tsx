@@ -11,8 +11,6 @@ import {
     Package,
     Clock,
     ChevronDown,
-    ExternalLink,
-    MoreVertical,
     Calendar,
     User,
     MapPin,
@@ -98,7 +96,7 @@ export function VendorOrderManagement() {
         try {
             const { error } = await supabase
                 .from('orders')
-                .update({ status: newStatus, updated_at: new Date().toISOString() })
+                .update({ status: newStatus })
                 .eq('id', orderId);
 
             if (error) throw error;
@@ -419,8 +417,8 @@ export function VendorOrderManagement() {
                                             onClick={() => updateOrderStatus(selectedOrder.id, status)}
                                             disabled={updating || selectedOrder.status === status}
                                             className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${selectedOrder.status === status
-                                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                                    : 'bg-white border border-gray-200 text-gray-700 hover:border-emerald-600 hover:text-emerald-600 shadow-sm'
+                                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                                : 'bg-white border border-gray-200 text-gray-700 hover:border-emerald-600 hover:text-emerald-600 shadow-sm'
                                                 }`}
                                         >
                                             {status}
