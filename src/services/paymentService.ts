@@ -1,7 +1,13 @@
-import { supabase } from '../lib/supabase';
+import { supabase as defaultSupabase } from '../lib/supabase';
 import type { PaymentGateway, PaymentTransaction, PaymentInstruction, PaymentInitiateRequest } from '../types/payment';
 
+let supabase = defaultSupabase;
+
 export const paymentService = {
+  setSupabase(client: any) {
+    supabase = client;
+  },
+
   async getActiveGateways(): Promise<PaymentGateway[]> {
     const { data, error } = await supabase
       .from('payment_gateways')
@@ -169,12 +175,13 @@ export const paymentService = {
   },
 
   async initiatePayment(request: PaymentInitiateRequest): Promise<any> {
-    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-payment`;
+    const apiUrl = `${(supabase as any).supabaseUrl}/functions/v1/process-payment`;
+    const apiKey = (supabase as any).supabaseKey;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(request),
