@@ -6,7 +6,7 @@ import { useCurrency } from '../contexts/CurrencyContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import { supabase } from '../lib/supabase';
-import { ShieldCheck, Truck, CreditCard, Lock, User, Mail, Phone, Loader2, Smartphone, Wallet } from 'lucide-react';
+import { ShieldCheck, Truck, CreditCard, Lock, User, Mail, Phone, Loader2, Smartphone, Wallet, Copy, Check } from 'lucide-react';
 import { paymentService } from '../services/paymentService';
 import { PaymentGateway } from '../types/payment';
 
@@ -43,6 +43,16 @@ export function CheckoutPage() {
         cvv: ''
     });
     const [ecocashNumber, setEcocashNumber] = useState('');
+
+    // Success Modal State
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [successOrderId, setSuccessOrderId] = useState<string>('');
+
+    // Password Modal State (for guest signup)
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [tempPassword, setTempPassword] = useState('');
+    const [tempEmail, setTempEmail] = useState('');
+    const [passwordCopied, setPasswordCopied] = useState(false);
 
     // Derived State
     const subtotal = cartItems.reduce((sum, item) => sum + (item.base_price * item.quantity), 0);
@@ -91,7 +101,8 @@ export function CheckoutPage() {
             const { data } = await supabase.from('shipping_methods').select('*').eq('is_active', true);
             if (data) {
                 setShippingMethods(data);
-                setSelectedShipping(data[0] || null);
+                // Default to Pickup
+                setSelectedShipping({ id: 'pickup', display_name: 'Store Pickup', base_cost: 0, delivery_time_min: 0, delivery_time_max: 0 });
             }
         };
 
@@ -255,9 +266,12 @@ export function CheckoutPage() {
                     : address;
                 const finalShippingMethodId = isPickup ? null : selectedShipping?.id;
 
+                const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
                 const { data: orderData, error: orderError } = await supabase
                     .from('orders')
                     .insert({
+                        order_number: orderNumber,
                         customer_id: currentUser.id,
                         vendor_id: vendorId,
                         status: 'processing', // Paid!
@@ -269,7 +283,8 @@ export function CheckoutPage() {
                         tax_total: vendorCalcs.tax,
                         shipping_total: (shippingCost / Object.keys(itemsByVendor).length),
                         total: orderTotal,
-                        commission_amount: vendorCalcs.comm
+                        commission_amount: vendorCalcs.comm,
+                        items: items
                     })
                     .select()
                     .single();
@@ -282,8 +297,7 @@ export function CheckoutPage() {
                     product_id: item.id,
                     quantity: item.quantity,
                     unit_price: item.price,
-                    total_price: item.price * item.quantity,
-                    vendor_id: vendorId
+                    total_price: item.price * item.quantity
                 }));
                 await supabase.from('order_items').insert(orderItemsData);
 
@@ -318,23 +332,31 @@ export function CheckoutPage() {
 
     const handleOrderPlacement = async () => {
         setLoading(true);
+        console.log("Starting order placement...");
         try {
             let currentUser = user;
 
             // 1. Validate inputs
             if (!currentUser) {
+                console.log("No user logged in, attempting guest signup...");
                 if (!email) throw new Error("Email is required for guest checkout.");
                 const { user: newUser, password } = await handleGuestSignup();
                 currentUser = newUser;
+                console.log("Guest signup successful:", currentUser?.id);
+
                 if (currentUser) {
                     if (selectedShipping?.id !== 'pickup') {
                         // Store shipping address in profile (optional, but good for future)
-                        await supabase.from('profiles').update({
+                        const { error: profileError } = await supabase.from('profiles').update({
                             city: address.city,
                             country: address.country
                         }).eq('id', currentUser.id);
+                        if (profileError) console.error("Profile update error:", profileError);
                     }
-                    alert(`Account created! Your temporary password is: ${password}. Please check your email.`);
+                    // Show password modal instead of alert
+                    setTempPassword(password);
+                    setTempEmail(email);
+                    setShowPasswordModal(true);
                 }
             }
 
@@ -376,9 +398,13 @@ export function CheckoutPage() {
 
                 const finalShippingMethodId = isPickup ? null : selectedShipping?.id;
 
+                const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+                console.log(`Creating order for vendor ${vendorId}...`);
                 const { data: orderData, error: orderError } = await supabase
                     .from('orders')
                     .insert({
+                        order_number: orderNumber,
                         customer_id: currentUser.id,
                         vendor_id: vendorId,
                         status: 'pending',
@@ -390,15 +416,17 @@ export function CheckoutPage() {
                         tax_total: vendorCalcs.tax,
                         shipping_total: (shippingCost / Object.keys(itemsByVendor).length),
                         total: orderTotal,
-                        commission_amount: vendorCalcs.comm
+                        commission_amount: vendorCalcs.comm,
+                        items: items
                     })
                     .select()
                     .single(); // Returns the data directly since we await
 
-                if (orderError) throw orderError;
-                return { data: orderData }; // returning for Promise.all
-
-                if (orderError) throw orderError;
+                if (orderError) {
+                    console.error("Order Insert Error:", orderError);
+                    throw orderError;
+                }
+                console.log("Order created:", orderData.id);
 
                 // Insert Order Items
                 const orderItemsData = items.map(item => ({
@@ -406,25 +434,29 @@ export function CheckoutPage() {
                     product_id: item.id,
                     quantity: item.quantity,
                     unit_price: item.price,
-                    total_price: item.price * item.quantity,
-                    vendor_id: vendorId
+                    total_price: item.price * item.quantity
                 }));
 
+                console.log("Inserting order items...");
                 const { error: itemsError } = await supabase.from('order_items').insert(orderItemsData);
-                if (itemsError) throw itemsError;
+                if (itemsError) {
+                    console.error("Order Items Insert Error:", itemsError);
+                    throw itemsError;
+                }
+                console.log("Order items inserted successfully.");
 
                 return { data: orderData };
             });
 
-            await Promise.all(orderPromises);
+            const completedOrderResults = await Promise.all(orderPromises);
 
-            // 3. Process Payment
             // 3. Process Payment
             if (['paynow', 'paypal'].includes(paymentMethod)) {
                 // Taking the first order to attach payment to (MVP). 
-                const firstOrder = (await Promise.all(orderPromises))[0]?.data;
+                const firstOrder = completedOrderResults[0]?.data;
                 if (!firstOrder) throw new Error("Order creation failed");
 
+                console.log("Initiating payment for order:", firstOrder.id);
                 const response = await paymentService.initiatePayment({
                     order_id: firstOrder.id,
                     gateway_type: paymentMethod as any,
@@ -452,26 +484,74 @@ export function CheckoutPage() {
                     throw new Error("Please enter valid card details.");
                 }
 
-                const response = await paymentService.initiatePayment({
-                    order_id: firstOrder.id,
-                    gateway_type: 'iveri', // Still use 'iveri' backend handler
-                    amount: grandTotal,
-                    currency: 'USD',
-                    metadata: {
-                        customer_name: fullName || currentUser?.email,
-                        full_cart_payment: true,
-                        card_pan: cardDetails.pan.replace(/\s/g, ''),
-                        card_expiry: cardDetails.expiry,
-                        card_cvv: cardDetails.cvv,
-                        payment_subtype: 'card' // Distinguish for backend if needed (though PAN tells story)
-                    }
-                });
+                // Validate card number format (basic check)
+                const cardNum = cardDetails.pan.replace(/\s/g, '');
+                if (cardNum.length < 13 || cardNum.length > 19) {
+                    throw new Error("Invalid card number. Please enter a valid 13-19 digit card number.");
+                }
 
-                if (response.success) {
-                    clearCart();
-                    navigate(`/orders/${firstOrder.id}?payment=success`);
-                } else {
-                    throw new Error(response.error || "Card payment processing failed");
+                // Validate expiry format (MMYY)
+                if (cardDetails.expiry.length !== 4 || !/^\d{4}$/.test(cardDetails.expiry)) {
+                    throw new Error("Invalid expiry date. Please use MMYY format (e.g., 1225).");
+                }
+
+                console.log("=== iVeri Card Payment Debug ===");
+                console.log("Order ID:", firstOrder.id);
+                console.log("Amount:", grandTotal);
+                console.log("Currency: USD");
+                console.log("Card (masked):", cardNum.slice(0, 4) + "****" + cardNum.slice(-4));
+                console.log("Expiry:", cardDetails.expiry);
+
+                try {
+                    const response = await paymentService.initiatePayment({
+                        order_id: firstOrder.id,
+                        gateway_type: 'iveri',
+                        amount: grandTotal,
+                        currency: 'USD',
+                        metadata: {
+                            customer_name: fullName || currentUser?.email,
+                            full_cart_payment: true,
+                            card_pan: cardNum,
+                            card_expiry: cardDetails.expiry,
+                            card_cvv: cardDetails.cvv,
+                            payment_subtype: 'card'
+                        }
+                    });
+
+                    console.log("=== iVeri Response ===");
+                    console.log(response);
+
+                    if (response.success) {
+                        setSuccessOrderId(firstOrder.id);
+                        setShowSuccessModal(true);
+                        clearCart();
+                        // Delay navigation to show success animation
+                        setTimeout(() => {
+                            navigate(`/orders/${firstOrder.id}?payment=success`);
+                        }, 3000);
+                    } else {
+                        console.error("iVeri Payment Declined:", response);
+                        // Show detailed error from gateway matching EcoCash style
+                        const details = response.details || response;
+                        const debugInfo = JSON.stringify(details, null, 2);
+                        throw new Error(`Payment Failed:\n${debugInfo}`);
+                    }
+                } catch (paymentError: any) {
+                    console.error("=== iVeri Payment Error ===");
+                    console.error(paymentError);
+
+                    // Provide more specific error messages
+                    let errorMsg = paymentError.message || "Payment initiation failed";
+
+                    if (errorMsg.includes("not authenticated")) {
+                        errorMsg = "Session expired. Please refresh the page and try again.";
+                    } else if (errorMsg.includes("gateway not available")) {
+                        errorMsg = "Payment gateway is currently unavailable. Please contact support.";
+                    } else if (errorMsg.includes("Application ID")) {
+                        errorMsg = "Payment system configuration error. Please contact support.";
+                    }
+
+                    throw new Error(errorMsg);
                 }
 
             } else if (paymentMethod === 'iveri_ecocash') {
@@ -483,36 +563,69 @@ export function CheckoutPage() {
                     throw new Error("Please enter your EcoCash number.");
                 }
 
-                // EcoCash logic: BIN '910012' + Phone Number = PAN
-                // Ensure phone format is clean (e.g. remove leading 0 if needed, or just append digits)
-                // Assuming user enters '077...' or '77...'
-                // Let's strip non-digits
+                // Phone number validation
                 const cleanPhone = ecocashNumber.replace(/\D/g, '');
-                // Use 910012 as prefix
+                if (cleanPhone.length < 9 || cleanPhone.length > 12) {
+                    throw new Error("Invalid phone number. Please enter a valid mobile number.");
+                }
+
+                // EcoCash logic: BIN '910012' + Phone Number = PAN
                 const ecocashPan = `910012${cleanPhone}`;
 
-                const response = await paymentService.initiatePayment({
-                    order_id: firstOrder.id,
-                    gateway_type: 'iveri',
-                    amount: grandTotal,
-                    currency: 'USD', // EcoCash might be ZiG/ZWG only in reality? User Guide says ZWG. We will send USD and let backend/gateway handle conversion or error if mismatch.
-                    // NOTE: User guide example showed Currency: "ZWG". If your store is USD, this might fail or do FX.
-                    // For now, sending the store currency.
-                    metadata: {
-                        customer_name: fullName || currentUser?.email,
-                        full_cart_payment: true,
-                        card_pan: ecocashPan,
-                        card_expiry: '1228', // Future date as per docs requirement
-                        card_cvv: '', // Not needed for EcoCash
-                        payment_subtype: 'ecocash'
-                    }
-                });
+                console.log("=== iVeri EcoCash Payment Debug ===");
+                console.log("Order ID:", firstOrder.id);
+                console.log("Amount:", grandTotal);
+                console.log("Phone (masked):", cleanPhone.slice(0, 3) + "***" + cleanPhone.slice(-2));
+                console.log("EcoCash PAN:", ecocashPan.slice(0, 6) + "****");
 
-                if (response.success) {
-                    clearCart();
-                    navigate(`/orders/${firstOrder.id}?payment=success`);
-                } else {
-                    throw new Error(response.error || "EcoCash payment processing failed");
+                try {
+                    const response = await paymentService.initiatePayment({
+                        order_id: firstOrder.id,
+                        gateway_type: 'iveri',
+                        amount: grandTotal,
+                        currency: 'USD',
+                        metadata: {
+                            customer_name: fullName || currentUser?.email,
+                            full_cart_payment: true,
+                            card_pan: ecocashPan,
+                            card_expiry: '1228', // Future date as per docs requirement
+                            card_cvv: '', // Not needed for EcoCash
+                            payment_subtype: 'ecocash'
+                        }
+                    });
+
+                    console.log("=== iVeri EcoCash Response ===");
+                    console.log(response);
+
+                    if (response.success) {
+                        setSuccessOrderId(firstOrder.id);
+                        setShowSuccessModal(true);
+                        clearCart();
+                        // Delay navigation to show success animation
+                        setTimeout(() => {
+                            navigate(`/orders/${firstOrder.id}?payment=success`);
+                        }, 3000);
+                    } else {
+                        console.error("EcoCash Payment Declined:", response);
+                        const details = response.details || response;
+                        const debugInfo = JSON.stringify(details, null, 2);
+                        throw new Error(`EcoCash Failed:\n${debugInfo}`);
+                    }
+                } catch (paymentError: any) {
+                    console.error("=== iVeri EcoCash Payment Error ===");
+                    console.error(paymentError);
+
+                    let errorMsg = paymentError.message || "EcoCash payment initiation failed";
+
+                    if (errorMsg.includes("not authenticated")) {
+                        errorMsg = "Session expired. Please refresh the page and try again.";
+                    } else if (errorMsg.includes("gateway not available")) {
+                        errorMsg = "Payment gateway is currently unavailable. Please contact support.";
+                    } else if (errorMsg.includes("Application ID")) {
+                        errorMsg = "Payment system configuration error. Please contact support.";
+                    }
+
+                    throw new Error(errorMsg);
                 }
 
             } else {
@@ -521,8 +634,12 @@ export function CheckoutPage() {
             }
 
         } catch (err: any) {
-            console.error(err);
-            alert(err.message || 'Checkout failed');
+            console.error('Detailed Checkout Error:', err);
+            // More user friendly error
+            let msg = err.message || 'Checkout failed';
+            if (err.code === '42501' || err.message?.includes('violates row-level security')) {
+                msg = 'Permission denied. Please try logging in again or contact support. (RLS Error)';
+            }
         } finally {
             setLoading(false);
         }
@@ -530,6 +647,93 @@ export function CheckoutPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 py-12">
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl transform scale-100 animate-in zoom-in-95 duration-300 flex flex-col items-center text-center">
+                        <div className="w-32 h-32 flex items-center justify-center mb-6 animate-bounce">
+                            <img src="/zimaio-logo.png" alt="ZimAIO" className="w-full h-full object-contain" />
+                        </div>
+                        <h2 className="text-2xl font-black text-gray-900 mb-2">Payment Successful!</h2>
+                        <p className="text-gray-500 text-sm mb-6">
+                            Your secure payment has been processed. Redirecting to your order summary...
+                        </p>
+                        <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                            <div className="h-full bg-emerald-500 animate-[progress_3s_ease-in-out_forwards] w-full origin-left" />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Password Modal - For Guest Account Creation */}
+            {showPasswordModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl transform scale-100 animate-in zoom-in-95 duration-300">
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <User className="w-8 h-8 text-green-600" />
+                            </div>
+                            <h2 className="text-2xl font-black text-gray-900 mb-2">Account Created!</h2>
+                            <p className="text-gray-500 text-sm">
+                                Welcome to ZimAIO! Your account has been successfully created.
+                            </p>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-5 mb-6 border border-gray-200">
+                            <div className="mb-4">
+                                <label className="block text-xs font-bold uppercase text-gray-500 tracking-wider mb-2">Email Address</label>
+                                <div className="flex items-center gap-2 px-4 py-3 bg-white rounded-lg border border-gray-200">
+                                    <Mail className="w-4 h-4 text-gray-400" />
+                                    <span className="text-sm font-medium text-gray-700">{tempEmail}</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold uppercase text-gray-500 tracking-wider mb-2">Temporary Password</label>
+                                <div className="flex items-center gap-2">
+                                    <div className="flex-1 flex items-center gap-2 px-4 py-3 bg-white rounded-lg border border-gray-200">
+                                        <Lock className="w-4 h-4 text-gray-400" />
+                                        <code className="text-sm font-mono font-bold text-green-600 flex-1">{tempPassword}</code>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(tempPassword);
+                                            setPasswordCopied(true);
+                                            setTimeout(() => setPasswordCopied(false), 2000);
+                                        }}
+                                        className={`p-3 rounded-lg transition-all ${passwordCopied
+                                                ? 'bg-green-600 text-white'
+                                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                            }`}
+                                        title="Copy password"
+                                    >
+                                        {passwordCopied ? (
+                                            <Check className="w-5 h-5" />
+                                        ) : (
+                                            <Copy className="w-5 h-5" />
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+                            <p className="text-xs text-amber-800 leading-relaxed">
+                                <strong className="font-bold">Important:</strong> Please save this password securely.
+                                You can change it after logging in from your account settings.
+                            </p>
+                        </div>
+
+                        <button
+                            onClick={() => setShowPasswordModal(false)}
+                            className="w-full py-4 bg-green-600 text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-xl shadow-green-200 hover:bg-green-700 active:scale-95 transition-all"
+                        >
+                            Continue to Checkout
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className="container mx-auto px-4 max-w-6xl">
                 <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tight mb-8">Secure Checkout</h1>
 
@@ -585,53 +789,14 @@ export function CheckoutPage() {
                             </div>
                         </div>
 
-                        {/* 2. Shipping Address */}
-                        {selectedShipping?.id !== 'pickup' && (
-                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                                <h2 className="text-lg font-bold flex items-center gap-3 mb-4">
-                                    <span className="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-xs">2</span>
-                                    Shipping Address
-                                </h2>
-                                <div className="grid md:grid-cols-2 gap-4">
-                                    <div className="md:col-span-2">
-                                        <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Street Address</label>
-                                        <input
-                                            type="text"
-                                            value={address.street}
-                                            onChange={(e) => setAddress({ ...address, street: e.target.value })}
-                                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">City</label>
-                                        <input
-                                            type="text"
-                                            value={address.city}
-                                            onChange={(e) => setAddress({ ...address, city: e.target.value })}
-                                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Province/State</label>
-                                        <input
-                                            type="text"
-                                            value={address.state}
-                                            onChange={(e) => setAddress({ ...address, state: e.target.value })}
-                                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 3. Shipping Method */}
+                        {/* 2. Delivery Method */}
                         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                             <h2 className="text-lg font-bold flex items-center gap-3 mb-4">
-                                <span className="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-xs">3</span>
+                                <span className="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-xs">2</span>
                                 Delivery Method
                             </h2>
                             <div className="grid md:grid-cols-2 gap-3">
-                                {/* Store Pickup Option */}
+                                {/* Store Pickup Option - ALWAYS FIRST */}
                                 <div
                                     onClick={() => setSelectedShipping({ id: 'pickup', display_name: 'Store Pickup', base_cost: 0, delivery_time_min: 0, delivery_time_max: 0 })}
                                     className={`cursor-pointer border rounded-xl p-3 flex items-center justify-between transition-all ${selectedShipping?.id === 'pickup' ? 'border-emerald-500 bg-emerald-50/20' : 'border-gray-100 hover:border-gray-200'}`}
@@ -666,13 +831,47 @@ export function CheckoutPage() {
                                         <span className="font-bold text-xs text-gray-900">{formatPrice(method.base_cost)}</span>
                                     </div>
                                 ))}
-                                {availableShippingMethods.length === 0 && (
-                                    <div className="col-span-2 p-4 text-center border border-dashed border-gray-100 rounded-xl">
-                                        <p className="text-xs text-gray-400">No shipping methods available for your current order total. Only Pick Up available.</p>
-                                    </div>
-                                )}
                             </div>
                         </div>
+
+                        {/* 3. Shipping Address - CONDITIONAL */}
+                        {selectedShipping?.id !== 'pickup' && (
+                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 animate-in fade-in slide-in-from-top-4 duration-300">
+                                <h2 className="text-lg font-bold flex items-center gap-3 mb-4">
+                                    <span className="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-xs">3</span>
+                                    Shipping Address
+                                </h2>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div className="md:col-span-2">
+                                        <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Street Address</label>
+                                        <input
+                                            type="text"
+                                            value={address.street}
+                                            onChange={(e) => setAddress({ ...address, street: e.target.value })}
+                                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">City</label>
+                                        <input
+                                            type="text"
+                                            value={address.city}
+                                            onChange={(e) => setAddress({ ...address, city: e.target.value })}
+                                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Province/State</label>
+                                        <input
+                                            type="text"
+                                            value={address.state}
+                                            onChange={(e) => setAddress({ ...address, state: e.target.value })}
+                                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* 4. Payment */}
                         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">

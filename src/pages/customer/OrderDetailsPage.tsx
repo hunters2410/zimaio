@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import {
     Package,
     MapPin,
     ArrowLeft,
     DollarSign,
-    RotateCcw
+    RotateCcw,
+    Truck
 } from 'lucide-react';
 
 interface OrderItem {
@@ -35,6 +36,7 @@ interface Order {
 
 export function OrderDetailsPage() {
     const { id } = useParams<{ id: string }>();
+    const location = useLocation();
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
     const [refundModalOpen, setRefundModalOpen] = useState(false);
@@ -114,6 +116,7 @@ export function OrderDetailsPage() {
         switch (status) {
             case 'delivered': return 'bg-green-100 text-green-700';
             case 'processing': return 'bg-blue-100 text-blue-700';
+            case 'paid': return 'bg-emerald-100 text-emerald-700'; // Added Paid status color
             case 'cancelled': return 'bg-red-100 text-red-700';
             default: return 'bg-yellow-100 text-yellow-700';
         }
@@ -128,6 +131,18 @@ export function OrderDetailsPage() {
                 </Link>
 
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+                    {/* Payment Success Banner */}
+                    {location.search.includes('payment=success') && (
+                        <div className="bg-emerald-50 text-emerald-800 px-6 py-3 text-sm font-medium border-b border-emerald-100 flex items-center gap-2">
+                            <div className="w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            Payment successful! Your order is now being processed.
+                        </div>
+                    )}
+
                     <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
                             <div className="flex items-center gap-3 mb-1">
@@ -139,6 +154,13 @@ export function OrderDetailsPage() {
                             <p className="text-gray-500 text-sm">
                                 Placed on {new Date(order.created_at).toLocaleDateString()} at {new Date(order.created_at).toLocaleTimeString()}
                             </p>
+                            {/* Tracking Number Display */}
+                            {order.delivery_info?.tracking_number && (
+                                <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg border border-blue-100 text-sm font-medium">
+                                    <Truck className="w-4 h-4" />
+                                    Tracking ID: <span className="font-mono tracking-wider text-blue-900">{order.delivery_info.tracking_number}</span>
+                                </div>
+                            )}
                         </div>
                         {order.status === 'delivered' && (
                             <button
@@ -204,6 +226,22 @@ export function OrderDetailsPage() {
                                         <div>
                                             <p>{(order.shipping_address as any).address}</p>
                                             <p>{(order.shipping_address as any).city}, {(order.shipping_address as any).country}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {order.delivery_info?.tracking_number && (
+                                <div className="mt-4 pt-4 border-t border-gray-100">
+                                    <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-2">Tracking Info</h3>
+                                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-xs text-blue-600 font-medium">Tracking #</span>
+                                            <span className="text-xs font-mono text-blue-800">{order.delivery_info.tracking_number}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs text-blue-600 font-medium">Status</span>
+                                            <span className="text-xs uppercase font-bold text-blue-800">{order.delivery_info.status}</span>
                                         </div>
                                     </div>
                                 </div>

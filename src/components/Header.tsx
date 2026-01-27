@@ -94,6 +94,28 @@ export function Header() {
     fetchCategories();
   }, []);
 
+  // Handle click outside to close dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+
+      // Close user menu if clicking outside
+      if (showUserMenu && !target.closest('.user-menu-container')) {
+        setShowUserMenu(false);
+      }
+
+      // Close currency menu if clicking outside
+      if (showCurrencyMenu && !target.closest('.currency-menu-container')) {
+        setShowCurrencyMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showUserMenu, showCurrencyMenu]);
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
@@ -134,7 +156,7 @@ export function Header() {
               <span className="opacity-30">|</span>
               <Link to="/support" className="hover:text-green-600 transition-colors">Support</Link>
               <span className="opacity-30">|</span>
-              <div className="relative">
+              <div className="relative currency-menu-container">
                 <button
                   onClick={() => setShowCurrencyMenu(!showCurrencyMenu)}
                   className="hover:text-green-600 transition-colors flex items-center"
@@ -210,7 +232,7 @@ export function Header() {
             {/* Right Icons */}
             <div className="flex items-center gap-2 md:gap-5">
               {user ? (
-                <div className="relative group">
+                <div className="relative group user-menu-container">
                   <button
                     onClick={() => setShowUserMenu(!showUserMenu)}
                     className="flex flex-col items-center p-2.5 rounded-2xl hover:bg-gray-50 transition-all text-gray-600 hover:text-green-600"

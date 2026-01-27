@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Authorization Header</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <h1>Test Authorization Header</h1>
+    <div id="output"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://mnkncdqalkamhmtfcykm.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ua25jZHFhbGthbWhtdGZjeWttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY5MzE0MzUsImV4cCI6MjA1MjUwNzQzNX0.XT0rGKSpVaRdW_eJqjVRMc_J5uDHWnmH6k3wqLdZJ7Q'; // Replace with your actual anon key
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const output = document.getElementById('output');
+
+        async function testAuth() {
+            output.innerHTML += '<h2>Step 1: Check Session</h2>';
+
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+            if (sessionError) {
+                output.innerHTML += `<p style="color: red;">❌ Session Error: ${sessionError.message}</p>`;
+                return;
+            }
+
+            if (!session) {
+                output.innerHTML += '<p style="color: orange;">⚠️ No session found. You need to be logged in.</p>';
+                output.innerHTML += '<p>Please log in at <a href="http://localhost:5174/login">http://localhost:5174/login</a> first.</p>';
+                return;
+            }
+
+            output.innerHTML += `<p style="color: green;">✅ Session found</p>`;
+            output.innerHTML += `<p>User ID: ${session.user.id}</p>`;
+            output.innerHTML += `<p>Email: ${session.user.email}</p>`;
+            output.innerHTML += `<p>Token (first 50 chars): ${session.access_token.substring(0, 50)}...</p>`;
+
+            output.innerHTML += '<h2>Step 2: Test Edge Function Call</h2>';
+
+            const apiUrl = `${SUPABASE_URL}/functions/v1/process-payment`;
+            output.innerHTML += `<p>API URL: ${apiUrl}</p>`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        order_id: 'test-order-id',
+                        gateway_type: 'cash',
+                        amount: 10.00,
+                        currency: 'USD'
+                    }),
+                });
+
+                output.innerHTML += `<p>Response Status: ${response.status} ${response.statusText}</p>`;
+
+                const responseText = await response.text();
+                output.innerHTML += `<p>Response Body: <pre>${responseText}</pre></p>`;
+
+                if (response.ok) {
+                    output.innerHTML += '<p style="color: green;">✅ Authorization header is working!</p>';
+                } else {
+                    output.innerHTML += '<p style="color: red;">❌ Request failed but header was sent</p>';
+                }
+
+            } catch (error) {
+                output.innerHTML += `<p style="color: red;">❌ Fetch Error: ${error.message}</p>`;
+            }
+        }
+
+        testAuth();
+    </script>
+</body>
+
+</html>

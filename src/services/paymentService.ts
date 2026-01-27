@@ -175,23 +175,100 @@ export const paymentService = {
   },
 
   async initiatePayment(request: PaymentInitiateRequest): Promise<any> {
+    console.log("🔐 Initiating payment - checking authentication...");
+
     const apiUrl = `${(supabase as any).supabaseUrl}/functions/v1/process-payment`;
-    const apiKey = (supabase as any).supabaseKey;
+    console.log("📍 API URL:", apiUrl);
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
+    // Get the current user's session token
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Payment initiation failed');
+    if (sessionError) {
+      console.error("❌ Session error:", sessionError);
+      throw new Error('Failed to get authentication session. Please refresh the page and try again.');
     }
 
-    return await response.json();
+    if (!session) {
+      console.error("❌ No session found");
+      throw new Error('User not authenticated. Please log in to continue with payment.');
+    }
+
+    if (!session.access_token) {
+      console.error("❌ Session exists but no access token");
+      throw new Error('Invalid session. Please log out and log in again.');
+    }
+
+    console.log("✅ Session valid");
+    console.log("   User ID:", session.user.id);
+    console.log("   Token preview:", session.access_token.substring(0, 20) + "...");
+    console.log("   Token expires:", new Date(session.expires_at! * 1000).toLocaleString());
+
+    // Check if token is expired
+    const now = Math.floor(Date.now() / 1000);
+    if (session.expires_at && session.expires_at < now) {
+      console.warn("⚠️  Token appears to be expired, refreshing...");
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+
+      if (refreshError || !refreshData.session) {
+        console.error("❌ Token refresh failed:", refreshError);
+        throw new Error('Session expired. Please log out and log in again.');
+      }
+
+      console.log("✅ Token refreshed successfully");
+    }
+
+    console.log("📤 Sending payment request...");
+    console.log("   Order ID:", request.order_id);
+    console.log("   Gateway:", request.gateway_type);
+    console.log("   Amount:", request.amount);
+    console.log("   Currency:", request.currency);
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+          'apikey': (supabase as any).supabaseKey, // Add anon key as backup
+        },
+        body: JSON.stringify(request),
+      });
+
+      console.log("📥 Response received:");
+      console.log("   Status:", response.status, response.statusText);
+      console.log("   Headers:", Object.fromEntries(response.headers.entries()));
+
+      const responseText = await response.text();
+      console.log("   Raw response:", responseText);
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("❌ Failed to parse response as JSON");
+        throw new Error(`Invalid response from server: ${responseText}`);
+      }
+
+      if (!response.ok) {
+        console.error("❌ API returned error:");
+        console.error(result);
+        throw new Error(result.error || result.message || 'Payment initiation failed');
+      }
+
+      console.log("✅ Payment API call successful");
+      console.log(result);
+
+      return result;
+
+    } catch (fetchError: any) {
+      console.error("❌ Fetch error:");
+      console.error(fetchError);
+
+      if (fetchError.message.includes('Failed to fetch')) {
+        throw new Error('Network error. Please check your internet connection and try again.');
+      }
+
+      throw fetchError;
+    }
   },
 };

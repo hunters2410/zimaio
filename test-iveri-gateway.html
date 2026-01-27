@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iVeri Payment Gateway Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #1a202c;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        p {
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .test-section {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .test-section h2 {
+            font-size: 16px;
+            color: #2d3748;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #cbd5e0;
+        }
+
+        .status.checking {
+            background: #ffd700;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status.success {
+            background: #48bb78;
+        }
+
+        .status.error {
+            background: #f56565;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .result {
+            font-family: 'Courier New', monospace;
+            background: #1a202c;
+            color: #48bb78;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .result.error {
+            color: #fc8181;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .info-box {
+            background: #edf2f7;
+            border-left: 4px solid #4299e1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #2d3748;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔧 iVeri Gateway Diagnostic</h1>
+        <p>This tool checks your iVeri payment gateway configuration</p>
+
+        <div class="info-box">
+            ℹ️ Open your browser console (F12) for detailed logs
+        </div>
+
+        <div class="test-section">
+            <h2>
+                <span class="status" id="auth-status"></span>
+                Test 1: Authentication
+            </h2>
+            <div id="auth-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>
+                <span class="status" id="gateway-status"></span>
+                Test 2: Gateway Configuration
+            </h2>
+            <div id="gateway-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>
+                <span class="status" id="function-status"></span>
+                Test 3: Edge Function
+            </h2>
+            <div id="function-result" class="result" style="display: none;"></div>
+        </div>
+
+        <button id="run-tests" onclick="runAllTests()">Run Diagnostic Tests</button>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+
+        // IMPORTANT: Update these with your Supabase credentials
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL_HERE'
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE'
+
+        window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+        window.runAllTests = async function () {
+            const button = document.getElementById('run-tests');
+            button.disabled = true;
+            button.textContent = 'Running Tests...';
+
+            await testAuthentication();
+            await testGatewayConfig();
+            await testEdgeFunction();
+
+            button.disabled = false;
+            button.textContent = 'Run Tests Again';
+        }
+
+        async function testAuthentication() {
+            const statusEl = document.getElementById('auth-status');
+            const resultEl = document.getElementById('auth-result');
+
+            statusEl.className = 'status checking';
+            resultEl.style.display = 'block';
+
+            try {
+                const { data: { session }, error } = await window.supabase.auth.getSession();
+
+                if (error) throw error;
+
+                if (session) {
+                    statusEl.className = 'status success';
+                    resultEl.className = 'result';
+                    resultEl.textContent = `✅ Authenticated as: ${session.user.email}\nUser ID: ${session.user.id}`;
+                    console.log('✅ Auth Test Passed:', session.user);
+                    return true;
+                } else {
+                    statusEl.className = 'status error';
+                    resultEl.className = 'result error';
+                    resultEl.textContent = '❌ Not authenticated. Please log in first.';
+                    console.error('❌ Auth Test Failed: No session');
+                    return false;
+                }
+            } catch (error) {
+                statusEl.className = 'status error';
+                resultEl.className = 'result error';
+                resultEl.textContent = `❌ Error: ${error.message}`;
+                console.error('❌ Auth Test Error:', error);
+                return false;
+            }
+        }
+
+        async function testGatewayConfig() {
+            const statusEl = document.getElementById('gateway-status');
+            const resultEl = document.getElementById('gateway-result');
+
+            statusEl.className = 'status checking';
+            resultEl.style.display = 'block';
+
+            try {
+                const { data, error } = await window.supabase
+                    .from('payment_gateways')
+                    .select('*')
+                    .eq('gateway_type', 'iveri')
+                    .eq('is_active', true)
+                    .maybeSingle();
+
+                if (error) throw error;
+
+                if (data) {
+                    const appId = data.configuration?.application_id;
+                    const mode = data.configuration?.mode;
+
+                    if (!appId || appId === 'YOUR_IVERI_APP_ID_HERE') {
+                        statusEl.className = 'status error';
+                        resultEl.className = 'result error';
+                        resultEl.textContent = '❌ Gateway found but Application ID not configured.\n\nPlease update the configuration in Supabase SQL Editor.';
+                        console.error('❌ Gateway Config Invalid:', data);
+                        return false;
+                    }
+
+                    statusEl.className = 'status success';
+                    resultEl.className = 'result';
+                    resultEl.textContent = `✅ Gateway Active\nMode: ${mode}\nApp ID: ${appId.substring(0, 8)}...`;
+                    console.log('✅ Gateway Test Passed:', data);
+                    return true;
+                } else {
+                    statusEl.className = 'status error';
+                    resultEl.className = 'result error';
+                    resultEl.textContent = '❌ iVeri gateway not found or not active.\n\nRun configure_iveri_gateway.sql';
+                    console.error('❌ Gateway Test Failed: Not found');
+                    return false;
+                }
+            } catch (error) {
+                statusEl.className = 'status error';
+                resultEl.className = 'result error';
+                resultEl.textContent = `❌ Error: ${error.message}`;
+                console.error('❌ Gateway Test Error:', error);
+                return false;
+            }
+        }
+
+        async function testEdgeFunction() {
+            const statusEl = document.getElementById('function-status');
+            const resultEl = document.getElementById('function-result');
+
+            statusEl.className = 'status checking';
+            resultEl.style.display = 'block';
+
+            try {
+                const { data: { session } } = await window.supabase.auth.getSession();
+
+                if (!session) {
+                    statusEl.className = 'status error';
+                    resultEl.className = 'result error';
+                    resultEl.textContent = '❌ Cannot test: Not authenticated';
+                    return false;
+                }
+
+                // This will fail but we just want to see if the function exists
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/process-payment`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        order_id: 'test',
+                        gateway_type: 'iveri',
+                        amount: 1,
+                        currency: 'USD'
+                    })
+                });
+
+                if (response.status === 404) {
+                    statusEl.className = 'status error';
+                    resultEl.className = 'result error';
+                    resultEl.textContent = '❌ Edge function not deployed.\n\nRun: npx supabase functions deploy process-payment';
+                    console.error('❌ Function Test Failed: 404 Not Found');
+                    return false;
+                }
+
+                const result = await response.json();
+
+                if (result.error && result.error.includes('Order not found')) {
+                    // This is expected - function exists and works!
+                    statusEl.className = 'status success';
+                    resultEl.className = 'result';
+                    resultEl.textContent = '✅ Edge function is deployed and responding';
+                    console.log('✅ Function Test Passed');
+                    return true;
+                }
+
+                statusEl.className = 'status success';
+                resultEl.className = 'result';
+                resultEl.textContent = `✅ Function responding\n${JSON.stringify(result, null, 2)}`;
+                console.log('✅ Function Test Result:', result);
+                return true;
+
+            } catch (error) {
+                statusEl.className = 'status error';
+                resultEl.className = 'result error';
+                resultEl.textContent = `❌ Error: ${error.message}`;
+                console.error('❌ Function Test Error:', error);
+                return false;
+            }
+        }
+    </script>
+</body>
+
+</html>

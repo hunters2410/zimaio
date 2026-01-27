@@ -191,8 +191,7 @@ export default function CheckoutScreen() {
                     product_id: item.id,
                     quantity: item.quantity,
                     unit_price: item.base_price,
-                    total_price: item.base_price * item.quantity,
-                    vendor_id: vendorId
+                    total_price: item.base_price * item.quantity
                 }));
 
                 await supabase.from('order_items').insert(orderItems);

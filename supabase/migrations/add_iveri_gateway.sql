@@ -20,7 +20,7 @@ SELECT
   'Secure online payment via Credit/Debit Card',
   true,
   false,
-  '{"application_id": "", "certificate_id": "", "api_url": "https://portal.iveri.com/Enterprise/REST", "base_url": "https://portal.iveri.com/Lite/Transactions/New/CheckOut"}',
+  '{"application_id": "", "certificate_id": "", "api_url": "https://portal.host.iveri.com/api/transactions", "base_url": "https://portal.iveri.com/Lite/Transactions/New/CheckOut"}',
   ARRAY['USD', 'ZWL', 'ZAR', 'EUR'],
   3,
   'https://www.iveri.com/images/iveri_logo.png',
