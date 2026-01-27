@@ -6,7 +6,7 @@ export function LoadingFallback() {
                 <div className="relative mb-6">
                     <div className="absolute inset-x-[-20px] inset-y-[-20px] bg-emerald-500 rounded-full blur-3xl opacity-20 animate-pulse"></div>
                     <img
-                        src="/zimaio_mineral_edition,_no_background_v1.2.png"
+                        src="/zimaio-logo.png"
                         alt="ZimAIO Logo"
                         className="w-32 h-auto relative z-10 animate-pulse"
                     />

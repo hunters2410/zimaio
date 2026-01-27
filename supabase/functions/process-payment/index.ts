@@ -302,6 +302,33 @@ Deno.serve(async (req: Request) => {
               console.error("CRITICAL: Failed to update order status to 'processing'!", updateOrderError);
             } else {
               console.log(`Order ${order_id} successfully updated to processing/paid`);
+
+              // Decrement stock for each product in the order
+              if (order.items && Array.isArray(order.items)) {
+                for (const item of order.items) {
+                  if (item.product_id && item.quantity) {
+                    const { data: product, error: fetchError } = await supabase
+                      .from('products')
+                      .select('stock_quantity')
+                      .eq('id', item.product_id)
+                      .single();
+
+                    if (!fetchError && product) {
+                      const newStock = Math.max(0, product.stock_quantity - item.quantity);
+                      const { error: stockError } = await supabase
+                        .from('products')
+                        .update({ stock_quantity: newStock })
+                        .eq('id', item.product_id);
+
+                      if (stockError) {
+                        console.error(`Failed to decrement stock for product ${item.product_id}:`, stockError);
+                      } else {
+                        console.log(`Stock decremented for product ${item.product_id}: ${product.stock_quantity} → ${newStock}`);
+                      }
+                    }
+                  }
+                }
+              }
             }
 
             return new Response(

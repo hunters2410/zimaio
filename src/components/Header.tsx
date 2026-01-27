@@ -135,7 +135,7 @@ export function Header() {
       <div className="bg-white border-b border-gray-100 hidden sm:block">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-10 text-[11px] uppercase tracking-wider font-semibold text-gray-500">
-            <span>Welcome To {settings.site_name} • {settings.site_tagline}</span>
+            <span className="bg-gradient-to-r from-gray-700 via-green-600 to-gray-700 bg-clip-text text-transparent font-['Poppins'] font-medium tracking-wide">Welcome To {settings.site_name} • {settings.site_tagline}</span>
             <div className="flex items-center space-x-6">
               {user ? (
                 <Link to="/dashboard" className="hover:text-green-600 transition-colors flex items-center">

@@ -10,6 +10,26 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
+  /* Mobile Fixes - Prevent horizontal scroll */
+  html,
+  body {
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  /* Apply max-width only to media elements, not icons */
+  img:not(svg),
+  video,
+  iframe {
+    max-width: 100%;
+    height: auto;
+  }
+
   h1,
   h2,
   h3,

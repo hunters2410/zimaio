@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSiteSettings } from '../contexts/SiteSettingsContext';
+import { supabase } from '../lib/supabase';
 import { Package } from 'lucide-react';
 
 export function LoginPage() {
@@ -18,41 +19,67 @@ export function LoginPage() {
     setError('');
     setLoading(true);
 
-    const { error } = await signIn(email, password);
+    try {
+      const { error } = await signIn(email, password);
 
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    } else {
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+        return;
+      }
+
+      // Wait a bit for the AuthContext to update the profile
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Get the latest profile data to redirect correctly
-      const { data: { user } } = await import('../lib/supabase').then(m => m.supabase.auth.getUser());
+      const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
-        const { data: profile } = await import('../lib/supabase').then(m =>
-          m.supabase.from('profiles').select('role').eq('id', user.id).single()
-        );
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
 
-        if (profile) {
+        if (!profileError && profile) {
+          console.log('Profile found:', profile);
+          // Reset loading before navigation
+          setLoading(false);
+
+          let redirectPath = '/';
           switch (profile.role) {
             case 'admin':
-              navigate('/admin/dashboard');
+              redirectPath = '/admin/dashboard';
               break;
             case 'vendor':
-              navigate('/vendor/dashboard');
+              redirectPath = '/vendor/dashboard';
               break;
             case 'customer':
-              navigate('/customer/dashboard');
+              redirectPath = '/dashboard';
               break;
             case 'logistic':
-              navigate('/logistic/dashboard');
+              redirectPath = '/logistic/dashboard';
               break;
             default:
-              navigate('/');
+              redirectPath = '/';
           }
+
+          console.log('Redirecting to:', redirectPath);
+          // Use full URL for Netlify compatibility
+          const fullUrl = `${window.location.origin}${redirectPath}`;
+          console.log('Full redirect URL:', fullUrl);
+          window.location.href = fullUrl;
           return;
         }
       }
+
+      // Fallback navigation
+      setLoading(false);
       navigate('/');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('An unexpected error occurred. Please try again.');
+      setLoading(false);
     }
   };
 
