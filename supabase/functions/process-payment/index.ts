@@ -407,8 +407,8 @@ Deno.serve(async (req: Request) => {
           Amount: amountInCents.toString(),
           Currency: currency || 'USD',
           MerchantReference: `ORD-${order.id.slice(0, 8)}`,
-          ReturnURL: return_url || config.return_url || 'http://localhost:5173/checkout/success',
-          ErrorURL: return_url ? `${return_url}?error=true` : 'http://localhost:5173/checkout/error',
+          ReturnURL: return_url || config.return_url || `${req.headers.get('origin') || 'https://zimaio.netlify.app'}/checkout/success`,
+          ErrorURL: return_url ? `${return_url}?error=true` : `${req.headers.get('origin') || 'https://zimaio.netlify.app'}/checkout/error`,
         });
 
         // Update transaction

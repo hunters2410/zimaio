@@ -49,7 +49,7 @@ if (-not $success) {
     Write-Host ""
     Write-Host "Manual deployment options:" -ForegroundColor Yellow
     Write-Host "1. Free up disk space and try again" -ForegroundColor White
-    Write-Host "2. Use Supabase Dashboard: Edge Functions → Upload function manually" -ForegroundColor White
+    Write-Host "2. Use Supabase Dashboard: Edge Functions -> Upload function manually" -ForegroundColor White
     Write-Host "3. Wait a few minutes and run this script again" -ForegroundColor White
     Write-Host ""
     Write-Host "Function file location:" -ForegroundColor Yellow

@@ -31,11 +31,14 @@ import {
   Search,
   Maximize as Scan,
   Megaphone,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { ReactNode, useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSiteSettings } from '../contexts/SiteSettingsContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { AdminNotifications } from './admin/AdminNotifications';
 import { supabase } from '../lib/supabase';
 import { Zap } from 'lucide-react';
@@ -106,7 +109,7 @@ function AdminLayout({ children }: AdminLayoutProps) {
   const navigate = useNavigate();
   const { signOut, profile } = useAuth();
   const { settings } = useSiteSettings();
-  // const { theme, toggleTheme } = useTheme(); // Theme removed
+  const { theme, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('admin-sidebar-collapsed');
@@ -215,17 +218,17 @@ function AdminLayout({ children }: AdminLayoutProps) {
     navigate('/admin');
   };
 
-  const isDark = false; // Forced light mode
+  const isDark = theme === 'dark';
 
   // Theme Colors
-  const bgColor = 'bg-[#f8fafc]'; // Slate-50
-  const sidebarBg = 'bg-white'; // White
-  const headerBg = 'bg-white/80'; // Glassmorphism backdrop
-  const borderColor = 'border-slate-200';
-  const textPrimary = 'text-slate-900';
-  const textSecondary = 'text-slate-500';
-  const hoverBg = 'hover:bg-slate-50';
-  const activeItemBg = 'bg-cyan-50 text-cyan-700';
+  const bgColor = isDark ? 'bg-slate-900' : 'bg-[#f8fafc]';
+  const sidebarBg = isDark ? 'bg-slate-800' : 'bg-white';
+  const headerBg = isDark ? 'bg-slate-800/80' : 'bg-white/80';
+  const borderColor = isDark ? 'border-slate-700' : 'border-slate-200';
+  const textPrimary = isDark ? 'text-white' : 'text-slate-900';
+  const textSecondary = isDark ? 'text-slate-400' : 'text-slate-500';
+  const hoverBg = isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-50';
+  const activeItemBg = isDark ? 'bg-cyan-900/40 text-cyan-400' : 'bg-cyan-50 text-cyan-700';
 
   const expandedWidth = 'w-72';
   const collapsedWidth = 'w-20';
@@ -451,6 +454,14 @@ function AdminLayout({ children }: AdminLayoutProps) {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
+            <button
+              onClick={toggleTheme}
+              className={`p-2.5 rounded-xl ${hoverBg} ${textSecondary} transition-all active:scale-95 border ${borderColor}`}
+              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {isDark ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5" />}
+            </button>
+
             <Link
               to="/"
               target="_blank"

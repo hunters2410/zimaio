@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import { supabase } from '../lib/supabase';
-import { Package } from 'lucide-react';
 import { PuzzleCaptcha } from '../components/PuzzleCaptcha';
 
 export function SignupPage() {
@@ -16,7 +15,6 @@ export function SignupPage() {
   const [isHuman, setIsHuman] = useState(false);
   const [acceptedCustomerTerms, setAcceptedCustomerTerms] = useState(false);
   const [acceptedCustomerPrivacy, setAcceptedCustomerPrivacy] = useState(false);
-  const [contractAcceptance, setContractAcceptance] = useState(false);
   const [contracts, setContracts] = useState<any[]>([]);
   const { signUp } = useAuth();
   const { settings } = useSiteSettings();
@@ -90,8 +88,8 @@ export function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cyan-50 to-green-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
+    <div className="min-h-screen bg-gradient-to-br from-cyan-50 to-green-50 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center p-4 transition-colors duration-300">
+      <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-2xl shadow-xl dark:shadow-slate-950/40 p-8 border border-gray-100 dark:border-slate-700">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
             <img
@@ -103,8 +101,8 @@ export function SignupPage() {
               }}
             />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
-          <p className="text-gray-600">Join {settings.site_name} today</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Create Account</h1>
+          <p className="text-gray-600 dark:text-gray-400">Join {settings.site_name} today</p>
         </div>
 
         {error && (
@@ -115,42 +113,42 @@ export function SignupPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Full Name
             </label>
             <input
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+              className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all"
               placeholder="collen hunters"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Email Address
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+              className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all"
               placeholder="you@example.com"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Password
             </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+              className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all"
               placeholder="••••••••"
               required
               minLength={6}
@@ -158,13 +156,13 @@ export function SignupPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               I want to
             </label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+              className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-gray-900 dark:text-white transition-all outline-none"
             >
               <option value="customer">Shop as a Customer</option>
               <option value="vendor">Sell as a Vendor</option>
@@ -172,8 +170,8 @@ export function SignupPage() {
           </div>
 
           {role === 'customer' && (
-            <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <p className="text-sm font-medium text-gray-900 mb-2">Customer Agreements *</p>
+            <div className="space-y-3 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-700">
+              <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">Customer Agreements *</p>
 
               <div className="flex items-start">
                 <input
@@ -181,9 +179,9 @@ export function SignupPage() {
                   required
                   checked={acceptedCustomerTerms}
                   onChange={(e) => setAcceptedCustomerTerms(e.target.checked)}
-                  className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 mt-1"
+                  className="rounded border-gray-300 dark:border-slate-600 text-cyan-600 focus:ring-cyan-500 bg-white dark:bg-slate-700 mt-1"
                 />
-                <label className="ml-2 text-sm text-gray-600">
+                <label className="ml-2 text-sm text-gray-600 dark:text-gray-400">
                   I agree to the{' '}
                   <Link to="/contract/customer_terms" target="_blank" className="text-cyan-600 hover:text-cyan-700 font-semibold underline">
                     Customer Terms & Conditions
@@ -197,11 +195,11 @@ export function SignupPage() {
                   required
                   checked={acceptedCustomerPrivacy}
                   onChange={(e) => setAcceptedCustomerPrivacy(e.target.checked)}
-                  className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 mt-1"
+                  className="rounded border-gray-300 dark:border-slate-600 text-cyan-600 focus:ring-cyan-500 bg-white dark:bg-slate-700 mt-1"
                 />
-                <label className="ml-2 text-sm text-gray-600">
+                <label className="ml-2 text-sm text-gray-600 dark:text-gray-400">
                   I have read and accept the{' '}
-                  <Link to="/contract/customer_privacy" target="_blank" className="text-cyan-600 hover:text-cyan-700 font-semibold underline">
+                  <Link to="/contract/customer_privacy" target="_blank" className="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 font-semibold underline">
                     Customer Privacy Policy
                   </Link>
                 </label>
@@ -223,9 +221,9 @@ export function SignupPage() {
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             Already have an account?{' '}
-            <Link to="/login" className="text-cyan-600 hover:text-cyan-700 font-semibold">
+            <Link to="/login" className="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 font-semibold">
               Sign in
             </Link>
           </p>

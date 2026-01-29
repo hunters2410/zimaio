@@ -84,34 +84,34 @@ export function CustomerWallet() {
 
     if (loading && !wallet) {
         return (
-            <div className="flex items-center justify-center h-64">
+            <div className="flex items-center justify-center h-64 bg-gray-50 dark:bg-slate-900">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
             </div>
         );
     }
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8">
+        <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">My Treasury</h1>
-                    <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mt-1">Personal Funds & Balance Audit</p>
+                    <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">My Treasury</h1>
+                    <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mt-2">Personal Funds & Balance Audit</p>
                 </div>
                 <button
                     onClick={fetchWalletData}
-                    className="p-3 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl hover:bg-slate-50 transition-colors shadow-sm"
+                    className="p-4 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-90 shadow-sm group"
                 >
-                    <RefreshCcw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                    <RefreshCcw className={`w-5 h-5 text-slate-600 dark:text-slate-400 group-hover:rotate-180 transition-transform duration-500 ${loading ? 'animate-spin' : ''}`} />
                 </button>
             </div>
 
             {message && (
-                <div className={`p-4 rounded-2xl flex items-center justify-between ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                    <div className="flex items-center gap-2">
-                        <AlertCircle className="w-5 h-5" />
-                        <span className="text-xs font-bold uppercase tracking-widest">{message.text}</span>
+                <div className={`p-6 rounded-[2rem] flex items-center justify-between border-2 animate-in slide-in-from-top-4 duration-300 ${message.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800/50 text-red-700 dark:text-red-400'}`}>
+                    <div className="flex items-center gap-4">
+                        <AlertCircle className="w-6 h-6" />
+                        <span className="text-xs font-black uppercase tracking-widest">{message.text}</span>
                     </div>
-                    <button onClick={() => setMessage(null)}><X size={18} /></button>
+                    <button onClick={() => setMessage(null)} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors"><X size={20} /></button>
                 </div>
             )}
 
@@ -160,27 +160,28 @@ export function CustomerWallet() {
 
                 <div className="divide-y-2 divide-slate-50 dark:divide-slate-800">
                     {transactions.map((tx) => (
-                        <div key={tx.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                            <div className="flex items-center gap-4">
-                                <div className={`p-3 rounded-2xl ${tx.amount > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-                                    {tx.amount > 0 ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
+                        <div key={tx.id} className="p-8 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors border-l-4 border-transparent hover:border-cyan-500">
+                            <div className="flex items-center gap-6">
+                                <div className={`p-4 rounded-[1.5rem] shadow-sm ${tx.amount > 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'}`}>
+                                    {tx.amount > 0 ? <ArrowDownLeft size={24} /> : <ArrowUpRight size={24} />}
                                 </div>
                                 <div>
-                                    <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tighter">{tx.description}</p>
+                                    <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-1">{tx.description}</p>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{new Date(tx.created_at).toLocaleString()}</p>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className={`text-sm font-black tracking-tight ${tx.amount > 0 ? 'text-green-600' : 'text-slate-900 dark:text-white'}`}>
+                                <p className={`text-lg font-black tracking-tighter ${tx.amount > 0 ? 'text-emerald-600' : 'text-slate-900 dark:text-white'}`}>
                                     {tx.amount > 0 ? '+' : ''}{tx.amount} {tx.currency}
                                 </p>
-                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-300">{tx.transaction_type}</span>
+                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-300 dark:text-slate-600">{tx.transaction_type}</span>
                             </div>
                         </div>
                     ))}
                     {transactions.length === 0 && (
-                        <div className="p-20 text-center">
-                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">No financial data logged yet</p>
+                        <div className="p-32 text-center">
+                            <RefreshCcw className="w-12 h-12 text-slate-100 dark:text-slate-800 mx-auto mb-6" />
+                            <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.6em]">No financial data logged yet</p>
                         </div>
                     )}
                 </div>

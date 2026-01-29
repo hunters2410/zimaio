@@ -12,6 +12,7 @@ import {
   ExternalLink,
   ShieldCheck,
   TrendingUp,
+  MessageCircle,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -76,7 +77,8 @@ export function VendorDashboard() {
     rating: 0,
     lowStockItems: 0,
     outOfStockItems: 0,
-    dailyRevenue: [] as any[]
+    dailyRevenue: [] as any[],
+    unreadMessages: 0
   });
 
   const [vendorProfile, setVendorProfile] = useState<any>(null);
@@ -161,7 +163,18 @@ export function VendorDashboard() {
           rating: vendor.rating || 0,
           lowStockItems: lowStock,
           outOfStockItems: outOfStock,
-          dailyRevenue: Object.entries(processedChartData).map(([date, total]) => ({ date, total }))
+          dailyRevenue: Object.entries(processedChartData).map(([date, total]) => ({ date, total })),
+          unreadMessages: (await supabase
+            .from('chat_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('is_read', false)
+            .neq('sender_id', profile.id)
+            .in('conversation_id', (
+              await supabase
+                .from('chat_conversations')
+                .select('id')
+                .contains('participant_ids', [profile.id])
+            ).data?.map(c => c.id) || [])).count || 0
         });
 
         setRecentOrders(orders.slice(0, 5));
@@ -264,8 +277,20 @@ export function VendorDashboard() {
             </div>
 
             {/* Quick Alerts */}
-            {(stats.lowStockItems > 0 || stats.outOfStockItems > 0 || stats.pendingOrders > 0) && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {(stats.lowStockItems > 0 || stats.outOfStockItems > 0 || stats.pendingOrders > 0 || stats.unreadMessages > 0) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {stats.unreadMessages > 0 && (
+                  <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-4 animate-pulse">
+                    <div className="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center shrink-0">
+                      <MessageCircle className="w-5 h-5 text-rose-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest leading-none mb-1">Unaddressed Inbox</p>
+                      <p className="text-xs font-bold text-rose-900">{stats.unreadMessages} Unread messages</p>
+                    </div>
+                    <button onClick={() => handleTabChange('messages')} className="text-[10px] font-black text-rose-600 uppercase tracking-widest hover:underline whitespace-nowrap">Reply</button>
+                  </div>
+                )}
                 {stats.pendingOrders > 0 && (
                   <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex items-center gap-4">
                     <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">

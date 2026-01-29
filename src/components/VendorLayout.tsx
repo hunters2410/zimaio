@@ -21,10 +21,13 @@ import {
     RotateCcw,
     Megaphone,
     TrendingUp,
-    MessageCircle
+    MessageCircle,
+    Moon,
+    Sun
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSiteSettings } from '../contexts/SiteSettingsContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 
 interface VendorLayoutProps {
@@ -68,7 +71,7 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
     const navigate = useNavigate();
     const { signOut, profile } = useAuth();
     const { settings } = useSiteSettings();
-    // const { theme, toggleTheme } = useTheme(); // Theme removed
+    const { theme, toggleTheme } = useTheme(); // Theme enabled
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
         const saved = localStorage.getItem('vendor-sidebar-collapsed');
@@ -79,6 +82,9 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
     const [quickActionSearch, setQuickActionSearch] = useState('');
     const quickActionRef = useRef<HTMLDivElement>(null);
     const sidebarRef = useRef<HTMLElement>(null);
+    const [unreadMessages, setUnreadMessages] = useState(0);
+    const [showMessageAlert, setShowMessageAlert] = useState(false);
+    const [lastMessageSender, setLastMessageSender] = useState<string | null>(null);
 
     // Close quick actions on click outside
     useEffect(() => {
@@ -123,6 +129,64 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
                 .then(({ data }) => {
                     if (data) setKycStatus(data.kyc_status);
                 });
+
+            // Fetch initial unread count
+            const fetchUnreadCount = async () => {
+                const { count } = await supabase
+                    .from('chat_messages')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('is_read', false)
+                    .neq('sender_id', profile.id)
+                    .in('conversation_id', (
+                        await supabase
+                            .from('chat_conversations')
+                            .select('id')
+                            .contains('participant_ids', [profile.id])
+                    ).data?.map(c => c.id) || []);
+
+                setUnreadMessages(count || 0);
+            };
+
+            fetchUnreadCount();
+
+            // Real-time listener for new messages
+            const channel = supabase
+                .channel('vendor-unread-messages')
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'chat_messages'
+                }, (payload) => {
+                    if (payload.new.sender_id !== profile.id) {
+                        setUnreadMessages(prev => prev + 1);
+                        if (activeTab !== 'messages') {
+                            setShowMessageAlert(true);
+                            supabase
+                                .from('profiles')
+                                .select('full_name')
+                                .eq('id', payload.new.sender_id)
+                                .single()
+                                .then(({ data }) => {
+                                    setLastMessageSender(data?.full_name || 'Customer');
+                                });
+
+                            // Auto hide after 5 seconds
+                            setTimeout(() => setShowMessageAlert(false), 5000);
+                        }
+                    }
+                })
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'chat_messages'
+                }, () => {
+                    fetchUnreadCount();
+                })
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(channel);
+            };
         }
     }, [profile?.id]);
 
@@ -149,15 +213,15 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
         return acc;
     }, {} as Record<string, NavItem[]>);
 
-    const isDark = false; // Forced light mode
-    const bgColor = 'bg-[#fcfcfc]'; // Lighter background for light mode
-    const sidebarBg = 'bg-white';
-    const headerBg = 'bg-white/80';
-    const borderColor = 'border-slate-200';
-    const textPrimary = 'text-slate-900';
-    const textSecondary = 'text-slate-500';
-    const hoverBg = 'hover:bg-slate-50';
-    const activeItemBg = 'bg-emerald-50 text-emerald-700';
+    const isDark = theme === 'dark'; // Dynamic dark mode
+    const bgColor = isDark ? 'bg-slate-900' : 'bg-[#fcfcfc]'; // Lighter background for light mode
+    const sidebarBg = isDark ? 'bg-slate-800' : 'bg-white';
+    const headerBg = isDark ? 'bg-slate-800/80' : 'bg-white/80';
+    const borderColor = isDark ? 'border-slate-700' : 'border-slate-200';
+    const textPrimary = isDark ? 'text-white' : 'text-slate-900';
+    const textSecondary = isDark ? 'text-slate-400' : 'text-slate-500';
+    const hoverBg = isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-50';
+    const activeItemBg = isDark ? 'bg-emerald-900/40 text-emerald-400' : 'bg-emerald-50 text-emerald-700';
 
     const expandedWidth = 'w-72';
     const collapsedWidth = 'w-20';
@@ -246,7 +310,16 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
                                                     <span className="ml-3 text-sm truncate">{item.label}</span>
                                                 )}
 
-                                                {isActive && !sidebarCollapsed && (
+                                                {item.id === 'messages' && unreadMessages > 0 && (
+                                                    <div className={`
+                                                        ${sidebarCollapsed ? 'absolute -top-1 -right-1' : 'ml-auto'}
+                                                        bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-lg animate-bounce
+                                                    `}>
+                                                        {unreadMessages}
+                                                    </div>
+                                                )}
+
+                                                {isActive && !sidebarCollapsed && item.id !== 'messages' && (
                                                     <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-500" />
                                                 )}
                                             </button>
@@ -393,6 +466,13 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-4">
+                        <button
+                            onClick={toggleTheme}
+                            className={`p-2.5 rounded-xl ${hoverBg} ${textSecondary} transition-all active:scale-95 border ${borderColor}`}
+                            title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                        >
+                            {isDark ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5" />}
+                        </button>
                         <VendorNotifications />
 
                         <Link
@@ -440,6 +520,38 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
                         </div>
                     </div>
                 </header>
+
+                {/* Floating Message Alert */}
+                {showMessageAlert && activeTab !== 'messages' && (
+                    <div className="fixed bottom-10 right-10 z-[100] animate-in slide-in-from-right-10 duration-500">
+                        <div className="bg-white dark:bg-slate-800 border-2 border-emerald-500 rounded-2xl shadow-2xl p-6 flex items-center gap-6 max-w-sm">
+                            <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center text-emerald-600">
+                                <MessageCircle className="w-6 h-6" />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">New Message Received!</h4>
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mt-1">
+                                    {lastMessageSender} is waiting for a response.
+                                </p>
+                                <button
+                                    onClick={() => {
+                                        onTabChange('messages');
+                                        setShowMessageAlert(false);
+                                    }}
+                                    className="mt-4 text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.2em] hover:underline"
+                                >
+                                    Reply Now →
+                                </button>
+                            </div>
+                            <button
+                                onClick={() => setShowMessageAlert(false)}
+                                className="p-2 text-slate-300 hover:text-slate-500 transition-colors"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Page Content */}
                 <main className="flex-1 p-6 lg:p-10 overflow-x-hidden">

@@ -18,6 +18,7 @@ import { useVisitorTracker } from './hooks/useVisitorTracker';
 const HomePage = lazy(() => import('./pages/HomePage').then(module => ({ default: module.HomePage })));
 const LoginPage = lazy(() => import('./pages/LoginPage').then(module => ({ default: module.LoginPage })));
 const SignupPage = lazy(() => import('./pages/SignupPage').then(module => ({ default: module.SignupPage })));
+const CategoriesPage = lazy(() => import('./pages/CategoriesPage').then(module => ({ default: module.CategoriesPage })));
 const ProductsPage = lazy(() => import('./pages/ProductsPage').then(module => ({ default: module.ProductsPage })));
 const VendorSignupPage = lazy(() => import('./pages/VendorSignupPage').then(module => ({ default: module.VendorSignupPage })));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage').then(module => ({ default: module.PrivacyPage })));
@@ -55,10 +56,11 @@ const WalletManagement = lazy(() => import('./pages/admin/WalletManagement').the
 const RolesPermissions = lazy(() => import('./pages/admin/RolesPermissions').then(module => ({ default: module.RolesPermissions })));
 const RoleForm = lazy(() => import('./pages/admin/RoleForm').then(module => ({ default: module.RoleForm })));
 const ContractPage = lazy(() => import('./pages/ContractPage').then(module => ({ default: module.ContractPage })));
+const WishlistPage = lazy(() => import('./pages/WishlistPage').then(module => ({ default: module.WishlistPage })));
 
 // Admin Pages Lazy Load
 const PaymentGateways = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.PaymentGateways })));
-const LogisticManagement = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.LogisticManagement })));
+const LogisticManagement = lazy(() => import('./pages/admin/LogisticManagement').then(module => ({ default: module.LogisticManagement })));
 const VATManagement = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.VATManagement })));
 const RefundManagement = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.RefundManagement })));
 const ImmutableLedger = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.ImmutableLedger })));
@@ -80,12 +82,16 @@ const ProductsManagement = lazy(() => import('./pages/admin/AllAdminPages').then
 const VendorContracts = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.VendorContracts })));
 const CustomerContracts = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.CustomerContracts })));
 const LogisticContracts = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.LogisticContracts })));
-const VendorPackages = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.VendorPackages })));
+const VendorPackages = lazy(() => import('./pages/admin/VendorPackages'));
 const OrdersManagement = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.OrdersManagement })));
 const ShippingManagement = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.ShippingManagement })));
 const Reports = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.Reports })));
 const AdminCommissions = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.AdminCommissions })));
 const Documentation = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.Documentation })));
+
+import { WishlistProvider } from './contexts/WishlistContext';
+import { ChatProvider } from './contexts/ChatContext';
+import { FloatingChat } from './components/FloatingChat';
 
 import { useSiteSettings } from './contexts/SiteSettingsContext';
 import { MaintenancePage } from './pages/MaintenancePage';
@@ -119,6 +125,7 @@ function AppContent() {
   return (
     <div className="min-h-screen flex flex-col">
       {!hideHeaderFooter && <Header />}
+      <FloatingChat />
       <main className="flex-grow">
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
@@ -127,6 +134,7 @@ function AppContent() {
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/logistic-signup" element={<LogisticSignupPage />} />
             <Route path="/admin" element={<AdminAuthPage />} />
+            <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/vendor-signup" element={<VendorSignupPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
@@ -136,7 +144,7 @@ function AppContent() {
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/support" element={<SupportPage />} />
             <Route path="/track-order" element={<TrackOrderPage />} />
-            <Route path="/orders" element={<TrackOrderPage />} />
+            <Route path="/favorites" element={<WishlistPage />} />
             <Route path="/contract/:type" element={<ContractPage />} />
             <Route path="/messages" element={<MessagesPage />} />
             <Route path="/vendors" element={<VendorsPage />} />
@@ -675,7 +683,11 @@ function App() {
             <SiteSettingsProvider>
               <CartProvider>
                 <CurrencyProvider>
-                  <AppContent />
+                  <WishlistProvider>
+                    <ChatProvider>
+                      <AppContent />
+                    </ChatProvider>
+                  </WishlistProvider>
                 </CurrencyProvider>
               </CartProvider>
             </SiteSettingsProvider>

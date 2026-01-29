@@ -86,7 +86,7 @@ export function LogisticSignupPage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-300">
             {/* Left Side - Visual */}
             <div className="hidden lg:flex lg:w-1/2 bg-slate-900 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-950 via-slate-900 to-slate-950"></div>
@@ -139,7 +139,7 @@ export function LogisticSignupPage() {
             </div>
 
             {/* Right Side - Form */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative overflow-y-auto">
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative overflow-y-auto bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
                 <div className="max-w-md w-full py-8">
                     {/* LOGO */}
                     <div className="flex flex-col items-center justify-center mb-10">
@@ -155,8 +155,8 @@ export function LogisticSignupPage() {
                     </div>
 
                     <div className="text-center mb-10">
-                        <h2 className="text-2xl font-bold text-slate-900 mb-2">Partner Registration</h2>
-                        <p className="text-slate-500">Register your shipping company to join the network.</p>
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Partner Registration</h2>
+                        <p className="text-slate-500 dark:text-slate-400">Register your shipping company to join the network.</p>
                     </div>
 
                     {error && (
@@ -168,56 +168,56 @@ export function LogisticSignupPage() {
 
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 uppercase ml-1 tracking-wider">Company Name</label>
+                            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1 tracking-wider">Company Name</label>
                             <input
                                 type="text"
                                 value={fullName}
                                 onChange={(e) => setFullName(e.target.value)}
-                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none shadow-sm"
+                                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none shadow-sm"
                                 placeholder="Enter Logistics Company Name"
                                 required
                             />
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 uppercase ml-1 tracking-wider">Email Address (Business)</label>
+                            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1 tracking-wider">Email Address (Business)</label>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none shadow-sm"
+                                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none shadow-sm"
                                 placeholder="email@example.com"
                                 required
                             />
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 uppercase ml-1 tracking-wider">Business Phone Number</label>
+                            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1 tracking-wider">Business Phone Number</label>
                             <input
                                 type="tel"
                                 value={phone}
                                 onChange={(e) => setPhone(e.target.value)}
-                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none shadow-sm"
+                                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none shadow-sm"
                                 placeholder="+1234567890"
                                 required
                             />
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 uppercase ml-1 tracking-wider">Password</label>
+                            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1 tracking-wider">Password</label>
                             <input
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none shadow-sm"
+                                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none shadow-sm"
                                 placeholder="••••••••"
                                 required
                                 minLength={6}
                             />
                         </div>
 
-                        <div className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Partner Agreements *</p>
+                        <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Partner Agreements *</p>
 
                             <div className="flex items-start">
                                 <input
@@ -225,9 +225,9 @@ export function LogisticSignupPage() {
                                     required
                                     checked={acceptedTerms}
                                     onChange={(e) => setAcceptedTerms(e.target.checked)}
-                                    className="mt-1 w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                    className="mt-1 w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                                 />
-                                <label className="ml-2 text-sm text-slate-600">
+                                <label className="ml-2 text-sm text-slate-600 dark:text-slate-400">
                                     I agree to the{' '}
                                     <Link to="/contract/logistic_terms" target="_blank" className="text-emerald-600 hover:text-emerald-700 font-bold hover:underline">
                                         Terms & Conditions
@@ -241,9 +241,9 @@ export function LogisticSignupPage() {
                                     required
                                     checked={acceptedPrivacy}
                                     onChange={(e) => setAcceptedPrivacy(e.target.checked)}
-                                    className="mt-1 w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                    className="mt-1 w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                                 />
-                                <label className="ml-2 text-sm text-slate-600">
+                                <label className="ml-2 text-sm text-slate-600 dark:text-slate-400">
                                     I have read the{' '}
                                     <Link to="/contract/logistic_privacy" target="_blank" className="text-emerald-600 hover:text-emerald-700 font-bold hover:underline">
                                         Privacy Policy
@@ -268,8 +268,8 @@ export function LogisticSignupPage() {
                         </div>
                     </form>
 
-                    <div className="mt-8 text-center bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                        <p className="text-slate-500 text-sm">
+                    <div className="mt-8 text-center bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                        <p className="text-slate-500 dark:text-slate-400 text-sm">
                             Already have a partner account?{' '}
                             <Link to="/login" className="text-emerald-600 font-bold hover:text-emerald-700 hover:underline transition-color">
                                 Sign In As Logistic

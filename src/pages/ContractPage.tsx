@@ -34,60 +34,54 @@ export function ContractPage() {
 
   if (loading) {
     return (
-      <div>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
-        </div>
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center transition-colors">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
       </div>
     );
   }
 
   if (!contract) {
     return (
-      <div>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Contract Not Found</h1>
-            <p className="text-gray-600">The requested contract could not be found.</p>
-          </div>
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center transition-colors px-4 text-center">
+        <div className="max-w-md">
+          <h1 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-4">Contract Void</h1>
+          <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">The requested protocol document could not be located in the current database registry.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="min-h-screen bg-white py-12">
-        <div className="container mx-auto px-4 max-w-4xl">
-          <div className="bg-white rounded-lg shadow-sm p-8 md:p-12">
-            <div className="mb-8">
-              <div className="flex items-center gap-3 mb-4">
-                <FileText className="h-8 w-8 text-cyan-600" />
-                <h1 className="text-4xl font-bold text-gray-900">{contract.title}</h1>
-              </div>
-
-              <div className="flex items-center gap-6 text-sm text-gray-600">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span>Version {contract.version}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span>Last Updated: {new Date(contract.updated_at).toLocaleDateString()}</span>
-                </div>
-              </div>
+    <div className="min-h-screen bg-white dark:bg-slate-900 py-12 transition-colors duration-300">
+      <div className="container mx-auto px-4 max-w-4xl">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-8 md:p-12 border border-blue-50 dark:border-slate-700">
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <FileText className="h-8 w-8 text-cyan-600 dark:text-cyan-400" />
+              <h1 className="text-4xl font-bold text-gray-900 dark:text-white uppercase tracking-tight">{contract.title}</h1>
             </div>
 
-            <div className="prose prose-cyan max-w-none">
-              <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                {contract.content}
+            <div className="flex items-center gap-6 text-sm text-gray-600 dark:text-gray-400 uppercase font-bold tracking-widest text-[10px]">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                <span>Version {contract.version}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>Last Updated: {new Date(contract.updated_at).toLocaleDateString()}</span>
               </div>
             </div>
+          </div>
 
-            <div className="mt-8 pt-6 border-t border-gray-200 text-sm text-gray-600">
-              <p>
-                Effective Date: {new Date(contract.effective_date).toLocaleDateString()}
-              </p>
+          <div className="prose prose-cyan dark:prose-invert max-w-none">
+            <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
+              {contract.content}
             </div>
+          </div>
+
+          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-slate-700 text-sm text-gray-600 dark:text-gray-400 uppercase font-bold tracking-widest text-[10px]">
+            <p>
+              Effective Date: {new Date(contract.effective_date).toLocaleDateString()}
+            </p>
           </div>
         </div>
       </div>

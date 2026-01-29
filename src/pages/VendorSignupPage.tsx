@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import { supabase } from '../lib/supabase';
-import { Package, CheckCircle, TrendingUp, Users, DollarSign, Check, ChevronDown, Search } from 'lucide-react';
+import { CheckCircle, TrendingUp, Users, DollarSign, Check, ChevronDown, Search } from 'lucide-react';
 import { PuzzleCaptcha } from '../components/PuzzleCaptcha';
 
 interface VendorPackage {
@@ -24,7 +24,6 @@ export function VendorSignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [shopName, setShopName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isHuman, setIsHuman] = useState(false);
@@ -161,7 +160,7 @@ export function VendorSignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
       <div className="bg-gradient-to-r from-cyan-600 to-green-600 text-white py-16">
         <div className="container mx-auto px-4 text-center">
           <div className="flex justify-center mb-4">
@@ -184,7 +183,7 @@ export function VendorSignupPage() {
       <div className="container mx-auto px-4 py-16">
         <div className="grid md:grid-cols-2 gap-12 items-start">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">Why Sell on ZimAIO?</h2>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Why Sell on ZimAIO?</h2>
 
             <div className="space-y-6">
               <div className="flex items-start space-x-4">
@@ -192,8 +191,8 @@ export function VendorSignupPage() {
                   <Users className="h-6 w-6 text-cyan-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Reach Millions of Customers</h3>
-                  <p className="text-gray-600">
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Reach Millions of Customers</h3>
+                  <p className="text-gray-600 dark:text-gray-400">
                     Access a large customer base actively looking for products like yours.
                   </p>
                 </div>
@@ -204,8 +203,8 @@ export function VendorSignupPage() {
                   <TrendingUp className="h-6 w-6 text-cyan-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Grow Your Business</h3>
-                  <p className="text-gray-600">
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Grow Your Business</h3>
+                  <p className="text-gray-600 dark:text-gray-400">
                     Powerful tools and analytics to help you understand and grow your sales.
                   </p>
                 </div>
@@ -216,8 +215,8 @@ export function VendorSignupPage() {
                   <DollarSign className="h-6 w-6 text-cyan-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Flexible Payment Options</h3>
-                  <p className="text-gray-600">
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Flexible Payment Options</h3>
+                  <p className="text-gray-600 dark:text-gray-400">
                     Multiple payment gateways and quick payouts to your wallet.
                   </p>
                 </div>
@@ -228,17 +227,17 @@ export function VendorSignupPage() {
                   <CheckCircle className="h-6 w-6 text-cyan-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Easy to Get Started</h3>
-                  <p className="text-gray-600">
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Easy to Get Started</h3>
+                  <p className="text-gray-600 dark:text-gray-400">
                     Simple onboarding process with step-by-step guidance.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="mt-8 p-6 bg-cyan-50 rounded-lg border border-cyan-200">
-              <h3 className="font-semibold text-gray-900 mb-4">Getting Started</h3>
-              <ol className="space-y-2 text-sm text-gray-600">
+            <div className="mt-8 p-6 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg border border-cyan-200 dark:border-cyan-800">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Getting Started</h3>
+              <ol className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                 <li>1. Create your vendor account</li>
                 <li>2. Set up your shop profile</li>
                 <li>3. Submit KYC documents for verification</li>
@@ -248,8 +247,8 @@ export function VendorSignupPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Create Vendor Account</h2>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-gray-100 dark:border-slate-700">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Create Vendor Account</h2>
 
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
@@ -259,40 +258,40 @@ export function VendorSignupPage() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Full Name
                 </label>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Email Address
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Password
                 </label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                   required
                   minLength={6}
                 />
@@ -300,19 +299,19 @@ export function VendorSignupPage() {
 
               <div>
                 <div className="relative group z-20">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                     Select Package *
                   </label>
 
                   <div
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="w-full bg-white border border-gray-300 rounded-lg p-3 cursor-pointer flex items-center justify-between hover:border-cyan-500 transition-colors"
+                    className="w-full bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-3 cursor-pointer flex items-center justify-between hover:border-cyan-500 transition-colors"
                   >
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-gray-900">
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">
                         {packages.find(p => p.id === selectedPackage)?.name || 'Select Package'}
                       </span>
-                      <span className={`text-xs font-semibold ${packages.find(p => p.id === selectedPackage)?.price_monthly === 0 ? 'text-green-600' : 'text-gray-500'}`}>
+                      <span className={`text-xs font-semibold ${packages.find(p => p.id === selectedPackage)?.price_monthly === 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
                         {(() => {
                           const pkg = packages.find(p => p.id === selectedPackage);
                           if (!pkg) return 'Choose a plan';
@@ -324,23 +323,23 @@ export function VendorSignupPage() {
                   </div>
 
                   {isDropdownOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden z-50">
-                      <div className="p-3 border-b border-gray-100">
-                        <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md border border-gray-200">
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg shadow-xl overflow-hidden z-50">
+                      <div className="p-3 border-b border-gray-100 dark:border-slate-600">
+                        <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-800 px-3 py-2 rounded-md border border-gray-200 dark:border-slate-600">
                           <Search size={16} className="text-gray-400" />
                           <input
                             type="text"
                             placeholder="Search packages..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="bg-transparent border-none outline-none text-sm w-full text-gray-700 placeholder-gray-400"
+                            className="bg-transparent border-none outline-none text-sm w-full text-gray-700 dark:text-white placeholder-gray-400"
                             autoFocus
                             onClick={(e) => e.stopPropagation()}
                           />
                         </div>
                       </div>
 
-                      <div className="max-h-60 overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-gray-200">
+                      <div className="max-h-60 overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-slate-600">
                         {packages.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).map(pkg => (
                           <div
                             key={pkg.id}
@@ -348,7 +347,7 @@ export function VendorSignupPage() {
                               setSelectedPackage(pkg.id);
                               setIsDropdownOpen(false);
                             }}
-                            className={`p-3 rounded-lg cursor-pointer flex items-center justify-between transition-colors ${selectedPackage === pkg.id ? 'bg-cyan-50 text-cyan-700' : 'hover:bg-gray-50 text-gray-700'}`}
+                            className={`p-3 rounded-lg cursor-pointer flex items-center justify-between transition-colors ${selectedPackage === pkg.id ? 'bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400' : 'hover:bg-gray-50 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200'}`}
                           >
                             <div>
                               <p className="text-sm font-bold">{pkg.name}</p>
@@ -360,7 +359,7 @@ export function VendorSignupPage() {
                           </div>
                         ))}
                         {packages.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
-                          <div className="p-4 text-center text-sm text-gray-500">No packages found</div>
+                          <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">No packages found</div>
                         )}
                       </div>
                     </div>
@@ -368,8 +367,8 @@ export function VendorSignupPage() {
                 </div>
               </div>
 
-              <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-sm font-medium text-gray-900 mb-2">Vendor Agreements *</p>
+              <div className="space-y-3 p-4 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600">
+                <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">Vendor Agreements *</p>
 
                 <div className="flex items-start">
                   <input
@@ -379,7 +378,7 @@ export function VendorSignupPage() {
                     onChange={(e) => setAcceptedVendorTerms(e.target.checked)}
                     className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 mt-1"
                   />
-                  <label className="ml-2 text-sm text-gray-600">
+                  <label className="ml-2 text-sm text-gray-600 dark:text-gray-300">
                     I agree to the{' '}
                     <Link to="/contract/vendor_terms" target="_blank" className="text-cyan-600 hover:text-cyan-700 font-semibold underline">
                       Vendor Terms & Conditions
@@ -395,7 +394,7 @@ export function VendorSignupPage() {
                     onChange={(e) => setAcceptedVendorPrivacy(e.target.checked)}
                     className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 mt-1"
                   />
-                  <label className="ml-2 text-sm text-gray-600">
+                  <label className="ml-2 text-sm text-gray-600 dark:text-gray-300">
                     I have read and accept the{' '}
                     <Link to="/contract/vendor_privacy" target="_blank" className="text-cyan-600 hover:text-cyan-700 font-semibold underline">
                       Vendor Privacy Policy
@@ -418,7 +417,7 @@ export function VendorSignupPage() {
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
                 Already have an account?{' '}
                 <Link to="/login" className="text-cyan-600 hover:text-cyan-700 font-semibold">
                   Sign in

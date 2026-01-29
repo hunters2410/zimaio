@@ -1,9 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Search, Menu, MessageCircle, LogOut, Package, LayoutDashboard, MapPin, Heart, ChevronDown, DollarSign, ArrowRight } from 'lucide-react';
+import { ShoppingCart, User, Search, Menu, MessageCircle, LogOut, Package, LayoutDashboard, MapPin, Heart, ChevronDown, DollarSign, ArrowRight, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { useCart } from '../contexts/CartContext';
+import { useWishlist } from '../contexts/WishlistContext';
 import { useSiteSettings } from '../contexts/SiteSettingsContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -27,12 +29,14 @@ export function Header() {
   const { user, profile, signOut } = useAuth();
   const { currency, setCurrency } = useCurrency();
   const { totalItems } = useCart();
+  const { wishlistCount } = useWishlist();
   const { settings } = useSiteSettings();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showCurrencyMenu, setShowCurrencyMenu] = useState(false);
   const [navigationItems, setNavigationItems] = useState<NavigationItem[]>([]);
+  const { theme, toggleTheme } = useTheme();
   const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
@@ -130,342 +134,383 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 transition-all duration-300">
-      {/* Top Bar */}
-      <div className="bg-white border-b border-gray-100 hidden sm:block">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-10 text-[11px] uppercase tracking-wider font-semibold text-gray-500">
-            <span className="bg-gradient-to-r from-gray-700 via-green-600 to-gray-700 bg-clip-text text-transparent font-['Poppins'] font-medium tracking-wide">Welcome To {settings.site_name} • {settings.site_tagline}</span>
-            <div className="flex items-center space-x-6">
-              {user ? (
-                <Link to="/dashboard" className="hover:text-green-600 transition-colors flex items-center">
-                  <User className="h-3.5 w-3.5 mr-1.5" />
-                  {profile?.full_name || 'My Account'}
-                </Link>
-              ) : (
-                <Link to="/login" className="hover:text-green-600 transition-colors flex items-center">
-                  <User className="h-3.5 w-3.5 mr-1.5" />
-                  Sign in
-                </Link>
-              )}
-              <span className="opacity-30">|</span>
-              <Link to="/orders" className="hover:text-green-600 transition-colors flex items-center">
-                <MapPin className="h-3.5 w-3.5 mr-1.5" />
-                Track Order
-              </Link>
-              <span className="opacity-30">|</span>
-              <Link to="/support" className="hover:text-green-600 transition-colors">Support</Link>
-              <span className="opacity-30">|</span>
-              <div className="relative currency-menu-container">
-                <button
-                  onClick={() => setShowCurrencyMenu(!showCurrencyMenu)}
-                  className="hover:text-green-600 transition-colors flex items-center"
-                >
-                  <DollarSign className="h-3 w-3 mr-1" />
-                  {currency}
-                  <ChevronDown className={`h-3 w-3 ml-1 transition-transform ${showCurrencyMenu ? 'rotate-180' : ''}`} />
-                </button>
-                {showCurrencyMenu && (
-                  <div className="absolute right-0 mt-2 w-32 bg-white rounded-xl shadow-2xl py-2 border border-gray-100 z-[60] animate-in fade-in slide-in-from-top-2 duration-200">
-                    <button
-                      onClick={() => { setCurrency('USD'); setShowCurrencyMenu(false); }}
-                      className={`block w-full text-left px-4 py-2 text-xs hover:bg-gray-50 transition-colors ${currency === 'USD' ? 'text-green-600 font-bold' : 'text-gray-600'}`}
-                    >
-                      USD ($)
-                    </button>
-                    <button
-                      onClick={() => { setCurrency('ZWL'); setShowCurrencyMenu(false); }}
-                      className={`block w-full text-left px-4 py-2 text-xs hover:bg-gray-50 transition-colors ${currency === 'ZWL' ? 'text-green-600 font-bold' : 'text-gray-600'}`}
-                    >
-                      ZWL (ZWL$)
-                    </button>
-                  </div>
+    <>
+      <header className="fixed top-0 w-full left-0 z-50 transition-all duration-300">
+        {/* Top Bar */}
+        <div className="bg-white border-b border-gray-100 hidden sm:block dark:bg-slate-900 dark:border-slate-800 transition-colors">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between h-10 text-[11px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">
+              <span className="bg-gradient-to-r from-blue-600 via-green-600 to-blue-600 bg-clip-text text-transparent font-['Poppins'] font-medium tracking-wide">Welcome To {settings.site_name} • {settings.site_tagline}</span>
+              <div className="flex items-center space-x-6">
+                {user ? (
+                  <Link to="/dashboard" className="hover:text-green-600 transition-colors flex items-center">
+                    <User className="h-3.5 w-3.5 mr-1.5" />
+                    {profile?.full_name || 'My Account'}
+                  </Link>
+                ) : (
+                  <Link to="/login" className="hover:text-green-600 transition-colors flex items-center">
+                    <User className="h-3.5 w-3.5 mr-1.5" />
+                    Sign in
+                  </Link>
                 )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Header */}
-      <div className="bg-white/95 backdrop-blur-xl border-b border-gray-100 relative">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between py-5 gap-4 md:gap-8 relative z-10">
-            {/* Logo */}
-            <Link to="/" className="flex-shrink-0 transition-transform active:scale-95 group">
-              <img
-                src={settings.site_logo}
-                alt={settings.site_name}
-                className="h-10 md:h-12 w-auto object-contain"
-                onError={(e) => {
-                  e.currentTarget.src = '/zimaio_mineral_edition,_no_background_v1.2.png';
-                }}
-              />
-            </Link>
-
-            {/* Search Bar */}
-            <div className="hidden lg:flex flex-1 max-w-2xl px-4">
-              <div className="flex w-full items-center bg-gray-50 rounded-2xl border border-gray-200 focus-within:border-green-500/50 focus-within:ring-4 focus-within:ring-green-500/5 transition-all group overflow-hidden">
-                <select
-                  onChange={(e) => e.target.value && navigate(`/products?category=${e.target.value}`)}
-                  className="px-5 py-3.5 bg-transparent text-gray-500 text-[11px] font-bold uppercase tracking-widest focus:outline-none cursor-pointer border-r border-gray-200"
-                >
-                  <option value="">ALL CATEGORIES</option>
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.slug}>{cat.name}</option>
-                  ))}
-                </select>
-                <div className="flex-1 flex items-center px-5">
-                  <Search className="h-4 w-4 text-gray-400 mr-3 group-focus-within:text-green-600 transition-colors" />
-                  <input
-                    type="text"
-                    placeholder="Search premium products..."
-                    className="w-full py-3.5 bg-transparent text-sm text-gray-700 placeholder-gray-400 focus:outline-none font-medium"
-                  />
-                </div>
-                <button className="px-8 py-3.5 bg-green-600 text-white font-bold text-xs uppercase tracking-widest hover:bg-green-700 transition-colors">
-                  Explore
-                </button>
-              </div>
-            </div>
-
-            {/* Right Icons */}
-            <div className="flex items-center gap-2 md:gap-5">
-              {user ? (
-                <div className="relative group user-menu-container">
+                <span className="opacity-30">|</span>
+                <Link to="/orders" className="hover:text-green-600 transition-colors flex items-center">
+                  <MapPin className="h-3.5 w-3.5 mr-1.5" />
+                  Track Order
+                </Link>
+                <span className="opacity-30">|</span>
+                <Link to="/support" className="hover:text-green-600 transition-colors">Support</Link>
+                <span className="opacity-30">|</span>
+                <div className="relative currency-menu-container">
                   <button
-                    onClick={() => setShowUserMenu(!showUserMenu)}
-                    className="flex flex-col items-center p-2.5 rounded-2xl hover:bg-gray-50 transition-all text-gray-600 hover:text-green-600"
+                    onClick={() => setShowCurrencyMenu(!showCurrencyMenu)}
+                    className="hover:text-green-600 transition-colors flex items-center"
                   >
-                    <User className="h-6 w-6" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] mt-1.5 hidden sm:block">Account</span>
+                    <DollarSign className="h-3 w-3 mr-1" />
+                    {currency}
+                    <ChevronDown className={`h - 3 w - 3 ml - 1 transition - transform ${showCurrencyMenu ? 'rotate-180' : ''} `} />
                   </button>
-
-                  {showUserMenu && (
-                    <div className="absolute right-0 mt-3 w-60 bg-white rounded-2xl shadow-2xl py-4 border border-gray-100 z-[60] animate-in fade-in slide-in-from-top-2 duration-200">
-                      <div className="px-5 py-2.5 border-b border-gray-50 mb-2">
-                        <p className="text-[9px] text-gray-400 uppercase font-black tracking-widest mb-1">Authenticating as</p>
-                        <p className="text-sm font-bold text-gray-900 truncate">{profile?.full_name}</p>
-                        <p className="text-[10px] text-gray-500 truncate">{user?.email}</p>
-                      </div>
-                      {profile?.role === 'customer' && (
-                        <Link to="/dashboard" className="flex items-center px-5 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors">
-                          <LayoutDashboard className="h-4 w-4 mr-4 text-green-500" />
-                          Client Dashboard
-                        </Link>
-                      )}
-                      {profile?.role === 'vendor' && (
-                        <Link to="/vendor/dashboard" className="flex items-center px-5 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors">
-                          <LayoutDashboard className="h-4 w-4 mr-4 text-green-500" />
-                          Vendor Panel Control
-                        </Link>
-                      )}
-                      {profile?.role === 'admin' && (
-                        <Link to="/admin/dashboard" className="flex items-center px-5 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors">
-                          <LayoutDashboard className="h-4 w-4 mr-4 text-green-500" />
-                          System Administration
-                        </Link>
-                      )}
-                      <Link to="/orders" className="flex items-center px-5 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors">
-                        <Package className="h-4 w-4 mr-4 text-green-500" />
-                        Order Logistics
-                      </Link>
-                      <Link to="/messages" className="flex items-center px-5 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors">
-                        <MessageCircle className="h-4 w-4 mr-4 text-green-500" />
-                        Concierge Chat
-                      </Link>
-                      <div className="border-t border-gray-50 mt-3 pt-3">
-                        <button
-                          onClick={handleSignOut}
-                          className="flex items-center w-full px-5 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors font-bold"
-                        >
-                          <LogOut className="h-4 w-4 mr-4" />
-                          Secure Logout
-                        </button>
-                      </div>
+                  {showCurrencyMenu && (
+                    <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-slate-800 rounded-xl shadow-2xl py-2 border border-gray-100 dark:border-slate-700 z-[60] animate-in fade-in slide-in-from-top-2 duration-200">
+                      <button
+                        onClick={() => { setCurrency('USD'); setShowCurrencyMenu(false); }}
+                        className={`block w - full text - left px - 4 py - 2 text - xs hover: bg - gray - 50 dark: hover: bg - slate - 700 transition - colors ${currency === 'USD' ? 'text-green-600 font-bold' : 'text-gray-600 dark:text-gray-300'} `}
+                      >
+                        USD ($)
+                      </button>
+                      <button
+                        onClick={() => { setCurrency('ZWL'); setShowCurrencyMenu(false); }}
+                        className={`block w - full text - left px - 4 py - 2 text - xs hover: bg - gray - 50 dark: hover: bg - slate - 700 transition - colors ${currency === 'ZWL' ? 'text-green-600 font-bold' : 'text-gray-600 dark:text-gray-300'} `}
+                      >
+                        ZWL (ZWL$)
+                      </button>
                     </div>
                   )}
                 </div>
-              ) : (
-                <Link to="/login" className="flex flex-col items-center p-2.5 rounded-2xl hover:bg-gray-50 transition-all text-gray-600 hover:text-green-600">
-                  <User className="h-6 w-6" />
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em] mt-1.5 hidden sm:block">Account</span>
-                </Link>
-              )}
 
+                <span className="opacity-30">|</span>
 
-
-              <Link to="/favorites" className="flex flex-col items-center p-2.5 rounded-2xl hover:bg-gray-50 transition-all text-gray-600 hover:text-pink-600">
-                <Heart className="h-6 w-6" />
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] mt-1.5 hidden sm:block">Wishlist</span>
-              </Link>
-
-              <Link to="/cart" className="relative flex flex-col items-center p-2.5 rounded-2xl hover:bg-gray-50 transition-all text-gray-600 hover:text-green-600">
-                <ShoppingCart className="h-6 w-6" />
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] mt-1.5 hidden sm:block">Purchase</span>
-                {totalItems > 0 && (
-                  <span className="absolute top-2 right-2 bg-green-600 text-white text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center shadow-lg animate-bounce">
-                    {totalItems}
-                  </span>
-                )}
-              </Link>
-
-              <button
-                onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className="lg:hidden p-2.5 rounded-2xl hover:bg-gray-50 text-gray-900"
-              >
-                <Menu className="h-6 w-6" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Navigation Bar - EMERALD GREEN GLASS */}
-      <div className="bg-green-600 backdrop-blur-xl border-b border-green-700 hidden sm:block overflow-x-auto whitespace-nowrap">
-        <div className="container mx-auto px-4">
-          <nav className="flex items-center gap-14 h-14">
-            {navigationItems.map((item) => {
-              const icon = getIcon(item.icon);
-              return (
-                <Link
-                  key={item.id}
-                  to={item.url}
-                  className="relative py-2 text-xs tracking-[0.25em] font-extrabold text-green-50/90 hover:text-white transition-all uppercase flex items-center gap-3 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-white after:transition-all hover:after:w-full"
+                <button
+                  onClick={toggleTheme}
+                  className="hover:text-green-600 transition-colors flex items-center"
+                  title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
                 >
-                  {icon && <span className="text-white/40">{icon}</span>}
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-      </div>
-
-      {/* Mobile Menu */}
-      {showMobileMenu && (
-        <div className="lg:hidden fixed inset-0 z-[100] bg-white animate-in slide-in-from-right duration-300">
-          <div className="container mx-auto px-6 py-8">
-            <div className="flex items-center justify-between mb-10">
-              <img
-                src={settings.site_logo}
-                alt={settings.site_name}
-                className="h-10"
-                onError={(e) => {
-                  e.currentTarget.src = '/zimaio_mineral_edition,_no_background_v1.2.png';
-                }}
-              />
-              <button onClick={() => setShowMobileMenu(false)} className="p-2 rounded-xl bg-gray-100">
-                <Menu className="h-6 w-6 rotate-90" />
-              </button>
-            </div>
-
-            <div className="mb-10">
-              <div className="flex items-center bg-gray-50 rounded-2xl border border-gray-200 px-4 py-3 focus-within:ring-2 focus-within:ring-green-500 transition-all">
-                <Search className="h-4 w-4 text-gray-400 mr-3" />
-                <input
-                  type="text"
-                  placeholder="What are you looking for?"
-                  className="w-full bg-transparent text-sm focus:outline-none placeholder-gray-400"
-                />
-              </div>
-            </div>
-
-            {/* Mobile User Profile Section */}
-            {user ? (
-              <div className="bg-gray-50 rounded-2xl p-4 mb-8 border border-gray-100 flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold text-xl uppercase">
-                  {profile?.full_name?.[0] || 'U'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-gray-900 truncate">{profile?.full_name}</p>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-widest">{profile?.role} Account</p>
-                </div>
-                <button onClick={handleSignOut} className="p-2 bg-white rounded-xl shadow-sm border border-gray-100 text-red-500">
-                  <LogOut className="h-4 w-4" />
+                  {theme === 'light' ? (
+                    <>
+                      <Moon className="h-3.5 w-3.5 mr-1.5" />
+                      <span>Dark</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sun className="h-3.5 w-3.5 mr-1.5 text-yellow-500" />
+                      <span>Light</span>
+                    </>
+                  )}
                 </button>
               </div>
-            ) : (
-              <div className="bg-gradient-to-r from-green-600 to-green-500 rounded-2xl p-6 mb-8 text-white shadow-lg shadow-green-900/20">
-                <h4 className="font-bold text-lg mb-1">Welcome Guest</h4>
-                <p className="text-green-100 text-xs mb-4">Sign in to access your orders and wishlist.</p>
-                <div className="flex gap-3">
-                  <Link to="/login" onClick={() => setShowMobileMenu(false)} className="px-6 py-2 bg-white text-green-600 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg">Sign In</Link>
-                  <Link to="/signup" onClick={() => setShowMobileMenu(false)} className="px-6 py-2 bg-green-700/50 text-white rounded-xl font-bold text-xs uppercase tracking-widest">Join</Link>
-                </div>
-              </div>
-            )}
-
-            <nav className="flex flex-col gap-1 mb-8">
-              <p className="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-2 pl-2">Menu</p>
-
-              {user && (
-                <>
-                  {profile?.role === 'customer' && (
-                    <Link to="/dashboard" onClick={() => setShowMobileMenu(false)} className="mobile-link">
-                      <span className="flex items-center gap-3"><LayoutDashboard className="h-5 w-5 text-gray-400" /> Dashboard</span>
-                      <ArrowRight className="h-4 w-4 text-gray-300" />
-                    </Link>
-                  )}
-                  {profile?.role === 'vendor' && (
-                    <Link to="/vendor/dashboard" onClick={() => setShowMobileMenu(false)} className="mobile-link">
-                      <span className="flex items-center gap-3"><LayoutDashboard className="h-5 w-5 text-gray-400" /> Vendor Panel</span>
-                      <ArrowRight className="h-4 w-4 text-gray-300" />
-                    </Link>
-                  )}
-                  {profile?.role === 'admin' && (
-                    <Link to="/admin/dashboard" onClick={() => setShowMobileMenu(false)} className="mobile-link">
-                      <span className="flex items-center gap-3"><LayoutDashboard className="h-5 w-5 text-gray-400" /> Admin Control</span>
-                      <ArrowRight className="h-4 w-4 text-gray-300" />
-                    </Link>
-                  )}
-                  <Link to="/orders" onClick={() => setShowMobileMenu(false)} className="mobile-link">
-                    <span className="flex items-center gap-3"><Package className="h-5 w-5 text-gray-400" /> My Orders</span>
-                    <ArrowRight className="h-4 w-4 text-gray-300" />
-                  </Link>
-                  <Link to="/messages" onClick={() => setShowMobileMenu(false)} className="mobile-link">
-                    <span className="flex items-center gap-3"><MessageCircle className="h-5 w-5 text-gray-400" /> Messages</span>
-                    <ArrowRight className="h-4 w-4 text-gray-300" />
-                  </Link>
-                  <div className="h-px bg-gray-100 my-2" />
-                </>
-              )}
-
-              {[
-                { label: 'Categories', url: '/categories', icon: Search },
-                { label: 'Verified Vendors', url: '/vendors', icon: User },
-                { label: 'New Arrivals', url: '/products', icon: Package },
-                { label: 'Sell On ZimAIO', url: '/vendor-signup', icon: DollarSign },
-                { label: 'Join Our Logistics', url: '/logistic-signup', icon: MapPin },
-              ].map((link) => (
-                <Link
-                  key={link.url}
-                  to={link.url}
-                  onClick={() => setShowMobileMenu(false)}
-                  className="mobile-link"
-                >
-                  <span className="flex items-center gap-3">
-                    <link.icon className="h-5 w-5 text-gray-400" />
-                    {link.label}
-                  </span>
-                  <ArrowRight className="h-4 w-4 text-gray-300" />
-                </Link>
-              ))}
-            </nav>
-
-            <div className="mt-12 p-6 bg-green-600 rounded-3xl text-white">
-              <h4 className="font-bold mb-2">Ready to sell?</h4>
-              <p className="text-sm text-green-100 mb-4 opacity-80">Open your shop on ZimAIO today.</p>
-              <Link
-                to="/vendor-signup"
-                className="inline-flex items-center text-sm font-bold bg-white text-green-600 px-6 py-2.5 rounded-xl shadow-lg"
-              >
-                Join Now
-              </Link>
             </div>
           </div>
         </div>
-      )}
-    </header>
+
+        {/* Main Header */}
+        <div className="bg-white/95 backdrop-blur-xl border-b border-gray-100 relative dark:bg-slate-900/95 dark:border-slate-800 transition-colors">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between py-5 gap-4 md:gap-8 relative z-10">
+              {/* Logo */}
+              <Link to="/" className="flex-shrink-0 transition-transform active:scale-95 group">
+                <img
+                  src={settings.site_logo}
+                  alt={settings.site_name}
+                  className="h-10 md:h-12 w-auto object-contain"
+                  onError={(e) => {
+                    e.currentTarget.src = '/zimaio_mineral_edition,_no_background_v1.2.png';
+                  }}
+                />
+              </Link>
+
+              {/* Search Bar */}
+              <div className="hidden lg:flex flex-1 max-w-2xl px-4">
+                <div className="flex w-full items-center bg-gray-50 rounded-2xl border border-gray-200 focus-within:border-green-500/50 focus-within:ring-4 focus-within:ring-green-500/5 transition-all group overflow-hidden">
+                  <select
+                    onChange={(e) => e.target.value && navigate(`/ products ? category = ${e.target.value} `)}
+                    className="px-5 py-3.5 bg-transparent text-gray-500 text-[11px] font-bold uppercase tracking-widest focus:outline-none cursor-pointer border-r border-gray-200"
+                  >
+                    <option value="">ALL CATEGORIES</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.slug}>{cat.name}</option>
+                    ))}
+                  </select>
+                  <div className="flex-1 flex items-center px-5">
+                    <Search className="h-4 w-4 text-gray-400 mr-3 group-focus-within:text-green-600 transition-colors" />
+                    <input
+                      type="text"
+                      placeholder="Search premium products..."
+                      className="w-full py-3.5 bg-transparent text-sm text-gray-700 placeholder-gray-400 focus:outline-none font-medium"
+                    />
+                  </div>
+                  <button className="px-8 py-3.5 bg-gradient-to-r from-green-600 to-blue-600 text-white font-bold text-xs uppercase tracking-widest hover:from-green-700 hover:to-blue-700 transition-all">
+                    Explore
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Icons */}
+              <div className="flex items-center gap-2 md:gap-5">
+                {user ? (
+                  <div className="relative group user-menu-container">
+                    <button
+                      onClick={() => setShowUserMenu(!showUserMenu)}
+                      className="flex flex-col items-center p-2.5 rounded-2xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-all text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400"
+                    >
+                      <User className="h-6 w-6" />
+                      <span className="text-[9px] font-black uppercase tracking-[0.2em] mt-1.5 hidden sm:block">Account</span>
+                    </button>
+
+                    {showUserMenu && (
+                      <div className="absolute right-0 mt-3 w-64 bg-white dark:bg-slate-800 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] py-5 border border-gray-100 dark:border-slate-700 z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
+                        <div className="px-6 py-3 border-b border-gray-50 dark:border-slate-700/50 mb-3">
+                          <p className="text-[9px] text-gray-400 dark:text-gray-500 uppercase font-black tracking-widest mb-1">Authenticating as</p>
+                          <p className="text-sm font-black text-gray-900 dark:text-white truncate">{profile?.full_name}</p>
+                          <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate mt-0.5">{user?.email}</p>
+                        </div>
+                        <div className="px-2">
+                          {profile?.role === 'customer' && (
+                            <Link to="/dashboard" onClick={() => setShowUserMenu(false)} className="flex items-center px-4 py-3 text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-slate-700 hover:text-green-700 dark:hover:text-green-400 rounded-xl transition-all">
+                              <LayoutDashboard className="h-4 w-4 mr-4 text-green-500" />
+                              Client Dashboard
+                            </Link>
+                          )}
+                          {profile?.role === 'vendor' && (
+                            <Link to="/vendor/dashboard" onClick={() => setShowUserMenu(false)} className="flex items-center px-4 py-3 text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-slate-700 hover:text-green-700 dark:hover:text-green-400 rounded-xl transition-all">
+                              <LayoutDashboard className="h-4 w-4 mr-4 text-green-500" />
+                              Vendor Panel
+                            </Link>
+                          )}
+                          {profile?.role === 'admin' && (
+                            <Link to="/admin/dashboard" onClick={() => setShowUserMenu(false)} className="flex items-center px-4 py-3 text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-slate-700 hover:text-green-700 dark:hover:text-green-400 rounded-xl transition-all">
+                              <LayoutDashboard className="h-4 w-4 mr-4 text-green-500" />
+                              System Admin
+                            </Link>
+                          )}
+                          <Link to="/orders" onClick={() => setShowUserMenu(false)} className="flex items-center px-4 py-3 text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-slate-700 hover:text-green-700 dark:hover:text-green-400 rounded-xl transition-all">
+                            <Package className="h-4 w-4 mr-4 text-green-500" />
+                            Logistics
+                          </Link>
+                          <Link to="/messages" onClick={() => setShowUserMenu(false)} className="flex items-center px-4 py-3 text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-slate-700 hover:text-green-700 dark:hover:text-green-400 rounded-xl transition-all">
+                            <MessageCircle className="h-4 w-4 mr-4 text-green-500" />
+                            Concierge
+                          </Link>
+                          <div className="border-t border-gray-50 dark:border-slate-700/50 mt-3 pt-3 px-2">
+                            <button
+                              onClick={handleSignOut}
+                              className="flex items-center w-full px-4 py-3 text-xs font-black uppercase tracking-widest text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-rose-900/20 rounded-xl transition-all"
+                            >
+                              <LogOut className="h-4 w-4 mr-4" />
+                              Secure Logout
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Link to="/login" className="flex flex-col items-center p-2.5 rounded-2xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-all text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400">
+                    <User className="h-6 w-6" />
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] mt-1.5 hidden sm:block">Account</span>
+                  </Link>
+                )}
+
+
+
+                <Link to="/favorites" className="relative flex flex-col items-center p-2.5 rounded-2xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-all text-gray-600 dark:text-gray-400 hover:text-pink-600 dark:hover:text-pink-400">
+                  <Heart className="h-6 w-6" />
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] mt-1.5 hidden sm:block">Wishlist</span>
+                  {wishlistCount > 0 && (
+                    <span className="absolute top-2 right-2 bg-pink-600 text-white text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center shadow-lg animate-bounce">
+                      {wishlistCount}
+                    </span>
+                  )}
+                </Link>
+
+                <Link to="/cart" className="relative flex flex-col items-center p-2.5 rounded-2xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-all text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400">
+                  <ShoppingCart className="h-6 w-6" />
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] mt-1.5 hidden sm:block">Purchase</span>
+                  {totalItems > 0 && (
+                    <span className="absolute top-2 right-2 bg-green-600 text-white text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center shadow-lg animate-bounce">
+                      {totalItems}
+                    </span>
+                  )}
+                </Link>
+
+                <button
+                  onClick={toggleTheme}
+                  className="lg:hidden p-2.5 rounded-2xl hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-900 dark:text-gray-100 transition-colors"
+                >
+                  {theme === 'light' ? (
+                    <Moon className="h-6 w-6" />
+                  ) : (
+                    <Sun className="h-6 w-6 text-yellow-500" />
+                  )}
+                </button>
+
+                <button
+                  onClick={() => setShowMobileMenu(!showMobileMenu)}
+                  className="lg:hidden p-2.5 rounded-2xl hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-900 dark:text-gray-100 transition-colors"
+                >
+                  <Menu className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Bar - EMERALD GREEN GLASS */}
+        <div className="bg-gradient-to-r from-green-600 to-blue-600 backdrop-blur-xl border-b border-green-700 hidden sm:block overflow-x-auto whitespace-nowrap">
+          <div className="container mx-auto px-4">
+            <nav className="flex items-center gap-14 h-14">
+              {navigationItems.map((item) => {
+                const icon = getIcon(item.icon);
+                return (
+                  <Link
+                    key={item.id}
+                    to={item.url}
+                    className="relative py-2 text-xs tracking-[0.25em] font-extrabold text-green-50/90 hover:text-white transition-all uppercase flex items-center gap-3 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-white after:transition-all hover:after:w-full"
+                  >
+                    {icon && <span className="text-white/40">{icon}</span>}
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        {showMobileMenu && (
+          <div className="lg:hidden fixed inset-0 z-[100] bg-white dark:bg-slate-900 animate-in slide-in-from-right duration-300 custom-scrollbar">
+            <div className="container mx-auto px-6 py-8">
+              <div className="flex items-center justify-between mb-10 text-gray-900 dark:text-white">
+                <img
+                  src={settings.site_logo}
+                  alt={settings.site_name}
+                  className="h-10"
+                  onError={(e) => {
+                    e.currentTarget.src = '/zimaio_mineral_edition,_no_background_v1.2.png';
+                  }}
+                />
+                <button onClick={() => setShowMobileMenu(false)} className="p-2 rounded-xl bg-gray-100 dark:bg-slate-800">
+                  <Menu className="h-6 w-6 rotate-90" />
+                </button>
+              </div>
+
+              <div className="mb-10">
+                <div className="flex items-center bg-gray-50 dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 px-4 py-3 focus-within:ring-2 focus-within:ring-green-500 transition-all">
+                  <Search className="h-4 w-4 text-gray-400 mr-3" />
+                  <input
+                    type="text"
+                    placeholder="What are you looking for?"
+                    className="w-full bg-transparent text-sm focus:outline-none placeholder-gray-400 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              {/* Mobile User Profile Section */}
+              {user ? (
+                <div className="bg-gray-50 dark:bg-slate-800 rounded-2xl p-4 mb-8 border border-gray-100 dark:border-slate-700 flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-green-600 dark:text-green-400 font-bold text-xl uppercase">
+                    {profile?.full_name?.[0] || 'U'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{profile?.full_name}</p>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">{profile?.role} Account</p>
+                  </div>
+                  <button onClick={handleSignOut} className="p-2 bg-white dark:bg-slate-700 rounded-xl shadow-sm border border-gray-100 dark:border-slate-600 text-red-500 dark:text-red-400">
+                    <LogOut className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-gradient-to-r from-green-600 to-green-500 rounded-2xl p-6 mb-8 text-white shadow-lg shadow-green-900/20">
+                  <h4 className="font-bold text-lg mb-1">Welcome Guest</h4>
+                  <p className="text-green-100 text-xs mb-4">Sign in to access your orders and wishlist.</p>
+                  <div className="flex gap-3">
+                    <Link to="/login" onClick={() => setShowMobileMenu(false)} className="px-6 py-2 bg-white text-green-600 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg">Sign In</Link>
+                    <Link to="/signup" onClick={() => setShowMobileMenu(false)} className="px-6 py-2 bg-green-700/50 text-white rounded-xl font-bold text-xs uppercase tracking-widest">Join</Link>
+                  </div>
+                </div>
+              )}
+
+              <nav className="flex flex-col gap-1 mb-8">
+                <p className="text-[10px] uppercase font-black text-gray-400 dark:text-gray-500 tracking-widest mb-2 pl-2">Menu</p>
+
+                {user && (
+                  <>
+                    {profile?.role === 'customer' && (
+                      <Link to="/dashboard" onClick={() => setShowMobileMenu(false)} className="mobile-link dark:text-gray-300 dark:hover:bg-slate-800">
+                        <span className="flex items-center gap-3"><LayoutDashboard className="h-5 w-5 text-gray-400" /> Dashboard</span>
+                        <ArrowRight className="h-4 w-4 text-gray-300 dark:text-gray-600" />
+                      </Link>
+                    )}
+                    {profile?.role === 'vendor' && (
+                      <Link to="/vendor/dashboard" onClick={() => setShowMobileMenu(false)} className="mobile-link dark:text-gray-300 dark:hover:bg-slate-800">
+                        <span className="flex items-center gap-3"><LayoutDashboard className="h-5 w-5 text-gray-400" /> Vendor Panel</span>
+                        <ArrowRight className="h-4 w-4 text-gray-300 dark:text-gray-600" />
+                      </Link>
+                    )}
+                    {profile?.role === 'admin' && (
+                      <Link to="/admin/dashboard" onClick={() => setShowMobileMenu(false)} className="mobile-link dark:text-gray-300 dark:hover:bg-slate-800">
+                        <span className="flex items-center gap-3"><LayoutDashboard className="h-5 w-5 text-gray-400" /> Admin Control</span>
+                        <ArrowRight className="h-4 w-4 text-gray-300 dark:text-gray-600" />
+                      </Link>
+                    )}
+                    <Link to="/orders" onClick={() => setShowMobileMenu(false)} className="mobile-link dark:text-gray-300 dark:hover:bg-slate-800">
+                      <span className="flex items-center gap-3"><Package className="h-5 w-5 text-gray-400" /> My Orders</span>
+                      <ArrowRight className="h-4 w-4 text-gray-300 dark:text-gray-600" />
+                    </Link>
+                    <Link to="/messages" onClick={() => setShowMobileMenu(false)} className="mobile-link dark:text-gray-300 dark:hover:bg-slate-800">
+                      <span className="flex items-center gap-3"><MessageCircle className="h-5 w-5 text-gray-400" /> Messages</span>
+                      <ArrowRight className="h-4 w-4 text-gray-300 dark:text-gray-600" />
+                    </Link>
+                    <div className="h-px bg-gray-100 dark:bg-slate-800 my-2" />
+                  </>
+                )}
+
+                {[
+                  { label: 'Categories', url: '/categories', icon: Search },
+                  { label: 'Verified Vendors', url: '/vendors', icon: User },
+                  { label: 'New Arrivals', url: '/products', icon: Package },
+                  { label: 'Sell On ZimAIO', url: '/vendor-signup', icon: DollarSign },
+                  { label: 'Join Our Logistics', url: '/logistic-signup', icon: MapPin },
+                ].map((link) => (
+                  <Link
+                    key={link.url}
+                    to={link.url}
+                    onClick={() => setShowMobileMenu(false)}
+                    className="mobile-link dark:text-gray-300 dark:hover:bg-slate-800"
+                  >
+                    <span className="flex items-center gap-3">
+                      <link.icon className="h-5 w-5 text-gray-400" />
+                      {link.label}
+                    </span>
+                    <ArrowRight className="h-4 w-4 text-gray-300 dark:text-gray-600" />
+                  </Link>
+                ))}
+              </nav>
+
+              <div className="mt-12 p-6 bg-green-600 rounded-3xl text-white">
+                <h4 className="font-bold mb-2">Ready to sell?</h4>
+                <p className="text-sm text-green-100 mb-4 opacity-80">Open your shop on ZimAIO today.</p>
+                <Link
+                  to="/vendor-signup"
+                  className="inline-flex items-center text-sm font-bold bg-white text-green-600 px-6 py-2.5 rounded-xl shadow-lg"
+                >
+                  Join Now
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+      </header>
+      <div className="h-[80px] sm:h-[184px]" />
+    </>
   );
 }

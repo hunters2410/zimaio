@@ -1,9 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Star, ArrowRight, Store, X, ShieldCheck, Search } from 'lucide-react';
+import { ShoppingBag, Star, ArrowRight, Store, X, ShieldCheck, Search, Heart } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-
 import { useCart } from '../contexts/CartContext';
+import { useWishlist } from '../contexts/WishlistContext';
 
 interface Product {
   id: string;
@@ -59,6 +59,7 @@ interface HomeSlide {
 export function HomePage() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { isInWishlist, toggleWishlist } = useWishlist();
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
 
@@ -145,13 +146,15 @@ export function HomePage() {
     fetchData();
   }, []);
 
+
+
   const handleAdClick = async (adId: string) => {
     // Record click
     await supabase.rpc('increment_ad_clicks', { ad_id: adId });
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen transition-colors duration-300 dark:bg-slate-900">
       {homeSlides.length > 0 && (
         <section className="relative h-[350px] md:h-[400px] lg:h-[450px] overflow-hidden">
           {homeSlides.map((slide, index) => (
@@ -194,12 +197,12 @@ export function HomePage() {
         </section>
       )}
 
-      <section className="py-24 bg-[#FAFAFA]">
+      <section className="py-24 bg-[#FAFAFA] dark:bg-slate-900 transition-colors duration-300">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12 animate-fade-in-up">
             <div>
-              <h2 className="text-4xl font-extrabold text-gray-900 mb-2 tracking-tight">Vendors</h2>
-              <p className="text-gray-500 font-medium tracking-tight">Verified professional sellers you can trust</p>
+              <h2 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">Vendors</h2>
+              <p className="text-gray-500 dark:text-gray-400 font-medium tracking-tight">Verified professional sellers you can trust</p>
             </div>
             <Link to="/vendors" className="text-green-600 font-bold flex items-center group">
               Explore All Shops
@@ -219,26 +222,26 @@ export function HomePage() {
                 <Link
                   key={shop.id}
                   to={`/shop/${shop.user_id}`}
-                  className="min-w-[280px] md:min-w-0 snap-center group bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg hover:shadow-emerald-900/5 transition-all duration-500 hover:-translate-y-1 flex flex-col"
+                  className="min-w-[280px] md:min-w-0 snap-center group bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-lg hover:shadow-emerald-900/5 transition-all duration-500 hover:-translate-y-1 flex flex-col"
                 >
-                  <div className="h-24 bg-gray-100 relative overflow-hidden">
+                  <div className="h-24 bg-gray-100 dark:bg-slate-700 relative overflow-hidden">
                     {shop.shop_banner_url ? (
                       <img src={shop.shop_banner_url} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={shop.shop_name} />
                     ) : (
-                      <div className="w-full h-full bg-emerald-50 flex items-center justify-center">
-                        <Store className="w-8 h-8 text-emerald-200" />
+                      <div className="w-full h-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+                        <Store className="w-8 h-8 text-emerald-200 dark:text-emerald-800" />
                       </div>
                     )}
                     {shop.is_verified && (
-                      <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded-full flex items-center gap-1 shadow-lg">
+                      <div className="absolute top-2 right-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md px-1.5 py-0.5 rounded-full flex items-center gap-1 shadow-lg">
                         <ShieldCheck className="w-2.5 h-2.5 text-emerald-500" />
-                        <span className="text-[7px] font-black text-emerald-900 uppercase tracking-widest">Verified</span>
+                        <span className="text-[7px] font-black text-emerald-900 dark:text-emerald-400 uppercase tracking-widest">Verified</span>
                       </div>
                     )}
                   </div>
                   <div className="p-4 pt-0 relative flex-grow flex flex-col text-left">
                     <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 bg-white p-1 rounded-xl shadow-lg -mt-6 relative z-10 border border-gray-50 flex items-center justify-center overflow-hidden transition-transform group-hover:rotate-3">
+                      <div className="w-12 h-12 bg-white dark:bg-slate-700 p-1 rounded-xl shadow-lg -mt-6 relative z-10 border border-gray-50 dark:border-slate-600 flex items-center justify-center overflow-hidden transition-transform group-hover:rotate-3">
                         {shop.shop_logo_url ? (
                           <img src={shop.shop_logo_url} loading="lazy" className="w-full h-full object-cover rounded-lg" alt="" />
                         ) : (
@@ -246,14 +249,14 @@ export function HomePage() {
                         )}
                       </div>
                       <div className="mt-2 flex-1 min-w-0">
-                        <h3 className="text-xs font-black text-gray-900 leading-none group-hover:text-emerald-600 transition-colors uppercase tracking-tight truncate">{shop.shop_name}</h3>
+                        <h3 className="text-xs font-black text-gray-900 dark:text-white leading-none group-hover:text-emerald-600 transition-colors uppercase tracking-tight truncate">{shop.shop_name}</h3>
                         <div className="flex items-center gap-1 mt-1">
                           <Star className="w-2 h-2 text-yellow-500 fill-yellow-500" />
-                          <span className="text-[8px] font-black text-gray-400">{(shop.rating || 5.0).toFixed(1)}</span>
+                          <span className="text-[8px] font-black text-gray-400 dark:text-gray-500">{(shop.rating || 5.0).toFixed(1)}</span>
                         </div>
                       </div>
                     </div>
-                    <p className="mt-2 text-gray-500 text-[10px] font-medium line-clamp-2 leading-relaxed opacity-80">
+                    <p className="mt-2 text-gray-500 dark:text-gray-400 text-[10px] font-medium line-clamp-2 leading-relaxed opacity-80">
                       {shop.shop_description || "Premium marketplace vendor offering quality goods."}
                     </p>
                   </div>
@@ -262,16 +265,16 @@ export function HomePage() {
             </div>
           )}
         </div>
-      </section>
+      </section >
 
-      <section className="py-20 bg-[#FAFAFA]">
+      <section className="py-20 bg-[#FAFAFA] dark:bg-slate-900 transition-colors duration-300">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 animate-fade-in-up">
             <div>
-              <h2 className="text-3xl font-extrabold text-gray-900 mb-1 tracking-tight">Featured Products</h2>
-              <p className="text-sm text-gray-500 font-medium tracking-tight">Handpicked premium items for you</p>
+              <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-1 tracking-tight">Featured Products</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 font-medium tracking-tight">Handpicked premium items for you</p>
             </div>
-            <Link to="/products" className="text-green-600 text-sm font-bold flex items-center group">
+            <Link to="/products" className="text-blue-600 text-sm font-bold flex items-center group">
               View Collection
               <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
@@ -286,9 +289,9 @@ export function HomePage() {
           ) : (
             <div className="flex overflow-x-auto snap-x snap-mandatory md:grid md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4 pb-4 md:pb-0 scrollbar-hide animate-fade-in-up-delay-2">
               {featuredProducts.map((product) => (
-                <div key={product.id} className="min-w-[160px] md:min-w-0 snap-center premium-card group bg-white rounded-xl md:rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 relative">
+                <div key={product.id} className="min-w-[160px] md:min-w-0 snap-center premium-card group bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all duration-300 relative">
                   <Link to={`/products/${product.slug}`} className="block">
-                    <div className="h-40 md:h-48 bg-gray-100 overflow-hidden relative group-hover:bg-gray-50 transition-colors">
+                    <div className="h-40 md:h-48 bg-gray-100 dark:bg-slate-700 overflow-hidden relative group-hover:bg-gray-50 dark:group-hover:bg-slate-600 transition-colors">
                       {product.images && product.images[0] ? (
                         <img
                           src={product.images[0]}
@@ -297,35 +300,41 @@ export function HomePage() {
                           loading="lazy"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-50 text-gray-200">
+                        <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-slate-700 text-gray-200 dark:text-slate-600">
                           <ShoppingBag className="h-12 w-12" />
                         </div>
                       )}
                       {product.is_featured && (
-                        <div className="absolute top-2 left-2 py-1 px-2.5 bg-white/90 backdrop-blur-sm rounded-full text-[9px] font-bold uppercase tracking-wider text-gray-900 shadow-sm z-10">
+                        <div className="absolute top-2 left-2 py-1 px-2.5 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-full text-[9px] font-bold uppercase tracking-wider text-gray-900 dark:text-white shadow-sm z-10">
                           Featured
                         </div>
                       )}
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(product.id); }}
+                        className={`absolute top-2 right-2 p-2 rounded-full backdrop-blur-md transition-all z-10 ${isInWishlist(product.id) ? 'bg-rose-500 text-white shadow-lg' : 'bg-white/80 dark:bg-slate-800/80 text-gray-400 hover:text-rose-500 border border-gray-100 dark:border-slate-700'}`}
+                      >
+                        <Heart className={`w-3.5 h-3.5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
+                      </button>
                     </div>
                   </Link>
 
                   <div className="p-3 md:p-4 flex flex-col gap-2">
                     <Link to={`/products/${product.slug}`}>
-                      <h3 className="font-bold text-gray-900 text-xs md:text-sm mb-1 line-clamp-2 leading-relaxed hover:text-green-600 transition-colors tracking-tight">
+                      <h3 className="font-bold text-gray-900 dark:text-white text-xs md:text-sm mb-1 line-clamp-2 leading-relaxed hover:text-blue-600 transition-colors tracking-tight">
                         {product.name}
                       </h3>
                     </Link>
 
                     <div className="flex items-end justify-between mt-1">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-medium text-gray-400">Price</span>
-                        <span className="text-sm md:text-lg font-extrabold text-green-600 font-sans">
+                        <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500">Price</span>
+                        <span className="text-sm md:text-lg font-extrabold text-blue-600 dark:text-blue-400 font-sans">
                           ${product.base_price.toFixed(2)}
                         </span>
                       </div>
                       <div className="flex items-center gap-1 mb-1">
                         <Star className="h-3 w-3 text-yellow-500 fill-current" />
-                        <span className="text-xs font-bold text-gray-600">4.8</span>
+                        <span className="text-xs font-bold text-gray-600 dark:text-gray-400">4.8</span>
                       </div>
                     </div>
 
@@ -345,10 +354,10 @@ export function HomePage() {
                             quantity: 1
                           });
                         }}
-                        className="flex-1 py-2 bg-gray-900 hover:bg-green-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 active:scale-95"
+                        className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 active:scale-95"
+                        title="Add to Cart"
                       >
-                        <ShoppingBag className="w-3 h-3" />
-                        <span>Add to Cart</span>
+                        <ShoppingBag className="w-4 h-4" />
                       </button>
 
                       <button
@@ -359,7 +368,7 @@ export function HomePage() {
                             navigate(`/products?category=${product.category.slug}`);
                           }
                         }}
-                        className="py-2 px-3 bg-gray-100 hover:bg-green-600 hover:text-white text-gray-600 rounded-lg transition-all duration-300 flex items-center justify-center active:scale-95"
+                        className="py-2 px-3 bg-gray-100 dark:bg-slate-700 hover:bg-blue-600 dark:hover:bg-blue-500 hover:text-white text-gray-600 dark:text-gray-300 rounded-lg transition-all duration-300 flex items-center justify-center active:scale-95"
                         title="Find Similar"
                       >
                         <Search className="w-3 h-3" />
@@ -377,7 +386,7 @@ export function HomePage() {
 
       {
         activeAds.find(ad => ad.ad_type === 'featured') && (
-          <section className="py-12 bg-white">
+          <section className="py-12 bg-white dark:bg-slate-900 transition-colors duration-300">
             <div className="container mx-auto px-4">
               {activeAds.filter(ad => ad.ad_type === 'featured').slice(0, 1).map(ad => (
                 <a
@@ -405,12 +414,12 @@ export function HomePage() {
         )
       }
 
-      < section className="py-24 bg-white" >
+      <section className="py-24 bg-white dark:bg-slate-900 transition-colors duration-300" >
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12">
             <div>
-              <h2 className="text-4xl font-extrabold text-gray-900 mb-2 tracking-tight">Curated Categories</h2>
-              <p className="text-gray-500 font-medium tracking-tight">Browse by your areas of interest</p>
+              <h2 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">Curated Categories</h2>
+              <p className="text-gray-500 dark:text-gray-400 font-medium tracking-tight">Browse by your areas of interest</p>
             </div>
             <Link to="/categories" className="text-green-600 font-bold flex items-center group">
               Browse All
@@ -430,12 +439,12 @@ export function HomePage() {
                 <Link
                   key={category.id}
                   to={`/products?category=${category.slug}`}
-                  className="bg-gray-50 rounded-3xl p-8 hover:bg-green-600 group transition-all duration-500 text-center hover:shadow-2xl hover:shadow-green-900/40"
+                  className="bg-gray-50 dark:bg-slate-800 rounded-3xl p-8 hover:bg-green-600 dark:hover:bg-green-600 group transition-all duration-500 text-center hover:shadow-2xl hover:shadow-green-900/40"
                 >
-                  <div className="w-16 h-16 mx-auto mb-6 bg-white rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <ShoppingBag className="h-8 w-8 text-green-600" />
+                  <div className="w-16 h-16 mx-auto mb-6 bg-white dark:bg-slate-700 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <ShoppingBag className="h-8 w-8 text-green-600 dark:text-green-400" />
                   </div>
-                  <h3 className="font-bold text-gray-900 group-hover:text-white transition-colors text-sm uppercase tracking-widest">{category.name}</h3>
+                  <h3 className="font-bold text-gray-600 dark:text-gray-300 group-hover:text-white transition-colors text-sm uppercase tracking-widest">{category.name}</h3>
                 </Link>
               ))}
             </div>
@@ -444,7 +453,7 @@ export function HomePage() {
       </section >
 
 
-      <section className="py-24 bg-gray-900 text-white relative overflow-hidden">
+      <section className="py-24 bg-gray-900 dark:bg-slate-950 text-white relative overflow-hidden transition-colors duration-300">
         <div className="absolute top-0 right-0 -mt-24 -mr-24 w-96 h-96 bg-green-500/20 blur-[100px] rounded-full" />
         <div className="absolute bottom-0 left-0 -mb-24 -ml-24 w-96 h-96 bg-green-500/10 blur-[100px] rounded-full" />
 
@@ -466,7 +475,7 @@ export function HomePage() {
       {
         popupAd && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="relative max-w-lg w-full bg-white rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-500 delay-200">
+            <div className="relative max-w-lg w-full bg-white dark:bg-slate-800 rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-500 delay-200 border border-gray-100 dark:border-slate-700">
               <button
                 onClick={() => setPopupAd(null)}
                 className="absolute top-4 right-4 z-20 p-2 bg-black/20 hover:bg-black/40 text-white rounded-full transition-all"

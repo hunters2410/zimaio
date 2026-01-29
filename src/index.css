@@ -6,7 +6,7 @@
 
 @layer base {
   body {
-    @apply antialiased text-gray-900 bg-[#FAFAFA];
+    @apply antialiased text-gray-900 bg-[#FAFAFA] dark:bg-slate-900 dark:text-gray-100;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
@@ -60,6 +60,14 @@
 
   .mobile-link {
     @apply py-3 text-sm font-bold text-gray-700 flex items-center justify-between active:bg-gray-50 transition-colors rounded-xl px-2 hover:bg-gray-50;
+  }
+
+  .custom-scrollbar {
+    @apply overflow-y-auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
   }
 }
 

@@ -646,19 +646,19 @@ export function CheckoutPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 py-12">
+        <div className="min-h-screen bg-gray-50 dark:bg-slate-900 py-12 transition-colors duration-300">
             {/* Success Modal */}
             {showSuccessModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl transform scale-100 animate-in zoom-in-95 duration-300 flex flex-col items-center text-center">
+                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-gray-100 dark:border-slate-700 transform scale-100 animate-in zoom-in-95 duration-300 flex flex-col items-center text-center">
                         <div className="w-32 h-32 flex items-center justify-center mb-6 animate-bounce">
                             <img src="/zimaio-logo.png" alt="ZimAIO" className="w-full h-full object-contain" />
                         </div>
-                        <h2 className="text-2xl font-black text-gray-900 mb-2">Payment Successful!</h2>
-                        <p className="text-gray-500 text-sm mb-6">
+                        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Payment Successful!</h2>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
                             Your secure payment has been processed. Redirecting to your order summary...
                         </p>
-                        <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                        <div className="w-full bg-gray-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
                             <div className="h-full bg-emerald-500 animate-[progress_3s_ease-in-out_forwards] w-full origin-left" />
                         </div>
                     </div>
@@ -668,32 +668,32 @@ export function CheckoutPage() {
             {/* Password Modal - For Guest Account Creation */}
             {showPasswordModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl transform scale-100 animate-in zoom-in-95 duration-300">
+                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-slate-700 transform scale-100 animate-in zoom-in-95 duration-300">
                         <div className="text-center mb-6">
-                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <User className="w-8 h-8 text-green-600" />
+                            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <User className="w-8 h-8 text-green-600 dark:text-green-400" />
                             </div>
-                            <h2 className="text-2xl font-black text-gray-900 mb-2">Account Created!</h2>
-                            <p className="text-gray-500 text-sm">
+                            <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Account Created!</h2>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm">
                                 Welcome to ZimAIO! Your account has been successfully created.
                             </p>
                         </div>
 
-                        <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-5 mb-6 border border-gray-200">
+                        <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-700 dark:to-slate-900 rounded-2xl p-5 mb-6 border border-gray-200 dark:border-slate-600">
                             <div className="mb-4">
-                                <label className="block text-xs font-bold uppercase text-gray-500 tracking-wider mb-2">Email Address</label>
-                                <div className="flex items-center gap-2 px-4 py-3 bg-white rounded-lg border border-gray-200">
-                                    <Mail className="w-4 h-4 text-gray-400" />
-                                    <span className="text-sm font-medium text-gray-700">{tempEmail}</span>
+                                <label className="block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 tracking-wider mb-2">Email Address</label>
+                                <div className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-600">
+                                    <Mail className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{tempEmail}</span>
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold uppercase text-gray-500 tracking-wider mb-2">Temporary Password</label>
+                                <label className="block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 tracking-wider mb-2">Temporary Password</label>
                                 <div className="flex items-center gap-2">
-                                    <div className="flex-1 flex items-center gap-2 px-4 py-3 bg-white rounded-lg border border-gray-200">
-                                        <Lock className="w-4 h-4 text-gray-400" />
-                                        <code className="text-sm font-mono font-bold text-green-600 flex-1">{tempPassword}</code>
+                                    <div className="flex-1 flex items-center gap-2 px-4 py-3 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-600">
+                                        <Lock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                        <code className="text-sm font-mono font-bold text-green-600 dark:text-green-400 flex-1">{tempPassword}</code>
                                     </div>
                                     <button
                                         onClick={() => {
@@ -702,8 +702,8 @@ export function CheckoutPage() {
                                             setTimeout(() => setPasswordCopied(false), 2000);
                                         }}
                                         className={`p-3 rounded-lg transition-all ${passwordCopied
-                                                ? 'bg-green-600 text-white'
-                                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                            ? 'bg-green-600 text-white'
+                                            : 'bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200'
                                             }`}
                                         title="Copy password"
                                     >
@@ -717,8 +717,8 @@ export function CheckoutPage() {
                             </div>
                         </div>
 
-                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-                            <p className="text-xs text-amber-800 leading-relaxed">
+                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-6">
+                            <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
                                 <strong className="font-bold">Important:</strong> Please save this password securely.
                                 You can change it after logging in from your account settings.
                             </p>
@@ -735,7 +735,7 @@ export function CheckoutPage() {
             )}
 
             <div className="container mx-auto px-4 max-w-6xl">
-                <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tight mb-8">Secure Checkout</h1>
+                <h1 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tight mb-8">Secure Checkout</h1>
 
                 <div className="grid lg:grid-cols-12 gap-8">
 
@@ -743,46 +743,46 @@ export function CheckoutPage() {
                     <div className="lg:col-span-8 space-y-6">
 
                         {/* 1. Contact Info */}
-                        <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100">
-                            <h2 className="text-lg font-bold flex items-center gap-3 mb-4">
-                                <span className="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-xs">1</span>
+                        <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-gray-100 dark:border-slate-700">
+                            <h2 className="text-lg font-bold flex items-center gap-3 mb-4 dark:text-white">
+                                <span className="w-6 h-6 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center text-xs">1</span>
                                 Contact Information
                             </h2>
                             <div className="grid md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Email Address</label>
+                                    <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Email Address</label>
                                     <div className="relative">
-                                        <Mail className="absolute left-3 top-2.5 w-3.5 h-3.5 text-gray-400" />
+                                        <Mail className="absolute left-3 top-2.5 w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
                                         <input
                                             type="email"
                                             disabled={!!user}
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700"
+                                            className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700 dark:text-gray-200"
                                         />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Phone Number</label>
+                                    <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Phone Number</label>
                                     <div className="relative">
-                                        <Phone className="absolute left-3 top-2.5 w-3.5 h-3.5 text-gray-400" />
+                                        <Phone className="absolute left-3 top-2.5 w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
                                         <input
                                             type="tel"
                                             value={phone}
                                             onChange={(e) => setPhone(e.target.value)}
-                                            className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700"
+                                            className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700 dark:text-gray-200"
                                         />
                                     </div>
                                 </div>
                                 <div className="md:col-span-2">
-                                    <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Full Name</label>
+                                    <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Full Name</label>
                                     <div className="relative">
-                                        <User className="absolute left-3 top-2.5 w-3.5 h-3.5 text-gray-400" />
+                                        <User className="absolute left-3 top-2.5 w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
                                         <input
                                             type="text"
                                             value={fullName}
                                             onChange={(e) => setFullName(e.target.value)}
-                                            className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700"
+                                            className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700 dark:text-gray-200"
                                         />
                                     </div>
                                 </div>
@@ -790,45 +790,45 @@ export function CheckoutPage() {
                         </div>
 
                         {/* 2. Delivery Method */}
-                        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                            <h2 className="text-lg font-bold flex items-center gap-3 mb-4">
-                                <span className="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-xs">2</span>
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
+                            <h2 className="text-lg font-bold flex items-center gap-3 mb-4 dark:text-white">
+                                <span className="w-6 h-6 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center text-xs">2</span>
                                 Delivery Method
                             </h2>
                             <div className="grid md:grid-cols-2 gap-3">
                                 {/* Store Pickup Option - ALWAYS FIRST */}
                                 <div
                                     onClick={() => setSelectedShipping({ id: 'pickup', display_name: 'Store Pickup', base_cost: 0, delivery_time_min: 0, delivery_time_max: 0 })}
-                                    className={`cursor-pointer border rounded-xl p-3 flex items-center justify-between transition-all ${selectedShipping?.id === 'pickup' ? 'border-emerald-500 bg-emerald-50/20' : 'border-gray-100 hover:border-gray-200'}`}
+                                    className={`cursor-pointer border rounded-xl p-3 flex items-center justify-between transition-all ${selectedShipping?.id === 'pickup' ? 'border-emerald-500 bg-emerald-50/20 dark:bg-emerald-900/10' : 'border-gray-100 dark:border-slate-700 hover:border-gray-200 dark:hover:border-slate-600'}`}
                                 >
                                     <div className="flex items-center gap-2">
-                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedShipping?.id === 'pickup' ? 'border-emerald-500' : 'border-gray-300'}`}>
+                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedShipping?.id === 'pickup' ? 'border-emerald-500' : 'border-gray-300 dark:border-slate-600'}`}>
                                             {selectedShipping?.id === 'pickup' && <div className="w-2 h-2 rounded-full bg-emerald-500" />}
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-xs text-gray-900">Store Pickup</h4>
-                                            <p className="text-[10px] text-gray-400 font-medium">Collect directly from shop</p>
+                                            <h4 className="font-bold text-xs text-gray-900 dark:text-white">Store Pickup</h4>
+                                            <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Collect directly from shop</p>
                                         </div>
                                     </div>
-                                    <span className="font-bold text-xs text-emerald-600">FREE</span>
+                                    <span className="font-bold text-xs text-emerald-600 dark:text-emerald-400">FREE</span>
                                 </div>
 
                                 {availableShippingMethods.map(method => (
                                     <div
                                         key={method.id}
                                         onClick={() => setSelectedShipping(method)}
-                                        className={`cursor-pointer border rounded-xl p-3 flex items-center justify-between transition-all ${selectedShipping?.id === method.id ? 'border-emerald-500 bg-emerald-50/20' : 'border-gray-100 hover:border-gray-200'}`}
+                                        className={`cursor-pointer border rounded-xl p-3 flex items-center justify-between transition-all ${selectedShipping?.id === method.id ? 'border-emerald-500 bg-emerald-50/20 dark:bg-emerald-900/10' : 'border-gray-100 dark:border-slate-700 hover:border-gray-200 dark:hover:border-slate-600'}`}
                                     >
                                         <div className="flex items-center gap-2">
-                                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedShipping?.id === method.id ? 'border-emerald-500' : 'border-gray-300'}`}>
+                                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedShipping?.id === method.id ? 'border-emerald-500' : 'border-gray-300 dark:border-slate-600'}`}>
                                                 {selectedShipping?.id === method.id && <div className="w-2 h-2 rounded-full bg-emerald-500" />}
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-xs text-gray-900">{method.display_name}</h4>
-                                                <p className="text-[10px] text-gray-400 font-medium">{method.delivery_time_min}-{method.delivery_time_max} Days</p>
+                                                <h4 className="font-bold text-xs text-gray-900 dark:text-white">{method.display_name}</h4>
+                                                <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{method.delivery_time_min}-{method.delivery_time_max} Days</p>
                                             </div>
                                         </div>
-                                        <span className="font-bold text-xs text-gray-900">{formatPrice(method.base_cost)}</span>
+                                        <span className="font-bold text-xs text-gray-900 dark:text-white">{formatPrice(method.base_cost)}</span>
                                     </div>
                                 ))}
                             </div>
@@ -836,37 +836,37 @@ export function CheckoutPage() {
 
                         {/* 3. Shipping Address - CONDITIONAL */}
                         {selectedShipping?.id !== 'pickup' && (
-                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 animate-in fade-in slide-in-from-top-4 duration-300">
-                                <h2 className="text-lg font-bold flex items-center gap-3 mb-4">
-                                    <span className="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-xs">3</span>
+                            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 animate-in fade-in slide-in-from-top-4 duration-300">
+                                <h2 className="text-lg font-bold flex items-center gap-3 mb-4 dark:text-white">
+                                    <span className="w-6 h-6 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center text-xs">3</span>
                                     Shipping Address
                                 </h2>
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div className="md:col-span-2">
-                                        <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Street Address</label>
+                                        <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Street Address</label>
                                         <input
                                             type="text"
                                             value={address.street}
                                             onChange={(e) => setAddress({ ...address, street: e.target.value })}
-                                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700"
+                                            className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700 dark:text-gray-200"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">City</label>
+                                        <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">City</label>
                                         <input
                                             type="text"
                                             value={address.city}
                                             onChange={(e) => setAddress({ ...address, city: e.target.value })}
-                                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700"
+                                            className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700 dark:text-gray-200"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Province/State</label>
+                                        <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Province/State</label>
                                         <input
                                             type="text"
                                             value={address.state}
                                             onChange={(e) => setAddress({ ...address, state: e.target.value })}
-                                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700"
+                                            className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700 dark:text-gray-200"
                                         />
                                     </div>
                                 </div>
@@ -874,9 +874,9 @@ export function CheckoutPage() {
                         )}
 
                         {/* 4. Payment */}
-                        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                            <h2 className="text-lg font-bold flex items-center gap-3 mb-4">
-                                <span className="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-xs">4</span>
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
+                            <h2 className="text-lg font-bold flex items-center gap-3 mb-4 dark:text-white">
+                                <span className="w-6 h-6 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center text-xs">4</span>
                                 Payment Method
                             </h2>
                             <div className="grid grid-cols-3 gap-3">
@@ -888,7 +888,7 @@ export function CheckoutPage() {
                                                 <div
                                                     key="iveri_card"
                                                     onClick={() => setPaymentMethod('iveri_card')}
-                                                    className={`cursor-pointer border rounded-xl p-3 flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'iveri_card' ? 'border-emerald-500 bg-emerald-50/20 text-emerald-700' : 'border-gray-100 text-gray-400 hover:border-gray-200'}`}
+                                                    className={`cursor-pointer border rounded-xl p-3 flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'iveri_card' ? 'border-emerald-500 bg-emerald-50/20 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-400' : 'border-gray-100 dark:border-slate-700 text-gray-400 dark:text-gray-500 hover:border-gray-200 dark:hover:border-slate-600'}`}
                                                 >
                                                     <CreditCard className="w-5 h-5" />
                                                     <span className="text-[10px] font-bold uppercase tracking-wide text-center">In-Store Card</span>
@@ -896,7 +896,7 @@ export function CheckoutPage() {
                                                 <div
                                                     key="iveri_ecocash"
                                                     onClick={() => setPaymentMethod('iveri_ecocash')}
-                                                    className={`cursor-pointer border rounded-xl p-3 flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'iveri_ecocash' ? 'border-emerald-500 bg-emerald-50/20 text-emerald-700' : 'border-gray-100 text-gray-400 hover:border-gray-200'}`}
+                                                    className={`cursor-pointer border rounded-xl p-3 flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'iveri_ecocash' ? 'border-emerald-500 bg-emerald-50/20 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-400' : 'border-gray-100 dark:border-slate-700 text-gray-400 dark:text-gray-500 hover:border-gray-200 dark:hover:border-slate-600'}`}
                                                 >
                                                     <Smartphone className="w-5 h-5" />
                                                     <span className="text-[10px] font-bold uppercase tracking-wide text-center">EcoCash</span>
@@ -914,7 +914,7 @@ export function CheckoutPage() {
                                         <div
                                             key={gateway.id}
                                             onClick={() => setPaymentMethod(gateway.gateway_type)}
-                                            className={`cursor-pointer border rounded-xl p-3 flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === gateway.gateway_type ? 'border-emerald-500 bg-emerald-50/20 text-emerald-700' : 'border-gray-100 text-gray-400 hover:border-gray-200'}`}
+                                            className={`cursor-pointer border rounded-xl p-3 flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === gateway.gateway_type ? 'border-emerald-500 bg-emerald-50/20 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-400' : 'border-gray-100 dark:border-slate-700 text-gray-400 dark:text-gray-500 hover:border-gray-200 dark:hover:border-slate-600'}`}
                                         >
                                             <Icon className="w-5 h-5" />
                                             <span className="text-[10px] font-bold uppercase tracking-wide text-center">{gateway.display_name}</span>
@@ -925,49 +925,49 @@ export function CheckoutPage() {
 
                             {/* Card Input for iVeri */}
                             {paymentMethod === 'iveri_card' && (
-                                <div className="mt-6 pt-6 border-t border-gray-100 animate-in slide-in-from-top-2 fade-in">
-                                    <h3 className="text-xs font-black text-gray-900 uppercase tracking-widest mb-4">Card Details</h3>
+                                <div className="mt-6 pt-6 border-t border-gray-100 dark:border-slate-700 animate-in slide-in-from-top-2 fade-in">
+                                    <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-widest mb-4">Card Details</h3>
                                     <div className="space-y-4">
                                         <div>
-                                            <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Card Number</label>
+                                            <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Card Number</label>
                                             <div className="relative">
-                                                <CreditCard className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                                <CreditCard className="absolute left-3 top-2.5 w-4 h-4 text-gray-400 dark:text-gray-500" />
                                                 <input
                                                     type="text"
                                                     maxLength={19}
                                                     placeholder="0000 0000 0000 0000"
                                                     value={cardDetails.pan}
                                                     onChange={(e) => setCardDetails({ ...cardDetails, pan: e.target.value })}
-                                                    className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700 tracking-wider"
+                                                    className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700 dark:text-gray-200 tracking-wider"
                                                 />
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Expiry Date</label>
+                                                <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Expiry Date</label>
                                                 <input
                                                     type="text"
                                                     placeholder="MMYY"
                                                     maxLength={4}
                                                     value={cardDetails.expiry}
                                                     onChange={(e) => setCardDetails({ ...cardDetails, expiry: e.target.value })}
-                                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700 text-center"
+                                                    className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700 dark:text-gray-200 text-center"
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">CVV / CVC</label>
+                                                <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">CVV / CVC</label>
                                                 <input
                                                     type="text"
                                                     maxLength={4}
                                                     placeholder="123"
                                                     value={cardDetails.cvv}
                                                     onChange={(e) => setCardDetails({ ...cardDetails, cvv: e.target.value })}
-                                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700 text-center"
+                                                    className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700 dark:text-gray-200 text-center"
                                                 />
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="mt-4 flex items-center gap-2 text-emerald-600 bg-emerald-50 p-3 rounded-lg">
+                                    <div className="mt-4 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg">
                                         <ShieldCheck className="w-4 h-4" />
                                         <p className="text-[10px] font-bold leading-tight">Your card details are securely processed via iVeri Enterprise Gateway.</p>
                                     </div>
@@ -976,18 +976,18 @@ export function CheckoutPage() {
 
                             {/* EcoCash Input for iVeri */}
                             {paymentMethod === 'iveri_ecocash' && (
-                                <div className="mt-6 pt-6 border-t border-gray-100 animate-in slide-in-from-top-2 fade-in">
-                                    <h3 className="text-xs font-black text-gray-900 uppercase tracking-widest mb-4">EcoCash Details</h3>
+                                <div className="mt-6 pt-6 border-t border-gray-100 dark:border-slate-700 animate-in slide-in-from-top-2 fade-in">
+                                    <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-widest mb-4">EcoCash Details</h3>
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Mobile Number</label>
+                                        <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Mobile Number</label>
                                         <div className="relative">
-                                            <Smartphone className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                            <Smartphone className="absolute left-3 top-2.5 w-4 h-4 text-gray-400 dark:text-gray-500" />
                                             <input
                                                 type="tel"
                                                 placeholder="077 123 4567"
                                                 value={ecocashNumber}
                                                 onChange={(e) => setEcocashNumber(e.target.value)}
-                                                className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700 tracking-wider"
+                                                className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-xs text-gray-700 dark:text-gray-200 tracking-wider"
                                             />
                                         </div>
                                         <p className="text-[9px] text-gray-400 mt-2 ml-1">
@@ -999,7 +999,7 @@ export function CheckoutPage() {
 
                             {/* PayPal SDK Container */}
                             {paymentMethod === 'paypal' && (
-                                <div className="mt-6 pt-6 border-t border-gray-100 animate-in slide-in-from-top-2 fade-in">
+                                <div className="mt-6 pt-6 border-t border-gray-100 dark:border-slate-700 animate-in slide-in-from-top-2 fade-in">
                                     <div id="paypal-button-container" className="w-full"></div>
                                     <p className="text-[10px] text-center text-gray-400 mt-2">
                                         Secure payment processing by PayPal. You will be redirected to PayPal to complete your purchase.
@@ -1012,48 +1012,48 @@ export function CheckoutPage() {
 
                     {/* RIGHT: Summary */}
                     <div className="lg:col-span-4">
-                        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm sticky top-24">
-                            <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight mb-6">Order Summary</h3>
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-6 shadow-sm dark:shadow-slate-950/20 sticky top-24">
+                            <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight mb-6">Order Summary</h3>
 
                             <div className="space-y-3 mb-4">
                                 {cartItems.map(item => (
                                     <div key={item.id} className="flex justify-between items-start gap-4">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-gray-50 rounded-lg overflow-hidden border border-gray-100">
+                                            <div className="w-10 h-10 bg-gray-50 dark:bg-slate-700 rounded-lg overflow-hidden border border-gray-100 dark:border-slate-600">
                                                 <img src={item.image} className="w-full h-full object-cover" />
                                             </div>
                                             <div>
-                                                <h4 className="text-[11px] font-bold text-gray-900 line-clamp-1">{item.name}</h4>
-                                                <p className="text-[9px] text-gray-400">Qty: {item.quantity}</p>
+                                                <h4 className="text-[11px] font-bold text-gray-900 dark:text-white line-clamp-1">{item.name}</h4>
+                                                <p className="text-[9px] text-gray-400 dark:text-gray-500">Qty: {item.quantity}</p>
                                             </div>
                                         </div>
-                                        <span className="text-[11px] font-black text-gray-900">{formatPrice(item.price * item.quantity)}</span>
+                                        <span className="text-[11px] font-black text-gray-900 dark:text-white">{formatPrice(item.price * item.quantity)}</span>
                                     </div>
                                 ))}
                             </div>
 
-                            <div className="border-t border-gray-100 my-4"></div>
+                            <div className="border-t border-gray-100 dark:border-slate-700 my-4"></div>
 
                             <div className="space-y-2">
-                                <div className="flex justify-between text-xs text-gray-500 font-medium">
+                                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 font-medium">
                                     <span>Subtotal</span>
-                                    <span className="text-gray-900 font-bold">{formatPrice(subtotal)}</span>
+                                    <span className="text-gray-900 dark:text-white font-bold">{formatPrice(subtotal)}</span>
                                 </div>
                                 {settings?.is_enabled && (
-                                    <div className="flex justify-between text-xs text-gray-500 font-medium">
+                                    <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 font-medium">
                                         <span>VAT ({settings.default_rate}%)</span>
-                                        <span className="text-gray-900 font-bold">{formatPrice(totalTax)}</span>
+                                        <span className="text-gray-900 dark:text-white font-bold">{formatPrice(totalTax)}</span>
                                     </div>
                                 )}
-                                <div className="flex justify-between text-xs text-gray-500 font-medium">
+                                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 font-medium">
                                     <span>Shipping</span>
-                                    <span className="text-emerald-600 font-bold">{selectedShipping ? formatPrice(selectedShipping.base_cost) : '--'}</span>
+                                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">{selectedShipping ? formatPrice(selectedShipping.base_cost) : '--'}</span>
                                 </div>
                             </div>
 
-                            <div className="border-t border-gray-100 my-6 pt-6">
+                            <div className="border-t border-gray-100 dark:border-slate-700 my-6 pt-6">
                                 <div className="flex justify-between items-end">
-                                    <span className="font-black text-gray-900 uppercase">Total</span>
+                                    <span className="font-black text-gray-900 dark:text-white uppercase">Total</span>
                                     <span className="text-3xl font-black text-emerald-600 leading-none">{formatPrice(grandTotal)}</span>
                                 </div>
                             </div>
