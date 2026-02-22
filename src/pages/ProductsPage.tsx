@@ -74,6 +74,8 @@ export function ProductsPage() {
         if (categorySlug) {
           const cat = categoriesRes.data.find(c => c.slug === categorySlug);
           if (cat) setSelectedCategory(cat.id);
+        } else {
+          setSelectedCategory(null);
         }
       }
       if (productsRes.data) setProducts(productsRes.data);
@@ -231,17 +233,41 @@ export function ProductsPage() {
           </aside>
 
           <main className="flex-1">
-            <div className="flex justify-between items-center mb-6">
-              <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-[0.2em]">
-                {filteredProducts.length} Premium results found
-              </p>
-              <select className="px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 rounded-xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-emerald-500 outline-none">
-                <option>Sort by: Featured</option>
-                <option>Price: Low to High</option>
-                <option>Price: High to Low</option>
-                <option>Newest</option>
-                <option>Best Rating</option>
-              </select>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+              <div className="flex-1 w-full max-w-md">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search in this collection..."
+                    value={searchParams.get('search') || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val) {
+                        setSearchParams({ ...Object.fromEntries(searchParams.entries()), search: val });
+                      } else {
+                        const newParams = Object.fromEntries(searchParams.entries());
+                        delete newParams.search;
+                        setSearchParams(newParams);
+                      }
+                    }}
+                    className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm transition-all text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 w-full md:w-auto">
+                <p className="hidden sm:block text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-[0.2em] whitespace-nowrap">
+                  {filteredProducts.length} Premium results found
+                </p>
+                <select className="flex-1 md:flex-none px-4 py-3 border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm h-[46px]">
+                  <option>Sort by: Featured</option>
+                  <option>Price: Low to High</option>
+                  <option>Price: High to Low</option>
+                  <option>Newest</option>
+                  <option>Best Rating</option>
+                </select>
+              </div>
             </div>
 
             {loading ? (

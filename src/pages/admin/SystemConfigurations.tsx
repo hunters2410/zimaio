@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Settings, Save, AlertCircle, Globe, Mail, Phone, Layout, Share2, Lock, Upload, Image as ImageIcon } from 'lucide-react';
+import { Settings, Save, AlertCircle, Globe, Mail, Phone, Layout, Share2, Lock, Upload, Image as ImageIcon, Construction, AlertTriangle } from 'lucide-react';
 import { AdminLayout } from '../../components/AdminLayout';
 
 interface SiteSetting {
@@ -290,21 +290,53 @@ export function SystemConfigurations() {
                             </div>
                         </ConfigSection>
 
-                        <ConfigSection title="Security & Advanced" icon={Lock}>
-                            <div className="flex items-center justify-between p-3 bg-white rounded border border-gray-200">
-                                <div>
-                                    <h4 className="text-sm font-medium text-slate-900">Maintenance Mode</h4>
-                                    <p className="text-xs text-slate-600">Take the platform offline for updates</p>
+                        <ConfigSection title="Security & Platform State" icon={Lock}>
+                            <div className={`p-4 rounded-xl border transition-all duration-300 ${formData['maintenance_mode'] === 'true' ? 'bg-amber-500/10 border-amber-500/30' : 'bg-white border-gray-100'}`}>
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-lg ${formData['maintenance_mode'] === 'true' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                                            <Construction className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-slate-900">Forced Maintenance Mode</h4>
+                                            <p className="text-[10px] font-medium text-slate-500 uppercase tracking-tight">Offline for everyone except Admins</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleChange('maintenance_mode', formData['maintenance_mode'] === 'true' ? 'false' : 'true')}
+                                        className={`w-12 h-6 rounded-full p-0.5 transition-all duration-500 ${formData['maintenance_mode'] === 'true' ? 'bg-amber-500 rotate-0' : 'bg-slate-300'}`}
+                                    >
+                                        <div className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform duration-500 ${formData['maintenance_mode'] === 'true' ? 'translate-x-6' : 'translate-x-0'}`} />
+                                    </button>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => handleChange('maintenance_mode', formData['maintenance_mode'] === 'true' ? 'false' : 'true')}
-                                    className={`w-12 h-6 rounded-full p-0.5 transition ${formData['maintenance_mode'] === 'true' ? 'bg-rose-500' : 'bg-gray-300'}`}
-                                >
-                                    <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${formData['maintenance_mode'] === 'true' ? 'translate-x-6' : ''}`} />
-                                </button>
+                                {formData['maintenance_mode'] === 'true' && (
+                                    <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="py-2 px-3 bg-white/50 rounded-lg flex items-center gap-2 text-[10px] font-bold text-amber-700 uppercase tracking-wider">
+                                            <AlertTriangle className="w-3.5 h-3.5" />
+                                            Warning: This affects all users in real-time
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">
+                                                Estimated Completion Time
+                                            </label>
+                                            <input
+                                                type="datetime-local"
+                                                value={formData['maintenance_end_time'] || ''}
+                                                onChange={e => handleChange('maintenance_end_time', e.target.value)}
+                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 bg-white text-xs font-bold"
+                                            />
+                                            <p className="text-[10px] text-slate-400 mt-2 ml-1 italic">
+                                                * Leaves empty if you don't want to show a countdown timer.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            <InputField label="Google Analytics ID" id="ga_id" placeholder="G-XXXXXXXXXX" />
+                            <div className="mt-4">
+                                <InputField label="Google Analytics ID" id="ga_id" placeholder="G-XXXXXXXXXX" />
+                            </div>
                         </ConfigSection>
                     </form>
                 )}

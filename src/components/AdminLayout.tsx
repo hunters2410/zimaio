@@ -78,6 +78,7 @@ const navItems: NavItem[] = [
   { path: '/admin/vat', label: 'Commission & VAT', icon: <Percent className="h-5 w-5" />, section: 'Financial' },
   { path: '/admin/commissions', label: 'Commission Oversight', icon: <DollarSign className="h-5 w-5" />, section: 'Financial' },
   { path: '/admin/refunds', label: 'Refund Management', icon: <RefreshCw className="h-5 w-5" />, section: 'Financial' },
+  { path: '/admin/payment-logs', label: 'Payment Logs', icon: <BookOpen className="h-5 w-5" />, section: 'Financial' },
   { path: '/admin/ledger', label: 'Immutable Ledger', icon: <BookOpen className="h-5 w-5" />, section: 'Financial' },
 
   { path: '/admin/catalog', label: 'Catalog Management', icon: <Package className="h-5 w-5" />, section: 'Products & Orders' },
@@ -96,8 +97,10 @@ const navItems: NavItem[] = [
   { path: '/admin/ads', label: 'Ads Management', icon: <Megaphone className="h-5 w-5" />, section: 'Marketing' },
   { path: '/admin/slider', label: 'Slider Management', icon: <ImageIcon className="h-5 w-5" />, section: 'Marketing' },
   { path: '/admin/emails', label: 'Email Management', icon: <Mail className="h-5 w-5" />, section: 'Marketing' },
+  { path: '/admin/pre-registrations', label: 'Customer Pre-Registration', icon: <Users className="h-5 w-5" />, section: 'Marketing' },
 
   { path: '/admin/notifications', label: 'Notifications', icon: <Bell className="h-5 w-5" />, section: 'Other' },
+  { path: '/admin/content', label: 'Content Management', icon: <FileText className="h-5 w-5" />, section: 'Other' },
   { path: '/admin/vendor-analytics', label: 'Vendor Performance', icon: <TrendingUp className="h-5 w-5" />, section: 'Other' },
   { path: '/admin/fraud-detection', label: 'Fraud Detection', icon: <AlertTriangle className="h-5 w-5" />, section: 'Other' },
 ];
@@ -265,14 +268,12 @@ function AdminLayout({ children }: AdminLayoutProps) {
               />
             </div>
           </div>
-          {!sidebarCollapsed && (
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-2 text-slate-400 hover:text-slate-600"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden p-2 text-slate-400 hover:text-slate-600 ml-auto"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Navigation */}

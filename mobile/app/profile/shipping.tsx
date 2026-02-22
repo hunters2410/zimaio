@@ -1,30 +1,48 @@
-import { StyleSheet, ScrollView } from 'react-native';
+import { StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { Text, View } from '@/components/Themed';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export default function ShippingScreen() {
+    const [content, setContent] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchContent();
+    }, []);
+
+    const fetchContent = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('site_content')
+                .select('*')
+                .eq('slug', 'shipping')
+                .eq('is_published', true)
+                .single();
+
+            if (error) throw error;
+            setContent(data);
+        } catch (err) {
+            console.error('Error fetching shipping content:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#16a34a" />
+            </View>
+        );
+    }
+
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
             <View style={styles.section}>
-                <Text style={styles.title}>Shipping Policy</Text>
-
-                <Text style={styles.heading}>Shipping Methods</Text>
+                <Text style={styles.title}>{content?.title || 'Shipping Information'}</Text>
                 <Text style={styles.paragraph}>
-                    We offer various shipping methods to suit your needs. Shipping costs and delivery times may vary depending on the shipping method selected and your location.
-                </Text>
-
-                <Text style={styles.heading}>Delivery Times</Text>
-                <Text style={styles.paragraph}>
-                    Standard delivery typically takes 3-5 business days. Express delivery options are available for faster shipping. Please note that delivery times are estimates and may be subject to delays.
-                </Text>
-
-                <Text style={styles.heading}>Tracking Your Order</Text>
-                <Text style={styles.paragraph}>
-                    Once your order is shipped, you will receive a tracking number to monitor the status of your delivery. You can track your order through our website or mobile app.
-                </Text>
-
-                <Text style={styles.heading}>Shipping Rates</Text>
-                <Text style={styles.paragraph}>
-                    Shipping rates are calculated based on the weight and dimensions of your order, as well as the destination. You can view the shipping cost at checkout before completing your purchase.
+                    {content?.content || 'We offer various shipping methods to suit your needs.'}
                 </Text>
             </View>
         </ScrollView>
@@ -67,5 +85,11 @@ const styles = StyleSheet.create({
         lineHeight: 24,
         color: '#475569',
         marginBottom: 12,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f8fafc',
     },
 });

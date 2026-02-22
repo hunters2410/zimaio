@@ -6,10 +6,10 @@ This document provides instructions for setting up demo users and testing the Zi
 
 To fully test the system, please create the following user accounts through the signup process:
 
-### Admin Account
-- **Email**: admin@zimaio.com
-- **Password**: Admin123!
-- **Role**: Admin (set during signup or manually update in database)
+### Admin Accounts
+- **Primary Admin**: admin@zimaio.com / Admin123!
+- **Super Admin**: super@zimaio.com / zimaio2410
+- **Role**: Admin
 - **Access**: Full platform management, vendor approval, delivery tracking, appearance settings
 
 ### Vendor Accounts
@@ -117,7 +117,7 @@ The platform supports multiple currencies:
 
 ### Supported Currencies
 - **USD** - United States Dollar (default)
-- **ZWL** - Zimbabwean Dollar
+- **ZWG** - Zimbabwe Gold
 
 ### Features
 - Currency selector in the header (top-right corner)
@@ -127,8 +127,8 @@ The platform supports multiple currencies:
 - Exchange rates are managed in the database and can be updated by admins
 
 ### Exchange Rates (Current)
-- 1 USD = 27,500 ZWL
-- 1 ZWL = 0.000036 USD
+- 1 USD = 13.5 ZWG
+- 1 ZWG = 0.074 USD
 
 ### How to Use
 1. Click on the currency dropdown in the header (shows current currency, e.g., "USD")

@@ -21,7 +21,7 @@ This comprehensive e-commerce platform enables you to manage a complete multi-ve
 ### Key Features
 
 - **Multi-Vendor Marketplace**: Support unlimited vendors with individual dashboards
-- **Multi-Currency Support**: Accept payments in multiple currencies (USD, ZWL)
+- **Multi-Currency Support**: Accept payments in multiple currencies (USD, ZWG)
 - **Multi-Language Support**: Serve customers in English, isiNdebele, and chiShona
 - **Advanced Analytics**: Real-time insights into sales, orders, and customer behavior
 - **Automated Triggers**: Send automated emails and SMS based on events
@@ -537,7 +537,7 @@ Navigate to **Admin > Currency Management**
 ### Supported Currencies
 
 **USD (US Dollar)**: Default currency with 1.00 exchange rate
-**ZWL (Zimbabwean Dollar)**: Active with configurable exchange rate
+**ZWG (Zimbabwe Gold)**: Active with configurable exchange rate
 
 ## Managing Currencies
 

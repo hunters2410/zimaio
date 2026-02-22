@@ -1,15 +1,12 @@
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Link, withLayoutContext } from 'expo-router';
-import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import { View, Text } from 'react-native';
+import { Tabs } from 'expo-router';
+import { View, Text, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useCart } from '@/contexts/CartContext';
-
-const { Navigator } = createMaterialTopTabNavigator();
-export const MaterialTopTabs = withLayoutContext(Navigator);
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
@@ -18,51 +15,58 @@ function TabBarIcon(props: {
   return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
 }
 
-
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { theme } = useTheme();
+  const colors = Colors[theme];
   const { cartItems } = useCart();
+  const insets = useSafeAreaInsets();
 
   return (
-    <MaterialTopTabs
-      tabBarPosition="bottom"
+    <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.tint,
         tabBarInactiveTintColor: colors.tabIconDefault,
-        tabBarIndicatorStyle: { height: 0, backgroundColor: 'transparent' },
-        tabBarLabelStyle: { textTransform: 'none', fontSize: 10, fontWeight: '600' },
-        tabBarStyle: { borderTopWidth: 1, borderColor: colors.border, backgroundColor: colors.background, elevation: 0, shadowOpacity: 0 },
-        tabBarContentContainerStyle: { alignItems: 'center' },
-        swipeEnabled: true,
-        animationEnabled: true,
+        tabBarStyle: {
+          backgroundColor: colors.background,
+          borderTopWidth: 1,
+          borderColor: colors.border,
+          elevation: 0,
+          shadowOpacity: 0,
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '600',
+          marginBottom: 5,
+        },
       }}>
-      <MaterialTopTabs.Screen
+      <Tabs.Screen
         name="index"
         options={{
-          tabBarLabel: 'Home',
+          title: 'Home',
           tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
         }}
       />
-      <MaterialTopTabs.Screen
+      <Tabs.Screen
         name="categories"
         options={{
-          tabBarLabel: 'Categories',
+          title: 'Categories',
           tabBarIcon: ({ color }) => <TabBarIcon name="th-large" color={color} />,
         }}
       />
-      <MaterialTopTabs.Screen
+      <Tabs.Screen
         name="explore"
         options={{
-          tabBarLabel: 'Explore',
+          title: 'Explore',
           tabBarIcon: ({ color }) => <TabBarIcon name="compass" color={color} />,
         }}
       />
-      <MaterialTopTabs.Screen
+      <Tabs.Screen
         name="cart"
         options={{
-          tabBarLabel: 'Cart',
+          title: 'Cart',
           tabBarIcon: ({ color }) => (
             <View>
               <TabBarIcon name="shopping-cart" color={color} />
@@ -89,19 +93,13 @@ export default function TabLayout() {
           ),
         }}
       />
-      <MaterialTopTabs.Screen
+      <Tabs.Screen
         name="profile"
         options={{
-          tabBarLabel: 'Profile',
+          title: 'Profile',
           tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
         }}
       />
-      <MaterialTopTabs.Screen
-        name="two"
-        options={{
-          tabBarItemStyle: { display: 'none' }, // Hide from tab bar
-        }}
-      />
-    </MaterialTopTabs>
+    </Tabs>
   );
 }

@@ -181,7 +181,7 @@ export function VendorReports() {
 
                 <div className="flex flex-wrap items-center gap-2">
                     <div className="bg-white p-1 rounded-xl border border-gray-100 flex gap-1 shadow-sm">
-                        {['USD', 'ZWL', 'ZAR'].map((cur) => (
+                        {['USD', 'ZWG', 'ZAR'].map((cur) => (
                             <button
                                 key={cur}
                                 onClick={() => setCurrency(cur)}

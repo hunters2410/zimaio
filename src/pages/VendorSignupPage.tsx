@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import { supabase } from '../lib/supabase';
-import { CheckCircle, TrendingUp, Users, DollarSign, Check, ChevronDown, Search } from 'lucide-react';
+import { CheckCircle, TrendingUp, Users, DollarSign, Check, ChevronDown, Search, X, FileText } from 'lucide-react';
 import { PuzzleCaptcha } from '../components/PuzzleCaptcha';
 
 interface VendorPackage {
@@ -34,6 +34,9 @@ export function VendorSignupPage() {
   const [contracts, setContracts] = useState<any[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalContent, setModalContent] = useState('');
   const { signUp } = useAuth();
   const { settings } = useSiteSettings();
   const navigate = useNavigate();
@@ -380,9 +383,18 @@ export function VendorSignupPage() {
                   />
                   <label className="ml-2 text-sm text-gray-600 dark:text-gray-300">
                     I agree to the{' '}
-                    <Link to="/contract/vendor_terms" target="_blank" className="text-cyan-600 hover:text-cyan-700 font-semibold underline">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const contract = contracts.find(c => c.contract_type === 'vendor_terms');
+                        setModalTitle('Vendor Terms & Conditions');
+                        setModalContent(contract?.content || 'Contract content not found.');
+                        setShowModal(true);
+                      }}
+                      className="text-cyan-600 hover:text-cyan-700 font-semibold underline"
+                    >
                       Vendor Terms & Conditions
-                    </Link>
+                    </button>
                   </label>
                 </div>
 
@@ -396,9 +408,18 @@ export function VendorSignupPage() {
                   />
                   <label className="ml-2 text-sm text-gray-600 dark:text-gray-300">
                     I have read and accept the{' '}
-                    <Link to="/contract/vendor_privacy" target="_blank" className="text-cyan-600 hover:text-cyan-700 font-semibold underline">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const contract = contracts.find(c => c.contract_type === 'vendor_privacy');
+                        setModalTitle('Vendor Privacy Policy');
+                        setModalContent(contract?.content || 'Contract content not found.');
+                        setShowModal(true);
+                      }}
+                      className="text-cyan-600 hover:text-cyan-700 font-semibold underline"
+                    >
                       Vendor Privacy Policy
-                    </Link>
+                    </button>
                   </label>
                 </div>
               </div>
@@ -427,6 +448,51 @@ export function VendorSignupPage() {
           </div>
         </div>
       </div>
+
+      {/* Contract Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+          <div className="relative bg-white dark:bg-slate-800 w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between bg-white dark:bg-slate-800 sticky top-0">
+              <div className="flex items-center gap-3">
+                <div className="bg-cyan-50 dark:bg-cyan-900/20 p-2 rounded-lg text-cyan-600">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <h3 className="font-black text-gray-900 dark:text-white uppercase tracking-tight">{modalTitle}</h3>
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg text-gray-400 transition-colors"
+                type="button"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-8 bg-gray-50/30 dark:bg-slate-900/10 text-left">
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
+                  {modalContent}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-gray-100 dark:border-slate-700 flex justify-end bg-white dark:bg-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="px-6 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-gray-200 dark:shadow-none"
+              >
+                Close Document
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

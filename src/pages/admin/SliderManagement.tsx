@@ -220,10 +220,15 @@ export function SliderManagement() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-700 mb-1">Background Image</label>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className="block text-xs font-medium text-gray-700">Background Image</label>
+                                        <span className="text-[9px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                            Recommended: 1920 x 600px (Banner)
+                                        </span>
+                                    </div>
                                     <div className="space-y-2">
                                         {formData.image_url && (
-                                            <div className="w-full aspect-video rounded overflow-hidden border border-gray-300">
+                                            <div className="w-full aspect-[21/9] rounded overflow-hidden border border-gray-300 bg-gray-50">
                                                 <img src={formData.image_url} className="w-full h-full object-cover" alt="Preview" />
                                             </div>
                                         )}
@@ -238,7 +243,7 @@ export function SliderManagement() {
                                             />
                                             <label
                                                 htmlFor="image-upload"
-                                                className={`inline-flex items-center gap-2 px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50 transition cursor-pointer text-sm ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                className={`inline-flex items-center gap-2 px-4 py-1.5 bg-white border border-gray-300 rounded hover:bg-gray-50 transition cursor-pointer text-sm font-medium ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             >
                                                 <Upload className="w-4 h-4" />
                                                 {uploading ? 'Uploading...' : 'Upload Image'}
@@ -248,10 +253,10 @@ export function SliderManagement() {
                                                 value={formData.image_url}
                                                 onChange={e => setFormData({ ...formData, image_url: e.target.value })}
                                                 placeholder="Or paste image URL"
-                                                className="flex-1 px-2 py-1 bg-gray-50 rounded border border-gray-300 focus:ring-2 focus:ring-purple-500 text-sm"
+                                                className="flex-1 px-3 py-1.5 bg-gray-50 rounded border border-gray-300 focus:ring-2 focus:ring-purple-500 text-sm shadow-sm"
                                             />
                                         </div>
-                                        <p className="text-xs text-gray-500">Upload an image or paste a URL. Recommended: 1920x600px</p>
+                                        <p className="text-[10px] text-gray-500 font-medium italic">High-resolution banner images are best for the homepage slider.</p>
                                     </div>
                                 </div>
 

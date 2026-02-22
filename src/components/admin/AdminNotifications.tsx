@@ -141,7 +141,7 @@ export function AdminNotifications() {
 
             {/* Real-time Pop-up Toast */}
             {latestToast && (
-                <div className="fixed bottom-6 right-6 w-96 bg-white dark:bg-slate-900 border-l-4 border-red-500 rounded-2xl shadow-2xl p-4 z-[100] animate-in slide-in-from-right-full duration-500 flex items-start gap-3">
+                <div className="fixed bottom-6 right-6 w-[calc(100vw-3rem)] sm:w-96 bg-white dark:bg-slate-900 border-l-4 border-red-500 rounded-2xl shadow-2xl p-4 z-[100] animate-in slide-in-from-right-full duration-500 flex items-start gap-3">
                     <div className="mt-1">
                         {getIcon(latestToast.type)}
                     </div>
@@ -156,7 +156,7 @@ export function AdminNotifications() {
             )}
 
             {isOpen && (
-                <div className="absolute right-0 top-full mt-2 w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                     <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <h3 className="font-bold text-slate-900 dark:text-white">Admin Notifications</h3>

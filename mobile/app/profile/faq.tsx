@@ -1,37 +1,46 @@
-import { StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text, View } from '@/components/Themed';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { supabase } from '@/lib/supabase';
 
 export default function FAQScreen() {
+    const [faqs, setFaqs] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
-    const faqs = [
-        {
-            question: "How do I place an order?",
-            answer: "Simply browse our products, add the items you love to your cart, and proceed to checkout. You can pay securely using various payment methods."
-        },
-        {
-            question: "What payment methods do you accept?",
-            answer: "We accept Visa, Mastercard, EcoCash, and other local payment methods."
-        },
-        {
-            question: "How can I track my order?",
-            answer: "Once your order is shipped, you will receive a tracking number via email/SMS. You can track your order status in the 'My Orders' section."
-        },
-        {
-            question: "Do you offer international shipping?",
-            answer: "Currently, we only ship within Zimbabwe. We are working on expanding our shipping options soon."
-        },
-        {
-            question: "What is your return policy?",
-            answer: "You can return items within 7 days of delivery if they are damaged or incorrect. Please visit our Return Policy page for more details."
-        },
-    ];
+    useEffect(() => {
+        fetchFaqs();
+    }, []);
+
+    const fetchFaqs = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('faqs')
+                .select('*')
+                .eq('is_published', true)
+                .order('order_index', { ascending: true });
+
+            if (error) throw error;
+            setFaqs(data || []);
+        } catch (err) {
+            console.error('Error fetching faqs:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const toggleExpand = (index: number) => {
         setExpandedIndex(expandedIndex === index ? null : index);
     };
+
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#16a34a" />
+            </View>
+        );
+    }
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -68,6 +77,12 @@ const styles = StyleSheet.create({
     },
     content: {
         padding: 20,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f8fafc',
     },
     header: {
         fontSize: 22,

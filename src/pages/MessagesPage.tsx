@@ -205,7 +205,7 @@ export function MessagesPage() {
                                 <ArrowLeft className="w-6 h-6 text-gray-400 group-hover:text-emerald-500" />
                             </button>
                             <div>
-                                <h1 className="text-2xl md:text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-1">Support Concierge</h1>
+                                <h1 className="text-2xl md:text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-1">Support Messages</h1>
                                 <p className="text-[10px] text-emerald-600 font-black uppercase tracking-[0.3em] flex items-center gap-2">
                                     <ShieldCheck className="w-3.5 h-3.5" /> Verified Vendor Communications
                                 </p>
@@ -246,7 +246,7 @@ export function MessagesPage() {
                                     <div className="w-20 h-20 bg-gray-50 dark:bg-slate-800 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
                                         <MessageCircle className="h-10 w-10 text-gray-200 dark:text-slate-700" />
                                     </div>
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-loose">No active concierge channels</p>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-loose">No active message channels</p>
                                 </div>
                             ) : (
                                 <div className="divide-y divide-gray-50 dark:divide-slate-800/50">
@@ -382,7 +382,7 @@ export function MessagesPage() {
                                 <div className="w-32 h-32 bg-white dark:bg-slate-800 rounded-[3rem] flex items-center justify-center shadow-2xl shadow-emerald-900/10 mb-10 group hover:scale-110 transition-transform duration-700">
                                     <MessageCircle className="h-16 w-16 text-emerald-600 group-hover:rotate-12 transition-transform" />
                                 </div>
-                                <h3 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-4">Concierge Support</h3>
+                                <h3 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-4">Message Support</h3>
                                 <p className="text-[10px] text-gray-400 font-bold max-w-xs uppercase tracking-[0.2em] leading-relaxed">Select a verified vendor channel from the sidebar to establish a direct secure line.</p>
                                 <div className="mt-12 flex gap-12 opacity-30">
                                     <div className="flex flex-col items-center gap-2">

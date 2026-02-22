@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Lock, Mail, Save, AlertCircle, CheckCircle, Store, Upload, Image, DollarSign } from 'lucide-react';
+import { Lock, Mail, Save, AlertCircle, CheckCircle, Store, Upload, Image, DollarSign, X, FileText } from 'lucide-react';
 
 export function VendorSettings() {
     const { user } = useAuth();
@@ -19,6 +19,35 @@ export function VendorSettings() {
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [uploadingBanner, setUploadingBanner] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+    // Modal State
+    const [showModal, setShowModal] = useState(false);
+    const [modalTitle, setModalTitle] = useState('');
+    const [modalContent, setModalContent] = useState('');
+    const [modalLoading, setModalLoading] = useState(false);
+
+    const openContractModal = async (type: 'vendor_terms' | 'vendor_privacy', title: string) => {
+        setModalTitle(title);
+        setShowModal(true);
+        setModalLoading(true);
+        setModalContent('');
+
+        try {
+            const { data, error } = await supabase
+                .from('contracts')
+                .select('content')
+                .eq('contract_type', type)
+                .eq('is_active', true)
+                .single();
+
+            if (error) throw error;
+            setModalContent(data.content);
+        } catch (error: any) {
+            setModalContent('Failed to load contract content. Please try again later.');
+        } finally {
+            setModalLoading(false);
+        }
+    };
 
     useEffect(() => {
         fetchShopDetails();
@@ -393,6 +422,100 @@ export function VendorSettings() {
                     </form>
                 </div>
             </div>
+
+            {/* Legal & Compliance */}
+            <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-5">
+                    <div className="bg-slate-50 p-2 rounded-lg">
+                        <AlertCircle className="w-4 h-4 text-slate-600" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-sm uppercase tracking-tight">Legal & Compliance</h3>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                    <button
+                        onClick={() => openContractModal('vendor_terms', 'Vendor Terms & Conditions')}
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 group hover:border-emerald-500 transition-all text-left"
+                    >
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-widest text-gray-900 group-hover:text-emerald-700 transition-colors">Vendor Terms & Conditions</p>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Agreement for Platform Sellers</p>
+                        </div>
+                        <div className="bg-white p-2 rounded-lg border border-gray-100 text-gray-400 group-hover:text-emerald-600 group-hover:border-emerald-100 transition-all shadow-sm">
+                            <FileText className="w-4 h-4" />
+                        </div>
+                    </button>
+
+                    <button
+                        onClick={() => openContractModal('vendor_privacy', 'Vendor Privacy Policy')}
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 group hover:border-emerald-500 transition-all text-left"
+                    >
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-widest text-gray-900 group-hover:text-emerald-700 transition-colors">Vendor Privacy Policy</p>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Data Protection Standards</p>
+                        </div>
+                        <div className="bg-white p-2 rounded-lg border border-gray-100 text-gray-400 group-hover:text-emerald-600 group-hover:border-emerald-100 transition-all shadow-sm">
+                            <FileText className="w-4 h-4" />
+                        </div>
+                    </button>
+                </div>
+                <div className="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-100">
+                    <p className="text-[10px] font-bold text-amber-900 uppercase tracking-widest leading-relaxed">
+                        By using the ZimAIO Vendor Portal, you acknowledge that you have read and agreed to the legal frameworks above.
+                    </p>
+                </div>
+            </div>
+
+            {/* Contract Modal */}
+            {showModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+                    <div className="relative bg-white dark:bg-slate-800 w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        {/* Modal Header */}
+                        <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between bg-white dark:bg-slate-800 sticky top-0">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-emerald-50 dark:bg-emerald-900/20 p-2 rounded-lg text-emerald-600">
+                                    <FileText className="w-5 h-5" />
+                                </div>
+                                <h3 className="font-black text-gray-900 dark:text-white uppercase tracking-tight">{modalTitle}</h3>
+                            </div>
+                            <button
+                                onClick={() => setShowModal(false)}
+                                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg text-gray-400 transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Modal Content */}
+                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-gray-50/30 dark:bg-slate-900/10">
+                            {modalLoading ? (
+                                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                                    <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Retrieving Protocol Content...</p>
+                                </div>
+                            ) : (
+                                <div className="prose prose-sm dark:prose-invert max-w-none">
+                                    <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
+                                        {modalContent}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="p-4 border-t border-gray-100 dark:border-slate-700 flex justify-end bg-white dark:bg-slate-800">
+                            <button
+                                onClick={() => setShowModal(false)}
+                                className="px-6 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-gray-200 dark:shadow-none"
+                            >
+                                Close Document
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
+
     );
 }

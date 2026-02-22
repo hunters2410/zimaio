@@ -106,7 +106,7 @@ export function VendorCurrencyManagement() {
           .from('currencies')
           .select('*')
           .eq('is_active', true)
-          .in('code', ['USD', 'ZWL'])
+          .in('code', ['USD', 'ZWG'])
           .order('code'),
         supabase
           .from('vendor_currency_rates')

@@ -24,7 +24,7 @@ export default function OrderDetailsScreen() {
             // Fetch Order
             const { data: orderData, error: orderError } = await supabase
                 .from('orders')
-                .select('*, shipping_shipping_method_id(*)') // Adjust if relation named differently
+                .select('*, shipping_methods(*)')
                 .eq('id', id)
                 .single();
 

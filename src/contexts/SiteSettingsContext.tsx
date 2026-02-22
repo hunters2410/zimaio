@@ -15,6 +15,7 @@ interface SiteSettings {
     instagram_url: string;
     font_family: string;
     maintenance_mode: string;
+    maintenance_end_time: string;
     ga_id: string;
 }
 
@@ -38,6 +39,7 @@ const defaultSettings: SiteSettings = {
     instagram_url: 'https://instagram.com/zimaio',
     font_family: 'Inter',
     maintenance_mode: 'false',
+    maintenance_end_time: '',
     ga_id: ''
 };
 

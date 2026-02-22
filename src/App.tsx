@@ -57,9 +57,14 @@ const RolesPermissions = lazy(() => import('./pages/admin/RolesPermissions').the
 const RoleForm = lazy(() => import('./pages/admin/RoleForm').then(module => ({ default: module.RoleForm })));
 const ContractPage = lazy(() => import('./pages/ContractPage').then(module => ({ default: module.ContractPage })));
 const WishlistPage = lazy(() => import('./pages/WishlistPage').then(module => ({ default: module.WishlistPage })));
+const FAQPage = lazy(() => import('./pages/FAQPage').then(module => ({ default: module.FAQPage })));
+const DynamicPage = lazy(() => import('./pages/DynamicPage').then(module => ({ default: module.DynamicPage })));
+const PreRegisterPage = lazy(() => import('./pages/PreRegisterPage').then(module => ({ default: module.PreRegisterPage })));
+const PreRegistrations = lazy(() => import('./pages/admin/PreRegistrations'));
 
 // Admin Pages Lazy Load
 const PaymentGateways = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.PaymentGateways })));
+const PaymentLogs = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.PaymentLogs })));
 const LogisticManagement = lazy(() => import('./pages/admin/LogisticManagement').then(module => ({ default: module.LogisticManagement })));
 const VATManagement = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.VATManagement })));
 const RefundManagement = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.RefundManagement })));
@@ -88,6 +93,7 @@ const ShippingManagement = lazy(() => import('./pages/admin/AllAdminPages').then
 const Reports = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.Reports })));
 const AdminCommissions = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.AdminCommissions })));
 const Documentation = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.Documentation })));
+const ContentManagement = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.ContentManagement })));
 
 import { WishlistProvider } from './contexts/WishlistContext';
 import { ChatProvider } from './contexts/ChatContext';
@@ -106,7 +112,9 @@ function AppContent() {
   // Check if maintenance mode is active
   const isMaintenanceMode = settings.maintenance_mode === 'true';
   const isAdmin = profile?.role === 'admin';
-  const isAuthPage = location.pathname.startsWith('/admin') || location.pathname === '/login';
+  const isExemptPage = location.pathname.startsWith('/admin') ||
+    location.pathname === '/login' ||
+    location.pathname === '/pre-register';
 
   // Show loading while checking settings and auth
   if (loading || authLoading) {
@@ -114,18 +122,19 @@ function AppContent() {
   }
 
   // If maintenance mode is on, user is not admin, and not trying to access admin login
-  if (isMaintenanceMode && !isAdmin && !isAuthPage) {
+  if (isMaintenanceMode && !isAdmin && !isExemptPage) {
     return <MaintenancePage />;
   }
 
   const hideHeaderFooter = location.pathname.startsWith('/admin') ||
     location.pathname.startsWith('/vendor/') ||
-    location.pathname.startsWith('/logistic/');
+    location.pathname.startsWith('/logistic/') ||
+    location.pathname === '/pre-register';
 
   return (
     <div className="min-h-screen flex flex-col">
       {!hideHeaderFooter && <Header />}
-      <FloatingChat />
+      {location.pathname !== '/pre-register' && <FloatingChat />}
       <main className="flex-grow">
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
@@ -151,6 +160,12 @@ function AppContent() {
             <Route path="/shop/:userId" element={<ShopPage />} />
             <Route path="/vendor/:userId" element={<ShopPage />} />
             <Route path="/products/:slug" element={<ProductDetailsPage />} />
+            <Route path="/faq" element={<FAQPage />} />
+            <Route path="/about" element={<DynamicPage />} />
+            <Route path="/shipping" element={<DynamicPage />} />
+            <Route path="/returns" element={<DynamicPage />} />
+            <Route path="/p/:slug" element={<DynamicPage />} />
+            <Route path="/pre-register" element={<PreRegisterPage />} />
 
             <Route
               path="/dashboard"
@@ -476,6 +491,15 @@ function AppContent() {
             />
 
             <Route
+              path="/admin/payment-logs"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <PaymentLogs />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
               path="/admin/vat"
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
@@ -661,6 +685,22 @@ function AppContent() {
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <Documentation />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/content"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <ContentManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/pre-registrations"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <PreRegistrations />
                 </ProtectedRoute>
               }
             />

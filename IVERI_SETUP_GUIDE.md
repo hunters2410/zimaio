@@ -167,7 +167,7 @@ npx supabase functions deploy process-payment
 1. Go to checkout page on localhost:5173
 2. Add an item to cart
 3. Go to checkout
-4. Select "In-Store Card" or "EcoCash"
+4. Select "Iveri Card" or "EcoCash"
 5. Fill in payment details
 6. Click "Pay & Place Order"
 

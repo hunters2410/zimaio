@@ -405,7 +405,7 @@ export function OrdersManagement() {
                                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-900"></div>
                                 </div>
                             ) : (
-                                <div className={`rounded-xl border border-slate-200 overflow-hidden`}>
+                                <div className={`rounded-xl border border-slate-200 overflow-x-auto`}>
                                     <table className="w-full text-left font-mono">
                                         <thead>
                                             <tr className={`border-b border-slate-200 bg-slate-50`}>

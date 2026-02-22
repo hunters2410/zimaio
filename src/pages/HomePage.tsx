@@ -92,7 +92,7 @@ export function HomePage() {
             .from('categories')
             .select('*')
             .eq('is_active', true)
-            .limit(6),
+            .limit(12),
           supabase
             .from('vendor_profiles')
             .select('*')
@@ -439,12 +439,16 @@ export function HomePage() {
                 <Link
                   key={category.id}
                   to={`/products?category=${category.slug}`}
-                  className="bg-gray-50 dark:bg-slate-800 rounded-3xl p-8 hover:bg-green-600 dark:hover:bg-green-600 group transition-all duration-500 text-center hover:shadow-2xl hover:shadow-green-900/40"
+                  className="bg-gray-50 dark:bg-slate-800 rounded-3xl p-8 hover:bg-green-600 dark:hover:bg-green-600 group transition-all duration-500 text-center hover:shadow-2xl hover:shadow-green-900/40 relative overflow-hidden"
                 >
-                  <div className="w-16 h-16 mx-auto mb-6 bg-white dark:bg-slate-700 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <ShoppingBag className="h-8 w-8 text-green-600 dark:text-green-400" />
+                  <div className="w-16 h-16 mx-auto mb-6 bg-white dark:bg-slate-700 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500 overflow-hidden relative z-10">
+                    {category.image_url ? (
+                      <img src={category.image_url} alt={category.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <ShoppingBag className="h-8 w-8 text-green-600 dark:text-green-400" />
+                    )}
                   </div>
-                  <h3 className="font-bold text-gray-600 dark:text-gray-300 group-hover:text-white transition-colors text-sm uppercase tracking-widest">{category.name}</h3>
+                  <h3 className="font-bold text-gray-600 dark:text-gray-300 group-hover:text-white transition-colors text-sm uppercase tracking-widest relative z-10">{category.name}</h3>
                 </Link>
               ))}
             </div>

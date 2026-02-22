@@ -1,18 +1,21 @@
 import { StyleSheet, FlatList, ActivityIndicator, Image, TouchableOpacity, TextInput, Dimensions } from 'react-native';
 import { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { Text, View } from '@/components/Themed';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTheme } from '@/contexts/ThemeContext';
 import Colors from '@/constants/Colors';
-import { useRouter } from 'expo-router';
+import { useRouter, useGlobalSearchParams } from 'expo-router';
 import { useFavorites } from '@/contexts/FavoritesContext';
+import { useCart } from '@/contexts/CartContext';
 
 interface Product {
     id: string;
     name: string;
     base_price: number;
     images: string[];
+    vendor_id?: string;
 }
 
 interface Vendor {
@@ -23,6 +26,7 @@ interface Vendor {
 
 export default function ExploreScreen() {
     const { addFavorite, removeFavorite, isFavorite } = useFavorites();
+    const { addToCart } = useCart();
     const { theme } = useTheme();
     const colors = Colors[theme];
     const router = useRouter();
@@ -36,6 +40,14 @@ export default function ExploreScreen() {
     const [error, setError] = useState<string | null>(null);
     const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
     const [filteredVendors, setFilteredVendors] = useState<Vendor[]>([]);
+
+    const params = useGlobalSearchParams();
+
+    useEffect(() => {
+        if (params?.mode === 'vendors') {
+            setView('vendors');
+        }
+    }, [params?.mode]);
 
     useEffect(() => {
         fetchData();
@@ -61,10 +73,33 @@ export default function ExploreScreen() {
         setLoading(true);
         setError(null);
         try {
+            const [cachedProducts, cachedVendors] = await Promise.all([
+                AsyncStorage.getItem('cache_explore_products'),
+                AsyncStorage.getItem('cache_explore_vendors')
+            ]);
+
+            if (cachedProducts) {
+                const parsed = JSON.parse(cachedProducts);
+                setProducts(parsed);
+                setFilteredProducts(parsed);
+            }
+            if (cachedVendors) {
+                const parsed = JSON.parse(cachedVendors);
+                setVendors(parsed);
+                setFilteredVendors(parsed);
+            }
+
+            if (cachedProducts && cachedVendors) {
+                setLoading(false);
+            }
+
             await Promise.all([fetchProducts(), fetchVendors()]);
         } catch (error: any) {
             console.error('Error in fetchData:', error);
-            setError(error.message || 'An error occurred fetching data');
+            const hasCache = await AsyncStorage.getItem('cache_explore_products');
+            if (!hasCache) {
+                setError(error.message || 'An error occurred fetching data');
+            }
         } finally {
             setLoading(false);
         }
@@ -74,10 +109,10 @@ export default function ExploreScreen() {
         try {
             const { data, error } = await supabase
                 .from('products')
-                .select('id, name, base_price, images')
+                .select('id, name, base_price, images, vendor_id')
                 .eq('is_active', true)
                 .order('created_at', { ascending: false })
-                .limit(50);
+                .limit(24);
 
             if (error) {
                 throw error;
@@ -85,6 +120,7 @@ export default function ExploreScreen() {
             if (data) {
                 setProducts(data);
                 setFilteredProducts(data);
+                await AsyncStorage.setItem('cache_explore_products', JSON.stringify(data));
             }
         } catch (error) {
             console.log('Error fetching products catch:', error);
@@ -97,7 +133,7 @@ export default function ExploreScreen() {
                 .from('vendor_profiles')
                 .select('id, shop_name, shop_logo_url')
                 .eq('is_approved', true)
-                .limit(50);
+                .limit(24);
 
             if (error) {
                 throw error;
@@ -106,6 +142,7 @@ export default function ExploreScreen() {
             if (data) {
                 setVendors(data);
                 setFilteredVendors(data);
+                await AsyncStorage.setItem('cache_explore_vendors', JSON.stringify(data));
             }
         } catch (error) {
             console.log('Error fetching vendors catch:', error);
@@ -125,34 +162,63 @@ export default function ExploreScreen() {
         }
     };
 
+    const handleAddToCart = (item: Product) => {
+        addToCart({
+            id: item.id,
+            name: item.name,
+            price: item.base_price,
+            base_price: item.base_price,
+            image: item.images?.[0] || '',
+            quantity: 1,
+            vendor: 'Official Store',
+            vendor_id: item.vendor_id || 'unknown'
+        });
+    };
+
+    /* Marketplace Style Constants */
+    const { width: SCREEN_WIDTH } = Dimensions.get('window');
+    const SPACING = 2;
+    const ITEM_WIDTH = (SCREEN_WIDTH / 2) - SPACING;
+
     const renderProductItem = ({ item }: { item: Product }) => (
         <TouchableOpacity
-            style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.text }]}
+            style={[styles.card, { width: ITEM_WIDTH, backgroundColor: colors.card }]}
             onPress={() => router.push(`/product/${item.id}`)}
             activeOpacity={0.9}
         >
-            <View style={[styles.imageContainer, { backgroundColor: colors.background }]}>
+            <View style={[styles.imageContainer, { height: ITEM_WIDTH }]}>
                 {item.images && item.images[0] ? (
                     <Image source={{ uri: item.images[0] }} style={styles.image} resizeMode="cover" />
                 ) : (
                     <View style={[styles.image, { backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center' }]}>
-                        <Text style={{ opacity: 0.5, color: colors.textSecondary }}>No Image</Text>
+                        <Text style={{ opacity: 0.5, color: colors.textSecondary, fontSize: 10 }}>No Image</Text>
                     </View>
                 )}
-                <TouchableOpacity
-                    style={[styles.favoriteBtn, { backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)' }]}
-                    onPress={() => toggleFavorite(item)}
-                >
-                    <FontAwesome
-                        name={isFavorite(item.id) ? "heart" : "heart-o"}
-                        size={16}
-                        color={isFavorite(item.id) ? colors.danger : colors.textSecondary}
-                    />
-                </TouchableOpacity>
-            </View>
-            <View style={[styles.details, { backgroundColor: colors.card }]}>
-                <Text style={[styles.productName, { color: colors.text }]} numberOfLines={2}>{item.name}</Text>
-                <Text style={[styles.price, { color: colors.primary }]}>${item.base_price.toFixed(2)}</Text>
+                {/* Product Icons Overlay */}
+                <View style={styles.productIconsOverlay}>
+                    <TouchableOpacity
+                        style={[styles.iconCircle, { backgroundColor: 'rgba(255,255,255,0.9)' }]}
+                        onPress={() => toggleFavorite(item)}
+                    >
+                        <FontAwesome
+                            name={isFavorite(item.id) ? "heart" : "heart-o"}
+                            size={14}
+                            color={isFavorite(item.id) ? colors.danger : '#333'}
+                        />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.iconCircle, { backgroundColor: colors.primary }]}
+                        onPress={() => handleAddToCart(item)}
+                    >
+                        <FontAwesome name="shopping-cart" size={14} color="#fff" />
+                    </TouchableOpacity>
+                </View>
+
+                {/* Product Details Overlay */}
+                <View style={styles.detailsOverlay}>
+                    <Text style={[styles.productName, { color: '#fff' }]} numberOfLines={1}>{item.name}</Text>
+                    <Text style={[styles.price, { color: '#fff' }]}>${item.base_price.toLocaleString()}</Text>
+                </View>
             </View>
         </TouchableOpacity>
     );
@@ -176,11 +242,11 @@ export default function ExploreScreen() {
     );
 
     const ProductSkeleton = () => (
-        <View style={[styles.card, { backgroundColor: colors.card }]}>
-            <View style={[styles.imageContainer, { backgroundColor: colors.border }]} />
+        <View style={[styles.card, { backgroundColor: colors.card, width: ITEM_WIDTH, marginBottom: 0 }]}>
+            <View style={[styles.imageContainer, { backgroundColor: colors.border, height: ITEM_WIDTH }]} />
             <View style={[styles.details, { backgroundColor: colors.card }]}>
-                <View style={{ height: 10, width: '90%', backgroundColor: colors.border, marginBottom: 6, borderRadius: 4 }} />
-                <View style={{ height: 12, width: '50%', backgroundColor: colors.border, borderRadius: 4 }} />
+                <View style={{ height: 10, width: '40%', backgroundColor: colors.border, marginBottom: 6, borderRadius: 4 }} />
+                <View style={{ height: 10, width: '80%', backgroundColor: colors.border, borderRadius: 4 }} />
             </View>
         </View>
     );
@@ -197,7 +263,7 @@ export default function ExploreScreen() {
             {/* Search Bar & Header Icons */}
             <View style={styles.searchRow}>
                 <View style={[styles.searchContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border, marginRight: 0 }]}>
-                    <FontAwesome name="search" size={20} color={colors.primary} style={styles.searchIcon} />
+                    <FontAwesome name="search" size={16} color={colors.textSecondary} style={styles.searchIcon} />
                     <TextInput
                         placeholder={`Search ${view}...`}
                         placeholderTextColor={colors.textSecondary}
@@ -218,19 +284,21 @@ export default function ExploreScreen() {
             ) : null}
 
             {/* Toggles */}
-            <View style={[styles.toggleContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <TouchableOpacity
-                    style={[styles.toggleBtn, view === 'products' && { backgroundColor: colors.primary }]}
-                    onPress={() => setView('products')}
-                >
-                    <Text style={[styles.toggleText, view === 'products' ? { color: '#fff' } : { color: colors.textSecondary }]}>All Products</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.toggleBtn, view === 'vendors' && { backgroundColor: colors.primary }]}
-                    onPress={() => setView('vendors')}
-                >
-                    <Text style={[styles.toggleText, view === 'vendors' ? { color: '#fff' } : { color: colors.textSecondary }]}>All Vendors</Text>
-                </TouchableOpacity>
+            <View style={{ paddingHorizontal: 16, marginBottom: 10 }}>
+                <View style={[styles.toggleContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <TouchableOpacity
+                        style={[styles.toggleBtn, view === 'products' && { backgroundColor: colors.primary }]}
+                        onPress={() => setView('products')}
+                    >
+                        <Text style={[styles.toggleText, view === 'products' ? { color: '#fff' } : { color: colors.textSecondary }]}>All Products</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.toggleBtn, view === 'vendors' && { backgroundColor: colors.primary }]}
+                        onPress={() => setView('vendors')}
+                    >
+                        <Text style={[styles.toggleText, view === 'vendors' ? { color: '#fff' } : { color: colors.textSecondary }]}>All Vendors</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             {loading ? (
@@ -238,7 +306,7 @@ export default function ExploreScreen() {
                     {view === 'products' ? (
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
                             {[...Array(6)].map((_, i) => (
-                                <View key={i} style={{ width: '48%' }}>
+                                <View key={i}>
                                     <ProductSkeleton />
                                 </View>
                             ))}
@@ -260,8 +328,12 @@ export default function ExploreScreen() {
                     renderItem={view === 'products' ? (renderProductItem as any) : (renderVendorItem as any)}
                     keyExtractor={(item) => item.id}
                     numColumns={view === 'products' ? 2 : 3}
-                    contentContainerStyle={styles.list}
-                    columnWrapperStyle={view === 'vendors' ? styles.vendorColumnWrapper : undefined}
+                    contentContainerStyle={[styles.list, view === 'products' && { paddingHorizontal: 0 }]}
+                    columnWrapperStyle={view === 'products' ? { justifyContent: 'space-between', marginBottom: SPACING } : styles.vendorColumnWrapper}
+                    initialNumToRender={8}
+                    maxToRenderPerBatch={8}
+                    windowSize={5}
+                    removeClippedSubviews={true}
                     ListEmptyComponent={
                         <View style={{ flex: 1, alignItems: 'center', marginTop: 50 }}>
                             <FontAwesome name="inbox" size={40} color={colors.textSecondary} />
@@ -283,67 +355,40 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginHorizontal: 16,
-        marginBottom: 16,
+        marginBottom: 12,
     },
     searchContainer: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        borderRadius: 16,
+        borderRadius: 20,
         paddingHorizontal: 16,
-        height: 50,
-        shadowColor: '#16a34a',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 4,
+        height: 40,
         borderWidth: 1,
         marginRight: 10,
     },
     bellButton: {
-        width: 50,
-        height: 50,
-        borderRadius: 16,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        shadowColor: '#16a34a',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 4,
-        position: 'relative'
+        display: 'none', // Removed
     },
     badge: {
-        position: 'absolute',
-        right: 12,
-        top: 12,
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-        backgroundColor: '#ef4444',
-        borderWidth: 2,
-        borderColor: '#fff',
+        display: 'none',
     },
     searchIcon: {
-        marginRight: 12,
+        marginRight: 10,
     },
     searchInput: {
         flex: 1,
-        fontSize: 15,
-        fontWeight: '500',
+        fontSize: 14,
     },
     toggleContainer: {
         flexDirection: 'row',
-        marginHorizontal: 16,
-        marginBottom: 16,
         borderRadius: 12,
         padding: 4,
         borderWidth: 1,
     },
     toggleBtn: {
         flex: 1,
-        paddingVertical: 10,
+        paddingVertical: 8,
         alignItems: 'center',
         borderRadius: 8,
     },
@@ -352,45 +397,51 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     list: {
-        paddingHorizontal: 10,
+        paddingHorizontal: 0,
         paddingBottom: 20,
     },
     // Product Card Styles (Reused)
     card: {
-        flex: 1,
-        margin: 5,
-        borderRadius: 8,
+        marginBottom: 0,
+        borderRadius: 12,
         overflow: 'hidden',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
     },
     imageContainer: {
-        height: 100,
+        // height set dynamically
         width: '100%',
+        position: 'relative',
+        backgroundColor: '#e2e8f0',
     },
     image: {
         width: '100%',
         height: '100%',
     },
     details: {
-        padding: 6,
+        padding: 8,
+        paddingTop: 6,
+    },
+    detailsOverlay: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        padding: 8,
+        backgroundColor: 'rgba(50,50,50,0.7)',
     },
     productName: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 'bold',
         marginBottom: 2,
         textTransform: 'uppercase',
     },
     price: {
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: '900',
     },
     // Vendor Card Styles
     vendorColumnWrapper: {
         justifyContent: 'space-between',
-        paddingHorizontal: 6,
+        paddingHorizontal: 16, // Keep padding for vendors
     },
     vendorCard: {
         width: '30%',
@@ -426,11 +477,22 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         textAlign: 'center',
     },
-    favoriteBtn: {
+    productIconsOverlay: {
         position: 'absolute',
-        right: 5,
-        top: 5,
-        borderRadius: 12,
-        padding: 4,
+        top: 8,
+        right: 8,
+        gap: 8,
+    },
+    iconCircle: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
     },
 });

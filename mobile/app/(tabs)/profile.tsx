@@ -15,25 +15,90 @@ export default function ProfileScreen() {
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const [isVendor, setIsVendor] = useState(false);
+
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
+            if (session) checkVendorStatus(session.user.id);
             setLoading(false);
         });
 
-        supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
+            if (session) {
+                checkVendorStatus(session.user.id);
+            } else {
+                setIsVendor(false);
+                setLoading(false);
+            }
         });
+
+        return () => subscription.unsubscribe();
     }, []);
+
+    const checkVendorStatus = async (userId: string) => {
+        try {
+            const { data, error } = await supabase
+                .from('vendor_profiles')
+                .select('id')
+                .eq('user_id', userId)
+                .single();
+
+            if (data && !error) {
+                setIsVendor(true);
+            } else {
+                setIsVendor(false);
+            }
+        } catch (e) {
+            setIsVendor(false);
+        }
+    };
+
+    const handleVendorAction = () => {
+        if (!session) {
+            Alert.alert("Login Required", "Please login to start selling.", [
+                { text: "Cancel", style: "cancel" },
+                { text: "Login", onPress: () => router.push('/login') }
+            ]);
+            return;
+        }
+
+        if (isVendor) {
+            router.push('/vendor-portal');
+        } else {
+            router.push('/vendor-portal/register');
+        }
+    };
 
     const handleLogout = async () => {
         try {
-            await supabase.auth.signOut();
+            const { error } = await supabase.auth.signOut();
+            if (error) throw error;
             setSession(null);
+            setIsVendor(false);
+            // Optional: redirect to login or home to force refresh state
+            // router.replace('/'); 
         } catch (error) {
             console.error('Error signing out:', error);
-            setSession(null);
+            setSession(null); // Force clear local session even if server fails
+            setIsVendor(false);
         }
+    };
+
+    const confirmLogout = () => {
+        Alert.alert(
+            "Logout",
+            "Are you sure you want to log out?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Logout",
+                    style: "destructive",
+                    onPress: handleLogout
+                }
+            ]
+        );
     };
 
     const handleLanguage = () => {
@@ -50,6 +115,13 @@ export default function ProfileScreen() {
     };
 
     const menuItems = [
+        {
+            icon: 'shopping-cart', // Changed icon to distinguish
+            label: isVendor ? 'Vendor Portal' : 'Sell on ZimAIo',
+            action: handleVendorAction,
+            color: colors.primary, // Highlight this button
+            special: true
+        },
         {
             icon: 'search',
             label: 'Track Order',
@@ -100,7 +172,7 @@ export default function ProfileScreen() {
         menuItems.push({
             icon: 'sign-out',
             label: 'Logout',
-            action: handleLogout,
+            action: confirmLogout,
             color: colors.danger // Optional custom prop if I handle it
         } as any);
     }

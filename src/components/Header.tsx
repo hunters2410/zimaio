@@ -24,6 +24,7 @@ interface Category {
 }
 
 
+import { GlobalChatModal } from './GlobalChatModal';
 
 export function Header() {
   const { user, profile, signOut } = useAuth();
@@ -38,6 +39,8 @@ export function Header() {
   const [navigationItems, setNavigationItems] = useState<NavigationItem[]>([]);
   const { theme, toggleTheme } = useTheme();
   const [categories, setCategories] = useState<Category[]>([]);
+  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const fetchNavigationItems = async () => {
@@ -125,6 +128,14 @@ export function Header() {
     navigate('/');
   };
 
+  const handleSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+      setShowMobileMenu(false);
+    }
+  };
+
   const getIcon = (iconName: string | null) => {
     if (iconName === 'Menu') return <Menu className="h-4 w-4" />;
     if (iconName === 'Package') return <Package className="h-4 w-4" />;
@@ -168,21 +179,21 @@ export function Header() {
                   >
                     <DollarSign className="h-3 w-3 mr-1" />
                     {currency}
-                    <ChevronDown className={`h - 3 w - 3 ml - 1 transition - transform ${showCurrencyMenu ? 'rotate-180' : ''} `} />
+                    <ChevronDown className={`h-3 w-3 ml-1 transition-transform ${showCurrencyMenu ? 'rotate-180' : ''}`} />
                   </button>
                   {showCurrencyMenu && (
                     <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-slate-800 rounded-xl shadow-2xl py-2 border border-gray-100 dark:border-slate-700 z-[60] animate-in fade-in slide-in-from-top-2 duration-200">
                       <button
                         onClick={() => { setCurrency('USD'); setShowCurrencyMenu(false); }}
-                        className={`block w - full text - left px - 4 py - 2 text - xs hover: bg - gray - 50 dark: hover: bg - slate - 700 transition - colors ${currency === 'USD' ? 'text-green-600 font-bold' : 'text-gray-600 dark:text-gray-300'} `}
+                        className={`block w-full text-left px-4 py-2 text-xs hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors ${currency === 'USD' ? 'text-green-600 font-bold' : 'text-gray-600 dark:text-gray-300'}`}
                       >
                         USD ($)
                       </button>
                       <button
-                        onClick={() => { setCurrency('ZWL'); setShowCurrencyMenu(false); }}
-                        className={`block w - full text - left px - 4 py - 2 text - xs hover: bg - gray - 50 dark: hover: bg - slate - 700 transition - colors ${currency === 'ZWL' ? 'text-green-600 font-bold' : 'text-gray-600 dark:text-gray-300'} `}
+                        onClick={() => { setCurrency('ZWG'); setShowCurrencyMenu(false); }}
+                        className={`block w-full text-left px-4 py-2 text-xs hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors ${currency === 'ZWG' ? 'text-green-600 font-bold' : 'text-gray-600 dark:text-gray-300'}`}
                       >
-                        ZWL (ZWL$)
+                        ZWG (ZiG)
                       </button>
                     </div>
                   )}
@@ -213,7 +224,7 @@ export function Header() {
         </div>
 
         {/* Main Header */}
-        <div className="bg-white/95 backdrop-blur-xl border-b border-gray-100 relative dark:bg-slate-900/95 dark:border-slate-800 transition-colors">
+        <div className="bg-white/95 backdrop-blur-xl border-b border-gray-100 relative z-20 dark:bg-slate-900/95 dark:border-slate-800 transition-colors">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between py-5 gap-4 md:gap-8 relative z-10">
               {/* Logo */}
@@ -230,9 +241,9 @@ export function Header() {
 
               {/* Search Bar */}
               <div className="hidden lg:flex flex-1 max-w-2xl px-4">
-                <div className="flex w-full items-center bg-gray-50 rounded-2xl border border-gray-200 focus-within:border-green-500/50 focus-within:ring-4 focus-within:ring-green-500/5 transition-all group overflow-hidden">
+                <form onSubmit={handleSearch} className="flex w-full items-center bg-gray-50 rounded-2xl border border-gray-200 focus-within:border-green-500/50 focus-within:ring-4 focus-within:ring-green-500/5 transition-all group overflow-hidden">
                   <select
-                    onChange={(e) => e.target.value && navigate(`/ products ? category = ${e.target.value} `)}
+                    onChange={(e) => e.target.value && navigate(`/products?category=${e.target.value}`)}
                     className="px-5 py-3.5 bg-transparent text-gray-500 text-[11px] font-bold uppercase tracking-widest focus:outline-none cursor-pointer border-r border-gray-200"
                   >
                     <option value="">ALL CATEGORIES</option>
@@ -245,13 +256,15 @@ export function Header() {
                     <input
                       type="text"
                       placeholder="Search premium products..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full py-3.5 bg-transparent text-sm text-gray-700 placeholder-gray-400 focus:outline-none font-medium"
                     />
                   </div>
-                  <button className="px-8 py-3.5 bg-gradient-to-r from-green-600 to-blue-600 text-white font-bold text-xs uppercase tracking-widest hover:from-green-700 hover:to-blue-700 transition-all">
+                  <button type="submit" className="px-8 py-3.5 bg-gradient-to-r from-green-600 to-blue-600 text-white font-bold text-xs uppercase tracking-widest hover:from-green-700 hover:to-blue-700 transition-all">
                     Explore
                   </button>
-                </div>
+                </form>
               </div>
 
               {/* Right Icons */}
@@ -267,7 +280,7 @@ export function Header() {
                     </button>
 
                     {showUserMenu && (
-                      <div className="absolute right-0 mt-3 w-64 bg-white dark:bg-slate-800 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] py-5 border border-gray-100 dark:border-slate-700 z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
+                      <div className="absolute left-1/2 -translate-x-1/2 md:left-auto md:right-0 md:translate-x-0 mt-3 w-64 bg-white dark:bg-slate-800 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] py-5 border border-gray-100 dark:border-slate-700 z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
                         <div className="px-6 py-3 border-b border-gray-50 dark:border-slate-700/50 mb-3">
                           <p className="text-[9px] text-gray-400 dark:text-gray-500 uppercase font-black tracking-widest mb-1">Authenticating as</p>
                           <p className="text-sm font-black text-gray-900 dark:text-white truncate">{profile?.full_name}</p>
@@ -296,10 +309,16 @@ export function Header() {
                             <Package className="h-4 w-4 mr-4 text-green-500" />
                             Logistics
                           </Link>
-                          <Link to="/messages" onClick={() => setShowUserMenu(false)} className="flex items-center px-4 py-3 text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-slate-700 hover:text-green-700 dark:hover:text-green-400 rounded-xl transition-all">
+                          <button
+                            onClick={() => {
+                              setShowUserMenu(false);
+                              setIsChatModalOpen(true);
+                            }}
+                            className="w-full flex items-center px-4 py-3 text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-slate-700 hover:text-green-700 dark:hover:text-green-400 rounded-xl transition-all"
+                          >
                             <MessageCircle className="h-4 w-4 mr-4 text-green-500" />
-                            Concierge
-                          </Link>
+                            Messages
+                          </button>
                           <div className="border-t border-gray-50 dark:border-slate-700/50 mt-3 pt-3 px-2">
                             <button
                               onClick={handleSignOut}
@@ -404,14 +423,17 @@ export function Header() {
               </div>
 
               <div className="mb-10">
-                <div className="flex items-center bg-gray-50 dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 px-4 py-3 focus-within:ring-2 focus-within:ring-green-500 transition-all">
+                <form onSubmit={handleSearch} className="flex items-center bg-gray-50 dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 px-4 py-3 focus-within:ring-2 focus-within:ring-green-500 transition-all">
                   <Search className="h-4 w-4 text-gray-400 mr-3" />
                   <input
                     type="text"
                     placeholder="What are you looking for?"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full bg-transparent text-sm focus:outline-none placeholder-gray-400 dark:text-white"
                   />
-                </div>
+                  <button type="submit" className="hidden">Search</button>
+                </form>
               </div>
 
               {/* Mobile User Profile Section */}
@@ -466,10 +488,16 @@ export function Header() {
                       <span className="flex items-center gap-3"><Package className="h-5 w-5 text-gray-400" /> My Orders</span>
                       <ArrowRight className="h-4 w-4 text-gray-300 dark:text-gray-600" />
                     </Link>
-                    <Link to="/messages" onClick={() => setShowMobileMenu(false)} className="mobile-link dark:text-gray-300 dark:hover:bg-slate-800">
+                    <button
+                      onClick={() => {
+                        setShowMobileMenu(false);
+                        setIsChatModalOpen(true);
+                      }}
+                      className="mobile-link dark:text-gray-300 dark:hover:bg-slate-800 w-full text-left"
+                    >
                       <span className="flex items-center gap-3"><MessageCircle className="h-5 w-5 text-gray-400" /> Messages</span>
-                      <ArrowRight className="h-4 w-4 text-gray-300 dark:text-gray-600" />
-                    </Link>
+                      <ArrowRight className="h-4 w-4 text-gray-300 dark:text-gray-600 ml-auto" />
+                    </button>
                     <div className="h-px bg-gray-100 dark:bg-slate-800 my-2" />
                   </>
                 )}
@@ -511,6 +539,11 @@ export function Header() {
         )}
       </header>
       <div className="h-[80px] sm:h-[184px]" />
+
+      <GlobalChatModal
+        isOpen={isChatModalOpen}
+        onClose={() => setIsChatModalOpen(false)}
+      />
     </>
   );
 }

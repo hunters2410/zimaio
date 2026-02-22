@@ -14,9 +14,12 @@ export default {
     primary: '#16a34a',
     danger: '#ef4444',
     inputBackground: '#ffffff',
+    success: '#10b981',
+    warning: '#f59e0b',
+    highlight: '#dcfce7', // Very light green for active states
   },
   dark: {
-    text: '#f8fafc',
+    text: '#f1f5f9',
     textSecondary: '#94a3b8',
     background: '#0f172a',
     card: '#1e293b',
@@ -27,5 +30,8 @@ export default {
     primary: '#22c55e', // Slightly lighter green for dark mode
     danger: '#f87171',
     inputBackground: '#1e293b',
+    success: '#4ade80',
+    warning: '#fbbf24',
+    highlight: '#064e3b', // Dark green for active states
   },
 };

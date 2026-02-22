@@ -134,7 +134,7 @@ export function PaymentGateways() {
         is_active: false,
         is_default: false,
         configuration: {},
-        supported_currencies: ['USD', 'ZWL'],
+        supported_currencies: ['USD', 'ZWG'],
         instructions: formData.get('instructions') as string,
         logo_url: formData.get('logo_url') as string,
         sort_order: gateways.length + 1,

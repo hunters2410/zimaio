@@ -6,7 +6,9 @@ import {
     Trash2,
     X,
     AlertCircle,
-    Tag
+    Tag,
+    Upload,
+    Loader2
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -40,6 +42,7 @@ export function CatalogManagement() {
     const [showModal, setShowModal] = useState(false);
     const [editingItem, setEditingItem] = useState<any>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const [uploading, setUploading] = useState(false);
 
     const [formData, setFormData] = useState<any>({
         name: '',
@@ -51,7 +54,6 @@ export function CatalogManagement() {
         sort_order: 0,
     });
 
-    const cardBg = isDark ? 'bg-gray-800' : 'bg-white';
     const textPrimary = isDark ? 'text-gray-100' : 'text-gray-900';
     const textSecondary = isDark ? 'text-gray-400' : 'text-gray-600';
     const borderColor = isDark ? 'border-gray-700' : 'border-gray-200';
@@ -120,6 +122,38 @@ export function CatalogManagement() {
         setEditingItem(item);
         setFormData(item);
         setShowModal(true);
+    };
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploading(true);
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Math.random()}.${fileExt}`;
+            const filePath = `${activeTab}/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('catalog')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('catalog')
+                .getPublicUrl(filePath);
+
+            setFormData({
+                ...formData,
+                [activeTab === 'categories' ? 'image_url' : 'logo_url']: publicUrl
+            });
+            setMessage({ type: 'success', text: 'Image uploaded successfully' });
+        } catch (error: any) {
+            setMessage({ type: 'error', text: 'Error uploading image: ' + error.message });
+        } finally {
+            setUploading(false);
+        }
     };
 
     const handleDelete = async (id: string) => {
@@ -381,36 +415,97 @@ export function CatalogManagement() {
                                     </>
                                 )}
                                 <div>
-                                    <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-1`}>
-                                        {activeTab === 'categories' ? 'Image URL' : 'Logo URL'}
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={formData.image_url || formData.logo_url}
-                                        onChange={(e) => setFormData({ ...formData, [activeTab === 'categories' ? 'image_url' : 'logo_url']: e.target.value })}
-                                        className={`w-full px-3 py-2 text-xs rounded-lg border ${borderColor} focus:outline-none focus:ring-2 focus:ring-slate-900/10 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white text-slate-900'}`}
-                                        placeholder="URL here"
-                                    />
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className={`block text-[10px] font-black uppercase tracking-widest ${textSecondary}`}>
+                                            {activeTab === 'categories' ? 'Category Image' : 'Brand Logo'}
+                                        </label>
+                                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                            Recommended: {activeTab === 'categories' ? '800 x 800px (1:1)' : '400 x 200px (2:1)'}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {(formData.image_url || formData.logo_url) && (
+                                            <div className="relative w-full h-32 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 shadow-inner">
+                                                <img
+                                                    src={formData.image_url || formData.logo_url}
+                                                    alt="Preview"
+                                                    className="w-full h-full object-contain"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, [activeTab === 'categories' ? 'image_url' : 'logo_url']: '' })}
+                                                    className="absolute top-2 right-2 p-1.5 bg-rose-500 text-white rounded-lg shadow-lg hover:bg-rose-600 transition-colors"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        )}
+                                        <div className="flex gap-2">
+                                            <label className={`flex-1 flex flex-col items-center justify-center h-24 border-2 border-dashed ${borderColor} rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer relative group`}>
+                                                {uploading ? (
+                                                    <div className="flex flex-col items-center gap-2">
+                                                        <Loader2 className="w-6 h-6 text-slate-900 dark:text-white animate-spin" />
+                                                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Uploading...</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex flex-col items-center gap-2">
+                                                        <Upload className="w-6 h-6 text-gray-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors" />
+                                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Choose File</span>
+                                                    </div>
+                                                )}
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleUpload}
+                                                    disabled={uploading}
+                                                    className="hidden"
+                                                />
+                                            </label>
+                                            <div className="flex-1">
+                                                <input
+                                                    type="text"
+                                                    value={formData.image_url || formData.logo_url}
+                                                    onChange={(e) => setFormData({ ...formData, [activeTab === 'categories' ? 'image_url' : 'logo_url']: e.target.value })}
+                                                    className={`w-full px-3 py-2 text-xs rounded-lg border ${borderColor} focus:outline-none focus:ring-2 focus:ring-slate-900/10 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white text-slate-900'}`}
+                                                    placeholder="Or enter image URL"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="flex items-center">
+                                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-900/50 rounded-2xl border border-gray-100 dark:border-slate-700">
+                                    <div className="flex flex-col">
+                                        <span className={`text-[10px] font-black uppercase tracking-widest ${textPrimary}`}>Status Control</span>
+                                        <span className={`text-[9px] font-medium ${textSecondary}`}>Enable or disable this items visibility</span>
+                                    </div>
                                     <button
                                         type="button"
                                         onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
                                         className="flex items-center gap-3"
                                     >
-                                        <div className={`w-10 h-6 bg-slate-200 dark:bg-slate-700 rounded-full relative transition-colors ${formData.is_active ? 'bg-emerald-500' : ''}`}>
-                                            <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${formData.is_active ? 'translate-x-4' : ''}`} />
+                                        <div className={`w-12 h-7 bg-slate-200 dark:bg-slate-700 rounded-full relative transition-all duration-300 ${formData.is_active ? 'bg-emerald-500 shadow-[0_0_15px_-3px_rgba(16,185,129,0.4)]' : ''}`}>
+                                            <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ${formData.is_active ? 'translate-x-5' : ''}`} />
                                         </div>
-                                        <span className={`text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white`}>Active</span>
+                                        <span className={`text-[10px] font-black uppercase tracking-widest ${formData.is_active ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                            {formData.is_active ? 'Active (Live)' : 'Deactivated'}
+                                        </span>
                                     </button>
                                 </div>
 
-                                <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end">
+                                <div className="pt-6 border-t border-gray-100 dark:border-slate-700 flex justify-end gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={handleCloseModal}
+                                        className={`px-6 py-2 rounded-xl font-black uppercase tracking-widest text-[10px] border ${borderColor} ${textSecondary} hover:bg-gray-50 dark:hover:bg-slate-700 transition-all`}
+                                    >
+                                        Cancel
+                                    </button>
                                     <button
                                         type="submit"
-                                        className="px-6 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-800 transition-all"
+                                        className="px-8 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-900/20 transition-all active:scale-95 disabled:opacity-50"
+                                        disabled={loading || uploading}
                                     >
-                                        Save
+                                        {loading ? 'Saving...' : 'Save Catalog'}
                                     </button>
                                 </div>
                             </form>

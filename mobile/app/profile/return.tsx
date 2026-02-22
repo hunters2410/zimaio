@@ -1,30 +1,48 @@
-import { StyleSheet, ScrollView } from 'react-native';
+import { StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { Text, View } from '@/components/Themed';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export default function ReturnScreen() {
+    const [content, setContent] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchContent();
+    }, []);
+
+    const fetchContent = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('site_content')
+                .select('*')
+                .eq('slug', 'returns')
+                .eq('is_published', true)
+                .single();
+
+            if (error) throw error;
+            setContent(data);
+        } catch (err) {
+            console.error('Error fetching returns content:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#16a34a" />
+            </View>
+        );
+    }
+
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
             <View style={styles.section}>
-                <Text style={styles.title}>Return Policy</Text>
-
-                <Text style={styles.heading}>Return Eligibility</Text>
+                <Text style={styles.title}>{content?.title || 'Returns & Refunds'}</Text>
                 <Text style={styles.paragraph}>
-                    Items may be returned within 7 days of delivery if they are damaged, defective, or incorrect. To be eligible for a return, your item must be unused and in the same condition that you received it. It must also be in the original packaging.
-                </Text>
-
-                <Text style={styles.heading}>Non-Returnable Items</Text>
-                <Text style={styles.paragraph}>
-                    Certain types of items cannot be returned, like perishable goods (such as food, flowers, or plants), custom products (such as special orders or personalized items), and personal care goods (such as beauty products).
-                </Text>
-
-                <Text style={styles.heading}>Refund Process</Text>
-                <Text style={styles.paragraph}>
-                    Once your return is received and inspected, we will send you an email to notify you that we have received your returned item. We will also notify you of the approval or rejection of your refund. If you are approved, then your refund will be processed, and a credit will automatically be applied to your credit card or original method of payment, within a certain amount of days.
-                </Text>
-
-                <Text style={styles.heading}>Exchanges</Text>
-                <Text style={styles.paragraph}>
-                    We only replace items if they are defective or damaged. If you need to exchange it for the same item, send us an email at support@zimaio.com.
+                    {content?.content || 'Items can be returned within 7 days of delivery.'}
                 </Text>
             </View>
         </ScrollView>
@@ -67,5 +85,11 @@ const styles = StyleSheet.create({
         lineHeight: 24,
         color: '#475569',
         marginBottom: 12,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f8fafc',
     },
 });

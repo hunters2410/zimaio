@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Users, Package, ShoppingCart, DollarSign, AlertTriangle, TrendingUp, BarChart3, Globe, Percent, Truck } from 'lucide-react';
+import { Users, Package, ShoppingCart, DollarSign, AlertTriangle, TrendingUp, BarChart3, Globe, Percent, Truck, Construction } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { AdminLayout } from '../../components/AdminLayout';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 import { analyticsService } from '../../services/analyticsService';
 import { RevenueChart } from '../../components/analytics/RevenueChart';
 import { CustomerGrowthChart } from '../../components/analytics/CustomerGrowthChart';
@@ -12,6 +13,7 @@ import { CategoryPieChart } from '../../components/analytics/CategoryPieChart';
 
 export function AdminDashboard() {
   const { theme } = useTheme();
+  const { settings } = useSiteSettings();
   const [stats, setStats] = useState({
     totalCustomers: 0,
     totalVendors: 0,
@@ -251,6 +253,29 @@ export function AdminDashboard() {
           <div className={`${cardBg} rounded-lg shadow-sm p-6`}>
             <h3 className={`text-base font-semibold ${textPrimary} mb-3`}>Quick Actions</h3>
             <div className="space-y-1.5">
+              <button
+                onClick={async () => {
+                  const newValue = settings.maintenance_mode === 'true' ? 'false' : 'true';
+                  const { error } = await supabase
+                    .from('site_settings')
+                    .upsert({
+                      setting_key: 'maintenance_mode',
+                      setting_value: newValue,
+                      setting_type: 'boolean'
+                    }, { onConflict: 'setting_key' });
+
+                  if (!error) {
+                    window.location.reload();
+                  }
+                }}
+                className={`flex items-center gap-2 w-full text-left px-3 py-2 ${settings.maintenance_mode === 'true'
+                    ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400'
+                    : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400'
+                  } rounded-lg text-sm font-bold transition`}
+              >
+                <Construction className="h-4 w-4" />
+                {settings.maintenance_mode === 'true' ? 'Deactivate Maintenance' : 'Activate Maintenance'}
+              </button>
               <Link to="/admin/vendors" className={`block w-full text-left px-3 py-2 ${isDark ? 'bg-green-900/20 text-green-400 hover:bg-green-900/40' : 'bg-green-50 text-green-700 hover:bg-green-100'} rounded-lg text-sm transition`}>
                 Manage Vendors
               </Link>
@@ -262,6 +287,9 @@ export function AdminDashboard() {
               </Link>
               <Link to="/admin/orders" className={`block w-full text-left px-3 py-2 ${isDark ? 'bg-purple-900/20 text-purple-400 hover:bg-purple-900/40' : 'bg-purple-50 text-purple-700 hover:bg-purple-100'} rounded-lg text-sm transition`}>
                 Orders Management
+              </Link>
+              <Link to="/admin/pre-registrations" className={`block w-full text-left px-3 py-2 ${isDark ? 'bg-orange-900/20 text-orange-400 hover:bg-orange-900/40' : 'bg-orange-50 text-orange-700 hover:bg-orange-100'} rounded-lg text-sm transition`}>
+                Customer Pre-Registration
               </Link>
               <Link to="/admin/reports" className={`block w-full text-left px-3 py-2 ${isDark ? 'bg-indigo-900/20 text-indigo-400 hover:bg-indigo-900/40' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'} rounded-lg text-sm transition`}>
                 Generate Reports

@@ -25,21 +25,61 @@ export default function LoginScreen() {
         }
 
         setLoading(true);
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
 
-        if (error) {
-            Alert.alert('Login Failed', error.message);
-        } else {
-            if (returnTo) {
-                router.replace(returnTo as string);
-            } else {
-                router.replace('/(tabs)');
+            if (error) throw error;
+
+            if (data.user) {
+                // Check user role from profiles table (consistent with web app)
+                const { data: profile, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', data.user.id)
+                    .single();
+
+                if (!profileError && profile) {
+                    if (profile.role === 'vendor') {
+                        // Redirect to Vendor Portal
+                        router.replace('/vendor-portal' as any);
+                    } else if (profile.role === 'logistic' || profile.role === 'logistics') {
+                        // Redirect to Logistics Portal (if it exists, otherwise tabs)
+                        router.replace('/(tabs)' as any); // Placeholder for logistics
+                    } else {
+                        // Normal customer redirect
+                        if (returnTo) {
+                            router.replace(returnTo as any);
+                        } else {
+                            router.replace('/(tabs)' as any);
+                        }
+                    }
+                } else {
+                    // Fallback to vendor_profiles check if profiles check failed but we suspect they are a vendor
+                    const { data: vendor } = await supabase
+                        .from('vendor_profiles')
+                        .select('id')
+                        .eq('user_id', data.user.id)
+                        .single();
+
+                    if (vendor) {
+                        router.replace('/vendor-portal' as any);
+                    } else {
+                        if (returnTo) {
+                            router.replace(returnTo as any);
+                        } else {
+                            router.replace('/(tabs)' as any);
+                        }
+                    }
+                }
             }
+        } catch (error: any) {
+            Alert.alert('Login Failed', error.message);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     return (

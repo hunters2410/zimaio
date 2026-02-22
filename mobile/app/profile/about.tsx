@@ -1,22 +1,48 @@
-import { StyleSheet, ScrollView } from 'react-native';
+import { StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { Text, View } from '@/components/Themed';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export default function AboutScreen() {
+    const [content, setContent] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchContent();
+    }, []);
+
+    const fetchContent = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('site_content')
+                .select('*')
+                .eq('slug', 'about')
+                .eq('is_published', true)
+                .single();
+
+            if (error) throw error;
+            setContent(data);
+        } catch (err) {
+            console.error('Error fetching about content:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#16a34a" />
+            </View>
+        );
+    }
+
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
             <View style={styles.section}>
-                <Text style={styles.title}>About ZimAIo</Text>
+                <Text style={styles.title}>{content?.title || 'About ZimAIO'}</Text>
                 <Text style={styles.paragraph}>
-                    Welcome to ZimAIo, your premier destination for quality products and exceptional service.
-                    We connect you with the best vendors and provide a seamless shopping experience tailored to your needs.
-                </Text>
-                <Text style={styles.paragraph}>
-                    Our mission is to empower local businesses and provide customers with access to a wide range of goods
-                    at competitive prices. Whether you are looking for electronics, fashion, or home essentials,
-                    ZimAIo has you covered.
-                </Text>
-                <Text style={styles.paragraph}>
-                    Thank you for choosing ZimAIo. We are committed to excellence and innovation in everything we do.
+                    {content?.content || 'ZimAIO is your premier destination for quality products and exceptional service.'}
                 </Text>
             </View>
         </ScrollView>
@@ -52,5 +78,11 @@ const styles = StyleSheet.create({
         lineHeight: 24,
         color: '#475569',
         marginBottom: 12,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f8fafc',
     },
 });

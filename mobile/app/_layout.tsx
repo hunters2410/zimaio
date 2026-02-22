@@ -5,6 +5,7 @@ import { Link, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { Pressable, Image, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
@@ -101,83 +102,88 @@ function RootLayoutContent() {
   };
 
   return (
-    <ThemeProvider value={theme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack
-        screenOptions={{
-          headerRight: () => (
-            <View style={{ flexDirection: 'row', marginRight: 15, gap: 15 }}>
-              <Link href="/favorites" asChild>
-                <Pressable>
-                  {({ pressed }) => (
-                    <FontAwesome
-                      name="heart"
-                      size={24}
-                      color={Colors[theme ?? 'light'].danger}
-                      style={{ opacity: pressed ? 0.5 : 1 }}
-                    />
-                  )}
-                </Pressable>
-              </Link>
-              <Link href="/notifications" asChild>
-                <Pressable>
-                  {({ pressed }) => (
-                    <FontAwesome
-                      name="bell"
-                      size={24}
-                      color={Colors[theme ?? 'light'].primary}
-                      style={{ opacity: pressed ? 0.5 : 1 }}
-                    />
-                  )}
-                </Pressable>
-              </Link>
-              {session && (
-                <Pressable onPress={handleSignOut}>
-                  {({ pressed }) => (
-                    <FontAwesome
-                      name="sign-out"
-                      size={24}
-                      color={Colors[theme ?? 'light'].text}
-                      style={{ opacity: pressed ? 0.5 : 1 }}
-                    />
-                  )}
-                </Pressable>
-              )}
-            </View>
-          ),
-        }}
-      >
-        <Stack.Screen
-          name="(tabs)"
-          options={{
-            headerShown: true,
-            headerTitle: () => null,
-            headerLeft: () => (
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 0, paddingLeft: 10 }}>
-                <Image
-                  source={require('@/assets/images/logo.png')}
-                  style={{ width: 140, height: 45 }}
-                  resizeMode="contain"
-                />
+    <>
+      <StatusBar style="auto" />
+      <ThemeProvider value={theme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: Colors[theme ?? 'light'].background },
+            headerShadowVisible: false,
+            headerRight: () => (
+              <View style={{ flexDirection: 'row', marginRight: 15, gap: 15 }}>
+                <Link href="/favorites" asChild>
+                  <Pressable>
+                    {({ pressed }) => (
+                      <FontAwesome
+                        name="heart"
+                        size={24}
+                        color={Colors[theme ?? 'light'].danger}
+                        style={{ opacity: pressed ? 0.5 : 1 }}
+                      />
+                    )}
+                  </Pressable>
+                </Link>
+                <Link href="/notifications" asChild>
+                  <Pressable>
+                    {({ pressed }) => (
+                      <FontAwesome
+                        name="bell"
+                        size={24}
+                        color={Colors[theme ?? 'light'].primary}
+                        style={{ opacity: pressed ? 0.5 : 1 }}
+                      />
+                    )}
+                  </Pressable>
+                </Link>
+                {session && (
+                  <Pressable onPress={handleSignOut}>
+                    {({ pressed }) => (
+                      <FontAwesome
+                        name="sign-out"
+                        size={24}
+                        color={Colors[theme ?? 'light'].text}
+                        style={{ opacity: pressed ? 0.5 : 1 }}
+                      />
+                    )}
+                  </Pressable>
+                )}
               </View>
             ),
           }}
-        />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="notifications" options={{ presentation: 'modal', title: 'Notifications' }} />
-        <Stack.Screen name="favorites" options={{ presentation: 'modal', title: 'My Wishlist' }} />
-        <Stack.Screen name="category/[id]" options={{ title: 'Category' }} />
-        <Stack.Screen name="profile/about" options={{ presentation: 'modal', title: 'About Us' }} />
-        <Stack.Screen name="profile/contact" options={{ presentation: 'modal', title: 'Contact Us' }} />
-        <Stack.Screen name="profile/faq" options={{ presentation: 'modal', title: 'FAQ' }} />
-        <Stack.Screen name="profile/privacy" options={{ presentation: 'modal', title: 'Privacy Policy' }} />
-        <Stack.Screen name="profile/terms" options={{ presentation: 'modal', title: 'Terms & Conditions' }} />
-        <Stack.Screen name="profile/shipping" options={{ presentation: 'modal', title: 'Shipping Policy' }} />
-        <Stack.Screen name="profile/return" options={{ presentation: 'modal', title: 'Return Policy' }} />
-        <Stack.Screen name="profile/track-order" options={{ title: 'Track Order' }} />
-        <Stack.Screen name="(auth)/login" options={{ title: 'Sign In' }} />
-        <Stack.Screen name="(auth)/signup" options={{ title: 'Create Account' }} />
-        <Stack.Screen name="(auth)/forgot-password" options={{ title: 'Reset Password' }} />
-      </Stack>
-    </ThemeProvider>
+        >
+          <Stack.Screen
+            name="(tabs)"
+            options={{
+              headerShown: true,
+              headerTitle: () => null,
+              headerLeft: () => (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 0, paddingLeft: 10 }}>
+                  <Image
+                    source={require('@/assets/images/logo.png')}
+                    style={{ width: 140, height: 45 }}
+                    resizeMode="contain"
+                  />
+                </View>
+              ),
+            }}
+          />
+          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="notifications" options={{ presentation: 'modal', title: 'Notifications' }} />
+          <Stack.Screen name="favorites" options={{ presentation: 'modal', title: 'My Wishlist' }} />
+          <Stack.Screen name="category/[id]" options={{ title: 'Category' }} />
+          <Stack.Screen name="profile/about" options={{ presentation: 'modal', title: 'About Us' }} />
+          <Stack.Screen name="profile/contact" options={{ presentation: 'modal', title: 'Contact Us' }} />
+          <Stack.Screen name="profile/faq" options={{ presentation: 'modal', title: 'FAQ' }} />
+          <Stack.Screen name="profile/privacy" options={{ presentation: 'modal', title: 'Privacy Policy' }} />
+          <Stack.Screen name="profile/terms" options={{ presentation: 'modal', title: 'Terms & Conditions' }} />
+          <Stack.Screen name="profile/shipping" options={{ presentation: 'modal', title: 'Shipping Policy' }} />
+          <Stack.Screen name="profile/return" options={{ presentation: 'modal', title: 'Return Policy' }} />
+          <Stack.Screen name="profile/track-order" options={{ title: 'Track Order' }} />
+          <Stack.Screen name="(auth)/login" options={{ title: 'Sign In' }} />
+          <Stack.Screen name="(auth)/signup" options={{ title: 'Create Account' }} />
+          <Stack.Screen name="(auth)/forgot-password" options={{ title: 'Reset Password' }} />
+        </Stack>
+      </ThemeProvider>
+    </>
   );
 }

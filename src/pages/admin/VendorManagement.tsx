@@ -509,7 +509,7 @@ export function VendorManagement() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
         <table className="min-w-full border-collapse border border-gray-200">
           <thead className="bg-white">
             <tr>

@@ -6,7 +6,7 @@ import { useCurrency } from '../contexts/CurrencyContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import { supabase } from '../lib/supabase';
-import { ShieldCheck, Truck, CreditCard, Lock, User, Mail, Phone, Loader2, Smartphone, Wallet, Copy, Check } from 'lucide-react';
+import { ShieldCheck, Truck, CreditCard, Lock, User, Mail, Phone, Loader2, Smartphone, Wallet, Copy, Check, AlertCircle, XCircle, CheckCircle } from 'lucide-react';
 import { paymentService } from '../services/paymentService';
 import { PaymentGateway } from '../types/payment';
 
@@ -31,6 +31,7 @@ export function CheckoutPage() {
     const [selectedShipping, setSelectedShipping] = useState<ShippingMethod | null>(null);
     const [activeGateways, setActiveGateways] = useState<PaymentGateway[]>([]);
     const [paymentMethod, setPaymentMethod] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
     // Guest / Form State
     const [email, setEmail] = useState('');
@@ -44,9 +45,19 @@ export function CheckoutPage() {
     });
     const [ecocashNumber, setEcocashNumber] = useState('');
 
-    // Success Modal State
-    const [showSuccessModal, setShowSuccessModal] = useState(false);
-    const [successOrderId, setSuccessOrderId] = useState<string>('');
+    // Unified Status Modal State
+    const [modalConfig, setModalConfig] = useState<{
+        show: boolean;
+        type: 'success' | 'error';
+        title: string;
+        message: string;
+        orderId?: string;
+    }>({
+        show: false,
+        type: 'success',
+        title: '',
+        message: ''
+    });
 
     // Password Modal State (for guest signup)
     const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -193,8 +204,18 @@ export function CheckoutPage() {
 
             (window as any).paypal.Buttons({
                 createOrder: async (data: any, actions: any) => {
-                    // Create Supabase Order first? Or just validation?
-                    // Ideally we create order in 'pending' state here
+                    // Pre-payment validation for PayPal
+                    if (!email || !fullName || !phone || !selectedShipping) {
+                        alert("Please provide your email, name, phone, and select a shipping method before using PayPal.");
+                        return null;
+                    }
+                    if (selectedShipping.id !== 'pickup') {
+                        if (!address.street || !address.city || !address.state) {
+                            alert("Please enter a valid shipping address before using PayPal.");
+                            return null;
+                        }
+                    }
+
                     try {
                         // We can't easily run the complex handleOrderPlacement logic here inside sync callback 
                         // unless we refactor. For now, let's assume validation passes or use basic amount.
@@ -331,29 +352,83 @@ export function CheckoutPage() {
     };
 
     const handleOrderPlacement = async () => {
+        setError(null);
+
+        // 1. Basic Identity Validation (Required for Guest and Auth users)
+        if (!email) {
+            alert("Please fill in your email address first.");
+            setError("Email is required.");
+            return;
+        }
+        if (!fullName) {
+            alert("Please enter your full name.");
+            setError("Name is required.");
+            return;
+        }
+        if (!phone) {
+            alert("Please fill in your phone number first.");
+            setError("Phone number is required.");
+            return;
+        }
+
+        // 2. Shipping Validation
+        if (!selectedShipping) {
+            alert("Please select a shipping method.");
+            setError("Shipping method is required.");
+            return;
+        }
+        if (selectedShipping?.id !== 'pickup') {
+            if (!address.street || !address.city || !address.state) {
+                alert("Please enter a valid shipping address.");
+                setError("Shipping address is incomplete.");
+                return;
+            }
+        }
+
+        // 3. Payment Method Validation
+        if (!paymentMethod) {
+            alert("Please select a payment method.");
+            setError("Payment method is required.");
+            return;
+        }
+
+        // 4. Banking Details Validation
+        if (paymentMethod === 'iveri_card') {
+            if (!cardDetails.pan || !cardDetails.expiry || !cardDetails.cvv) {
+                alert("Please enter your complete credit card details.");
+                setError("Card details are incomplete.");
+                return;
+            }
+        } else if (paymentMethod === 'iveri_ecocash') {
+            if (!ecocashNumber) {
+                alert("Please enter your EcoCash phone number.");
+                setError("EcoCash number is required.");
+                return;
+            }
+        }
+
         setLoading(true);
-        console.log("Starting order placement...");
+        console.log("Starting order placement with validated inputs...");
+
         try {
             let currentUser = user;
 
-            // 1. Validate inputs
+            // 1. Handle Guest Authentication
             if (!currentUser) {
-                console.log("No user logged in, attempting guest signup...");
-                if (!email) throw new Error("Email is required for guest checkout.");
+                console.log("No user logged in, performing guest signup...");
                 const { user: newUser, password } = await handleGuestSignup();
                 currentUser = newUser;
                 console.log("Guest signup successful:", currentUser?.id);
 
                 if (currentUser) {
                     if (selectedShipping?.id !== 'pickup') {
-                        // Store shipping address in profile (optional, but good for future)
+                        // Store shipping address in profile
                         const { error: profileError } = await supabase.from('profiles').update({
                             city: address.city,
                             country: address.country
                         }).eq('id', currentUser.id);
                         if (profileError) console.error("Profile update error:", profileError);
                     }
-                    // Show password modal instead of alert
                     setTempPassword(password);
                     setTempEmail(email);
                     setShowPasswordModal(true);
@@ -361,12 +436,6 @@ export function CheckoutPage() {
             }
 
             if (!currentUser) throw new Error("Authentication failed.");
-
-            if (selectedShipping?.id !== 'pickup') {
-                if (!address.street || !address.city || !address.state) {
-                    throw new Error("Please enter a valid shipping address.");
-                }
-            }
 
             // 2. Create Order Record
             // Group items by vendor
@@ -508,6 +577,7 @@ export function CheckoutPage() {
                         gateway_type: 'iveri',
                         amount: grandTotal,
                         currency: 'USD',
+                        return_url: `${window.location.origin}/orders/${firstOrder.id}?payment=success`,
                         metadata: {
                             customer_name: fullName || currentUser?.email,
                             full_cart_payment: true,
@@ -521,20 +591,35 @@ export function CheckoutPage() {
                     console.log("=== iVeri Response ===");
                     console.log(response);
 
+                    if (response.compliance_log) {
+                        console.log("%c▼ COPY THIS LOG FOR IVERI CERTIFICATION ▼", "color: #10b981; font-weight: bold; font-size: 14px;");
+                        console.log(JSON.stringify(response.compliance_log, null, 4));
+                        console.log("%c▲ END OF IVERI LOG ▲", "color: #10b981; font-weight: bold; font-size: 14px;");
+                    }
+
                     if (response.success) {
-                        setSuccessOrderId(firstOrder.id);
-                        setShowSuccessModal(true);
+                        setModalConfig({
+                            show: true,
+                            type: 'success',
+                            title: 'Payment Successful!',
+                            message: 'Your secure payment has been processed. Redirecting to your order summary...',
+                            orderId: firstOrder.id
+                        });
                         clearCart();
-                        // Delay navigation to show success animation
                         setTimeout(() => {
                             navigate(`/orders/${firstOrder.id}?payment=success`);
                         }, 3000);
+                    } else if (response.redirect_url) {
+                        // Handle 3D Secure Redirect
+                        console.log("Redirecting for 3D Secure verification:", response.redirect_url);
+                        window.location.href = response.redirect_url;
+                        return;
                     } else {
                         console.error("iVeri Payment Declined:", response);
                         // Show detailed error from gateway matching EcoCash style
                         const details = response.details || response;
-                        const debugInfo = JSON.stringify(details, null, 2);
-                        throw new Error(`Payment Failed:\n${debugInfo}`);
+                        const debugInfo = details?.ResultDescription || details?.Error || 'Transaction declined by bank.';
+                        throw new Error(debugInfo);
                     }
                 } catch (paymentError: any) {
                     console.error("=== iVeri Payment Error ===");
@@ -584,6 +669,7 @@ export function CheckoutPage() {
                         gateway_type: 'iveri',
                         amount: grandTotal,
                         currency: 'USD',
+                        return_url: `${window.location.origin}/orders/${firstOrder.id}?payment=success`,
                         metadata: {
                             customer_name: fullName || currentUser?.email,
                             full_cart_payment: true,
@@ -597,19 +683,33 @@ export function CheckoutPage() {
                     console.log("=== iVeri EcoCash Response ===");
                     console.log(response);
 
+                    if (response.compliance_log) {
+                        console.log("%c▼ COPY THIS LOG FOR IVERI CERTIFICATION ▼", "color: #10b981; font-weight: bold; font-size: 14px;");
+                        console.log(JSON.stringify(response.compliance_log, null, 4));
+                        console.log("%c▲ END OF IVERI LOG ▲", "color: #10b981; font-weight: bold; font-size: 14px;");
+                    }
+
                     if (response.success) {
-                        setSuccessOrderId(firstOrder.id);
-                        setShowSuccessModal(true);
+                        setModalConfig({
+                            show: true,
+                            type: 'success',
+                            title: 'Payment Successful!',
+                            message: 'Your EcoCash payment was processed successfully.',
+                            orderId: firstOrder.id
+                        });
                         clearCart();
-                        // Delay navigation to show success animation
                         setTimeout(() => {
                             navigate(`/orders/${firstOrder.id}?payment=success`);
                         }, 3000);
+                    } else if (response.redirect_url) {
+                        // Handle potential redirects for EcoCash as well
+                        window.location.href = response.redirect_url;
+                        return;
                     } else {
                         console.error("EcoCash Payment Declined:", response);
                         const details = response.details || response;
-                        const debugInfo = JSON.stringify(details, null, 2);
-                        throw new Error(`EcoCash Failed:\n${debugInfo}`);
+                        const debugInfo = details?.ResultDescription || details?.Error || JSON.stringify(details);
+                        throw new Error(debugInfo);
                     }
                 } catch (paymentError: any) {
                     console.error("=== iVeri EcoCash Payment Error ===");
@@ -629,17 +729,30 @@ export function CheckoutPage() {
                 }
 
             } else {
+                setModalConfig({
+                    show: true,
+                    type: 'success',
+                    title: 'Order Placed!',
+                    message: 'Your order has been placed successfully. Pay on delivery.',
+                });
                 clearCart();
-                navigate('/orders');
+                setTimeout(() => {
+                    navigate('/orders');
+                }, 2000);
             }
 
         } catch (err: any) {
             console.error('Detailed Checkout Error:', err);
-            // More user friendly error
-            let msg = err.message || 'Checkout failed';
-            if (err.code === '42501' || err.message?.includes('violates row-level security')) {
-                msg = 'Permission denied. Please try logging in again or contact support. (RLS Error)';
-            }
+            const msg = err.message || 'Checkout failed';
+            setError(msg);
+
+            // Show meaningful error modal instead of alert
+            setModalConfig({
+                show: true,
+                type: 'error',
+                title: 'Transaction Failed',
+                message: msg
+            });
         } finally {
             setLoading(false);
         }
@@ -647,20 +760,38 @@ export function CheckoutPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-slate-900 py-12 transition-colors duration-300">
-            {/* Success Modal */}
-            {showSuccessModal && (
+            {/* Status Modal (Success/Error) */}
+            {modalConfig.show && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-gray-100 dark:border-slate-700 transform scale-100 animate-in zoom-in-95 duration-300 flex flex-col items-center text-center">
-                        <div className="w-32 h-32 flex items-center justify-center mb-6 animate-bounce">
-                            <img src="/zimaio-logo.png" alt="ZimAIO" className="w-full h-full object-contain" />
+                    <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl border border-gray-100 dark:border-slate-700 transform scale-100 animate-in zoom-in-95 duration-300 flex flex-col items-center text-center">
+                        <div className={`w-24 h-24 flex items-center justify-center mb-6 rounded-3xl ${modalConfig.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
+                            {modalConfig.type === 'success' ? (
+                                <CheckCircle className="w-12 h-12 text-emerald-600 animate-bounce" />
+                            ) : (
+                                <XCircle className="w-12 h-12 text-red-600 animate-pulse" />
+                            )}
                         </div>
-                        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Payment Successful!</h2>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
-                            Your secure payment has been processed. Redirecting to your order summary...
+
+                        <h2 className={`text-2xl font-black mb-2 uppercase tracking-tight ${modalConfig.type === 'success' ? 'text-gray-900 dark:text-white' : 'text-red-600 dark:text-red-400'}`}>
+                            {modalConfig.title}
+                        </h2>
+
+                        <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-8 leading-relaxed">
+                            {modalConfig.message}
                         </p>
-                        <div className="w-full bg-gray-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
-                            <div className="h-full bg-emerald-500 animate-[progress_3s_ease-in-out_forwards] w-full origin-left" />
-                        </div>
+
+                        {modalConfig.type === 'success' ? (
+                            <div className="w-full bg-gray-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                                <div className="h-full bg-emerald-500 animate-[progress_3s_ease-in-out_forwards] w-full origin-left" />
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setModalConfig({ ...modalConfig, show: false })}
+                                className="w-full py-4 bg-gray-900 dark:bg-slate-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl hover:bg-black transition-all active:scale-95"
+                            >
+                                Try Again / Change Method
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
@@ -891,7 +1022,7 @@ export function CheckoutPage() {
                                                     className={`cursor-pointer border rounded-xl p-3 flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'iveri_card' ? 'border-emerald-500 bg-emerald-50/20 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-400' : 'border-gray-100 dark:border-slate-700 text-gray-400 dark:text-gray-500 hover:border-gray-200 dark:hover:border-slate-600'}`}
                                                 >
                                                     <CreditCard className="w-5 h-5" />
-                                                    <span className="text-[10px] font-bold uppercase tracking-wide text-center">In-Store Card</span>
+                                                    <span className="text-[10px] font-bold uppercase tracking-wide text-center">Iveri Card</span>
                                                 </div>
                                                 <div
                                                     key="iveri_ecocash"
@@ -1057,6 +1188,13 @@ export function CheckoutPage() {
                                     <span className="text-3xl font-black text-emerald-600 leading-none">{formatPrice(grandTotal)}</span>
                                 </div>
                             </div>
+
+                            {error && (
+                                <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-xs font-bold flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4" />
+                                    {error}
+                                </div>
+                            )}
 
                             {paymentMethod !== 'paypal' && (
                                 <button

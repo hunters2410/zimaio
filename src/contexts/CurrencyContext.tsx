@@ -25,7 +25,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const savedCurrency = localStorage.getItem('preferredCurrency');
-    if (savedCurrency && ['USD', 'ZWL'].includes(savedCurrency)) {
+    if (savedCurrency && ['USD', 'ZWG'].includes(savedCurrency)) {
       setCurrencyState(savedCurrency);
     }
 
@@ -37,7 +37,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       .from('currencies')
       .select('*')
       .eq('is_active', true)
-      .in('code', ['USD', 'ZWL'])
+      .in('code', ['USD', 'ZWG'])
       .order('code');
 
     if (data) {
@@ -46,7 +46,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   };
 
   const setCurrency = (newCurrency: string) => {
-    if (!['USD', 'ZWL'].includes(newCurrency)) {
+    if (!['USD', 'ZWG'].includes(newCurrency)) {
       newCurrency = 'USD';
     }
     setCurrencyState(newCurrency);

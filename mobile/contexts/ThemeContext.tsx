@@ -18,13 +18,15 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     const systemScheme = _useColorScheme();
-    const [theme, setThemeState] = useState<Theme>('light');
+    const [theme, setThemeState] = useState<Theme>(systemScheme || 'light');
+    const [manualOverride, setManualOverride] = useState(false);
 
     useEffect(() => {
         const loadTheme = async () => {
             const saved = await AsyncStorage.getItem('user_theme');
             if (saved) {
                 setThemeState(saved as Theme);
+                setManualOverride(true);
             } else if (systemScheme) {
                 setThemeState(systemScheme);
             }
@@ -32,14 +34,22 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
         loadTheme();
     }, []);
 
+    useEffect(() => {
+        if (!manualOverride && systemScheme) {
+            setThemeState(systemScheme);
+        }
+    }, [systemScheme, manualOverride]);
+
     const toggleTheme = () => {
         const newTheme = theme === 'light' ? 'dark' : 'light';
         setThemeState(newTheme);
+        setManualOverride(true);
         AsyncStorage.setItem('user_theme', newTheme);
     };
 
     const setTheme = (newTheme: Theme) => {
         setThemeState(newTheme);
+        setManualOverride(true);
         AsyncStorage.setItem('user_theme', newTheme);
     }
 

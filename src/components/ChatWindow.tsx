@@ -14,9 +14,10 @@ interface ChatWindowProps {
     vendorName: string;
     customerId: string;
     onClose: () => void;
+    embedded?: boolean;
 }
 
-export function ChatWindow({ vendorId, vendorName, customerId, onClose }: ChatWindowProps) {
+export function ChatWindow({ vendorId, vendorName, customerId, onClose, embedded = false }: ChatWindowProps) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [conversationId, setConversationId] = useState<string | null>(null);
@@ -76,9 +77,13 @@ export function ChatWindow({ vendorId, vendorName, customerId, onClose }: ChatWi
             const { data: convs } = await supabase
                 .from('chat_conversations')
                 .select('id, participant_ids')
-                .filter('participant_ids', 'cs', `{${customerId},${vendorUserId}}`);
+                .contains('participant_ids', [customerId, vendorUserId]);
 
-            let conv = convs?.find(c => c.participant_ids.length === 2);
+            // Need to filter manually because contains checks if the array contains specific elements but we want strict match for this pair mostly
+            // actually contains [A, B] ensures both are present.
+            // But we might want to ensure only these two are present? For now assuming 2 participants.
+
+            let conv = convs?.find(c => c.participant_ids.length === 2 && c.participant_ids.includes(customerId) && c.participant_ids.includes(vendorUserId));
 
             if (!conv) {
                 // Create new conversation
@@ -144,31 +149,36 @@ export function ChatWindow({ vendorId, vendorName, customerId, onClose }: ChatWi
     };
 
     return (
-        <div className="fixed bottom-0 right-0 md:bottom-24 md:right-6 z-[100] w-full md:w-[380px] h-full md:h-[550px] bg-white dark:bg-slate-900 md:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 duration-500 md:border md:border-slate-100 dark:md:border-slate-800">
-            {/* Premium Header */}
-            <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 flex items-center justify-between text-white shrink-0 shadow-lg relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
-                <div className="flex items-center gap-4 relative z-10">
-                    <div className="relative">
-                        <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-inner">
-                            <Store className="w-6 h-6 text-white" />
+        <div className={embedded
+            ? "flex flex-col h-full bg-gray-50 dark:bg-slate-900"
+            : "fixed bottom-0 right-0 md:bottom-24 md:right-6 z-[100] w-full md:w-[380px] h-full md:h-[550px] bg-white dark:bg-slate-900 md:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 duration-500 md:border md:border-slate-100 dark:md:border-slate-800"
+        }>
+            {/* Premium Header - Only show if not embedded (embedded typically has its own header or wrapper) */}
+            {!embedded && (
+                <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 flex items-center justify-between text-white shrink-0 shadow-lg relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+                    <div className="flex items-center gap-4 relative z-10">
+                        <div className="relative">
+                            <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-inner">
+                                <Store className="w-6 h-6 text-white" />
+                            </div>
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white dark:border-slate-900 rounded-full" />
                         </div>
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white dark:border-slate-900 rounded-full" />
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h4 className="text-sm font-black uppercase tracking-tight truncate max-w-[150px]">{vendorName}</h4>
+                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
+                            </div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-100/80">Support Message</p>
+                        </div>
                     </div>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h4 className="text-sm font-black uppercase tracking-tight truncate max-w-[150px]">{vendorName}</h4>
-                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
-                        </div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-100/80">Support Concierge</p>
+                    <div className="flex items-center gap-2 relative z-10">
+                        <button onClick={onClose} className="p-2.5 hover:bg-white/20 rounded-xl transition-all active:scale-90 bg-white/10">
+                            <X className="w-5 h-5" />
+                        </button>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 relative z-10">
-                    <button onClick={onClose} className="p-2.5 hover:bg-white/20 rounded-xl transition-all active:scale-90 bg-white/10">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-            </div>
+            )}
 
             {/* Safety Banner */}
             <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-2 border-b border-slate-100 dark:border-slate-800/50 flex items-center justify-center gap-2">
@@ -177,7 +187,7 @@ export function ChatWindow({ vendorId, vendorName, customerId, onClose }: ChatWi
             </div>
 
             {/* Messages Content */}
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 custom-scrollbar dark:bg-slate-900/50">
+            <div className={`flex-1 overflow-y-auto px-6 py-6 space-y-6 custom-scrollbar dark:bg-slate-900/50 ${embedded ? 'bg-white dark:bg-slate-950' : ''}`}>
                 {loading ? (
                     <div className="flex flex-col items-center justify-center h-full space-y-4">
                         <div className="w-10 h-10 border-4 border-emerald-500/10 border-t-emerald-500 rounded-full animate-spin" />
@@ -248,4 +258,3 @@ export function ChatWindow({ vendorId, vendorName, customerId, onClose }: ChatWi
         </div>
     );
 }
-

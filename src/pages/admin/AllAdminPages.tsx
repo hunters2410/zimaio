@@ -1,4 +1,5 @@
 export { PaymentGateways } from './PaymentGateways';
+export { PaymentLogs } from './PaymentLogs';
 export { LogisticManagement } from './LogisticManagement';
 export { VATManagement } from './VATManagement';
 export { RefundManagement } from './RefundManagement';
@@ -26,6 +27,7 @@ export { CustomerContracts } from './CustomerContracts';
 export { LogisticContracts } from './LogisticContracts';
 export { Reports } from './Reports';
 export { AdminCommissions } from './AdminCommissions';
+export { ContentManagement } from './ContentManagement';
 
 // Rest of the placeholders if needed
 import { Mail, Bell } from 'lucide-react';
