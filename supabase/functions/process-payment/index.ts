@@ -181,6 +181,48 @@ Deno.serve(async (req: Request) => {
 
         if (!applicationId) throw new Error("iVeri Application ID missing");
 
+        // 1. Validate Card Expiry (if subtype is card)
+        if (subtype === 'card' && metadata?.card_expiry) {
+          const expiry = metadata.card_expiry; // MMYY
+          if (expiry.length !== 4 || isNaN(parseInt(expiry))) {
+            return new Response(
+              JSON.stringify({ error: 'Invalid card expiry format. Expected MMYY.' }),
+              {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              }
+            );
+          }
+
+          const month = parseInt(expiry.substring(0, 2));
+          const year = parseInt("20" + expiry.substring(2, 4));
+
+          if (month < 1 || month > 12) {
+            return new Response(
+              JSON.stringify({ error: 'Invalid month in card expiry.' }),
+              {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              }
+            );
+          }
+
+          const now = new Date();
+          const currentMonth = now.getMonth() + 1; // getMonth() is 0-indexed
+          const currentYear = now.getFullYear();
+
+          if (year < currentYear || (year === currentYear && month < currentMonth)) {
+            console.warn(`[iVeri] Blocked expired card: ${expiry}`);
+            return new Response(
+              JSON.stringify({ error: 'Card has expired' }),
+              {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              }
+            );
+          }
+        }
+
         // Get API URL from config (for logging)
         const apiUrl = config.api_url || "https://portal.host.iveri.com/api/transactions";
         console.log(`[iVeri] Configured API URL: ${apiUrl}`);
@@ -279,18 +321,18 @@ Deno.serve(async (req: Request) => {
             const isSuccess = status === "0";
 
             const logMessageObj = {
-              "LITE_CURRENCY_ALPHACODE": currency || "USD",
-              "LITE_ORDER_AMOUNT": Math.round(amount * 100).toString(),
+              "ENTERPRISE_CURRENCY_ALPHACODE": currency || "USD",
+              "ENTERPRISE_ORDER_AMOUNT": Math.round(amount * 100).toString(),
               "ECOM_TRANSACTIONCOMPLETE": isSuccess ? "True" : "False",
               "MERCHANTREFERENCE": `ORD-${order.id.slice(0, 8)}`,
-              "LITE_MERCHANT_APPLICATIONID": applicationId,
+              "ENTERPRISE_MERCHANT_APPLICATIONID": applicationId,
               "ECOM_PAYMENT_CARD_PROTOCOLS": "IVERI",
-              "LITE_RESULT_DESCRIPTION": description || "",
+              "ENTERPRISE_RESULT_DESCRIPTION": description || "",
               "ECOM_PAYMENT_CARD_NUMBER": finalPan ? (finalPan.slice(0, 4) + "........" + finalPan.slice(-4)) : "",
               "ECOM_CONSUMERORDERID": `ORD-${order.id.slice(0, 8)}`,
-              "LITE_PAYMENT_CARD_STATUS": status || "Unknown",
+              "ENTERPRISE_PAYMENT_CARD_STATUS": status || "Unknown",
               "ECOM_BILLTO_ONLINE_EMAIL": user.email,
-              "LITE_ORDER_LINEITEMS_QUANTITY_1": "1",
+              "ENTERPRISE_ORDER_LINEITEMS_QUANTITY_1": "1",
               "IVERI_ACQUIRER": iveriResult?.Transaction?.Acquirer || "",
               "IVERI_ACQUIRER_REFERENCE": iveriResult?.Transaction?.AcquirerReference || "",
               "IVERI_RECON_REFERENCE": iveriResult?.Transaction?.ReconReference || "",

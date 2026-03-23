@@ -32,16 +32,7 @@ export { ContentManagement } from './ContentManagement';
 // Rest of the placeholders if needed
 import { Mail, Bell } from 'lucide-react';
 import { AdminPage } from './AdminPage';
-
-export function EmailManagement() {
-  return (
-    <AdminPage
-      title="Email Management"
-      description="Manage email templates and notifications"
-      icon={Mail}
-    />
-  );
-}
+// Removed EmailManagement placeholder as it now has a dedicated file.
 
 export function NotificationsManagement() {
   return (

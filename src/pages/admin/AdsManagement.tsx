@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { AdminLayout } from '../../components/AdminLayout';
-import { Megaphone, Check, X, Eye, MousePointer, Calendar, Clock, Trash2, ExternalLink } from 'lucide-react';
+import { Megaphone, Check, X, Eye, MousePointer, Calendar, Clock, Trash2, ExternalLink, Filter } from 'lucide-react';
+import { Pagination } from '../../components/Pagination';
 
 interface AdRequest {
     id: string;
@@ -25,13 +26,19 @@ export default function AdsManagement() {
     const [ads, setAds] = useState<AdRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'pending' | 'active' | 'banned'>('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const itemsPerPage = 10;
 
     useEffect(() => {
         fetchAds();
-    }, [filter]);
+    }, [filter, currentPage]);
 
     const fetchAds = async () => {
-        let query = supabase.from('vendor_ads').select('*, vendor_profiles(shop_name)').order('created_at', { ascending: false });
+        setLoading(true);
+        let query = supabase
+            .from('vendor_ads')
+            .select('*, vendor_profiles(shop_name)', { count: 'exact' });
 
         if (filter === 'pending') {
             query = query.eq('status', 'pending');
@@ -41,8 +48,14 @@ export default function AdsManagement() {
             query = query.eq('status', 'banned');
         }
 
-        const { data, error } = await query;
-        if (!error && data) setAds(data as any[]);
+        const { data, error, count } = await query
+            .order('created_at', { ascending: false })
+            .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
+
+        if (!error && data) {
+            setAds(data as any[]);
+            setTotalItems(count || 0);
+        }
         setLoading(false);
     };
 
@@ -182,6 +195,15 @@ export default function AdsManagement() {
                             <p className="text-sm text-gray-300">Wait for vendors to submit requests</p>
                         </div>
                     )}
+                </div>
+
+                <div className="mt-8 flex justify-center">
+                    <Pagination
+                        currentPage={currentPage}
+                        totalItems={totalItems}
+                        itemsPerPage={itemsPerPage}
+                        onPageChange={setCurrentPage}
+                    />
                 </div>
             </div>
         </AdminLayout>

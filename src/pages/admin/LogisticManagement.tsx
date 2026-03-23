@@ -2,23 +2,24 @@ import { useState, useEffect } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { supabase } from '../../lib/supabase';
 import {
+    Plus,
     Search,
     Truck,
     X,
     AlertCircle,
-    ShieldCheck,
-    ShieldAlert,
-    Zap,
-    CheckCircle2,
-    Mail,
-    Phone,
-    Calendar,
     Building2,
     Edit,
     Eye,
-    Plus
+    Zap,
+    ShieldCheck,
+    ShieldAlert,
+    CheckCircle2,
+    Mail,
+    Phone,
+    Calendar
 } from 'lucide-react';
 import { useCurrency } from '../../contexts/CurrencyContext';
+import { Pagination } from '../../components/Pagination';
 
 interface LogisticsPartner {
     id: string;
@@ -75,6 +76,9 @@ export function LogisticManagement() {
     const [showEditModal, setShowEditModal] = useState(false);
     const [showRegisterModal, setShowRegisterModal] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const itemsPerPage = 10;
 
     const [editFormData, setEditFormData] = useState({
         company_name: '',
@@ -94,16 +98,28 @@ export function LogisticManagement() {
 
     useEffect(() => {
         fetchAdminLogisticsData();
-    }, [activeTab]);
+    }, [activeTab, currentPage, searchTerm]);
+
+    // Reset page when tab or search changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab, searchTerm]);
 
     const fetchAdminLogisticsData = async () => {
         setLoading(true);
         try {
             if (activeTab === 'partners') {
-                const { data: partnerData, error: partnerError } = await supabase
+                let query = supabase
                     .from('logistics_profiles')
-                    .select('*, driver_count:delivery_drivers(count), method_count:shipping_methods(count)')
-                    .order('created_at', { ascending: false });
+                    .select('*, driver_count:delivery_drivers(count), method_count:shipping_methods(count)', { count: 'exact' });
+
+                if (searchTerm) {
+                    query = query.or(`company_name.ilike.%${searchTerm}%,business_email.ilike.%${searchTerm}%`);
+                }
+
+                const { data: partnerData, error: partnerError, count } = await query
+                    .order('created_at', { ascending: false })
+                    .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
 
                 if (partnerError) throw partnerError;
 
@@ -114,23 +130,42 @@ export function LogisticManagement() {
                 }));
 
                 setPartners(processedPartners);
+                setTotalItems(count || 0);
             }
             else if (activeTab === 'fleet') {
-                const { data, error } = await supabase
+                let query = supabase
                     .from('delivery_drivers')
-                    .select('*, logistics_profiles(company_name)')
-                    .order('driver_name');
+                    .select('*, logistics_profiles(company_name)', { count: 'exact' });
+
+                if (searchTerm) {
+                    query = query.or(`driver_name.ilike.%${searchTerm}%,vehicle_number.ilike.%${searchTerm}%`);
+                }
+
+                const { data, error, count } = await query
+                    .order('driver_name')
+                    .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
+
                 if (error) throw error;
                 setDrivers(data || []);
+                setTotalItems(count || 0);
             }
             else if (activeTab === 'rates') {
-                const { data, error } = await supabase
+                let query = supabase
                     .from('shipping_methods')
-                    .select('*, logistics_profiles(company_name)')
-                    .not('logistics_id', 'is', null)
-                    .order('base_cost');
+                    .select('*, logistics_profiles(company_name)', { count: 'exact' })
+                    .not('logistics_id', 'is', null);
+
+                if (searchTerm) {
+                    query = query.ilike('display_name', `%${searchTerm}%`);
+                }
+
+                const { data, error, count } = await query
+                    .order('base_cost')
+                    .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
+
                 if (error) throw error;
                 setMethods(data || []);
+                setTotalItems(count || 0);
             }
         } catch (error: any) {
             setMessage({ type: 'error', text: error.message });
@@ -359,7 +394,7 @@ export function LogisticManagement() {
                 )}
 
                 {/* Dense Table - White Background */}
-                <div className={`bg-white rounded-xl border ${borderColor} shadow-sm overflow-hidden`}>
+                <div className={`bg-white rounded-xl border ${borderColor} shadow-sm overflow-hidden mb-6`}>
                     {loading ? (
                         <div className="p-12 flex justify-center">
                             <div className="w-6 h-6 border-2 border-emerald-600/20 border-t-emerald-600 rounded-full animate-spin"></div>
@@ -475,6 +510,16 @@ export function LogisticManagement() {
                         </div>
                     )}
                 </div>
+
+                <div className="pb-8 flex justify-center">
+                    <Pagination
+                        currentPage={currentPage}
+                        totalItems={totalItems}
+                        itemsPerPage={itemsPerPage}
+                        onPageChange={setCurrentPage}
+                    />
+                </div>
+
             </div>
 
             {/* Edit Modal */}

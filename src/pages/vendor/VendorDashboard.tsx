@@ -196,7 +196,7 @@ export function VendorDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
       </div>
     );
@@ -240,8 +240,8 @@ export function VendorDashboard() {
           <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Dashboard Overview</h2>
-                <p className="text-xs text-gray-500 mt-1">Snapshot of your shop's performance and inventory health.</p>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Dashboard Overview</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Snapshot of your shop's performance and inventory health.</p>
               </div>
 
               {/* KYC Reminder Banner */}
@@ -263,12 +263,12 @@ export function VendorDashboard() {
                 </div>
               )}
               <div className="flex items-center gap-3">
-                <button onClick={fetchData} className="p-2.5 bg-white border border-gray-100 rounded-xl text-gray-400 hover:text-emerald-600 hover:border-emerald-100 transition-all shadow-sm">
+                <button onClick={fetchData} className="p-2.5 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl text-gray-400 hover:text-emerald-600 hover:border-emerald-100 dark:hover:border-emerald-500 transition-all shadow-sm">
                   <Package className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => handleTabChange('products?add=true')}
-                  className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition shadow-lg shadow-emerald-200 active:scale-95"
+                  className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition shadow-lg shadow-emerald-500/20 active:scale-95"
                 >
                   <Plus className="w-4 h-4" />
                   Add Product
@@ -280,51 +280,51 @@ export function VendorDashboard() {
             {(stats.lowStockItems > 0 || stats.outOfStockItems > 0 || stats.pendingOrders > 0 || stats.unreadMessages > 0) && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {stats.unreadMessages > 0 && (
-                  <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-center gap-4 animate-pulse">
-                    <div className="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center shrink-0">
-                      <MessageCircle className="w-5 h-5 text-rose-600" />
+                  <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/20 p-4 rounded-2xl flex items-center gap-4 animate-pulse">
+                    <div className="w-10 h-10 bg-rose-100 dark:bg-rose-900/30 rounded-xl flex items-center justify-center shrink-0">
+                      <MessageCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest leading-none mb-1">Unaddressed Inbox</p>
-                      <p className="text-xs font-bold text-rose-900">{stats.unreadMessages} Unread messages</p>
+                      <p className="text-[10px] font-black text-rose-400 dark:text-rose-500 uppercase tracking-widest leading-none mb-1">Unaddressed Inbox</p>
+                      <p className="text-xs font-bold text-rose-900 dark:text-rose-100">{stats.unreadMessages} Unread messages</p>
                     </div>
-                    <button onClick={() => handleTabChange('messages')} className="text-[10px] font-black text-rose-600 uppercase tracking-widest hover:underline whitespace-nowrap">Reply</button>
+                    <button onClick={() => handleTabChange('messages')} className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest hover:underline whitespace-nowrap">Reply</button>
                   </div>
                 )}
                 {stats.pendingOrders > 0 && (
-                  <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex items-center gap-4">
-                    <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
-                      <ShoppingCart className="w-5 h-5 text-blue-600" />
+                  <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 p-4 rounded-2xl flex items-center gap-4">
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center shrink-0">
+                      <ShoppingCart className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest leading-none mb-1">Attention Required</p>
-                      <p className="text-xs font-bold text-blue-900">{stats.pendingOrders} Orders need processing</p>
+                      <p className="text-[10px] font-black text-blue-400 dark:text-blue-500 uppercase tracking-widest leading-none mb-1">Attention Required</p>
+                      <p className="text-xs font-bold text-blue-900 dark:text-blue-100">{stats.pendingOrders} Orders need processing</p>
                     </div>
-                    <button onClick={() => handleTabChange('orders')} className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline whitespace-nowrap">View</button>
+                    <button onClick={() => handleTabChange('orders')} className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest hover:underline whitespace-nowrap">View</button>
                   </div>
                 )}
                 {stats.lowStockItems > 0 && (
-                  <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex items-center gap-4">
-                    <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
-                      <AlertCircle className="w-5 h-5 text-amber-600" />
+                  <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 p-4 rounded-2xl flex items-center gap-4">
+                    <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center shrink-0">
+                      <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest leading-none mb-1">Stock Warning</p>
-                      <p className="text-xs font-bold text-amber-900">{stats.lowStockItems} Items running low</p>
+                      <p className="text-[10px] font-black text-amber-400 dark:text-amber-500 uppercase tracking-widest leading-none mb-1">Stock Warning</p>
+                      <p className="text-xs font-bold text-amber-900 dark:text-amber-100">{stats.lowStockItems} Items running low</p>
                     </div>
-                    <button onClick={() => handleTabChange('products')} className="text-[10px] font-black text-amber-600 uppercase tracking-widest hover:underline whitespace-nowrap">Restock</button>
+                    <button onClick={() => handleTabChange('products')} className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest hover:underline whitespace-nowrap">Restock</button>
                   </div>
                 )}
                 {stats.outOfStockItems > 0 && (
-                  <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center gap-4">
-                    <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center shrink-0">
-                      <Archive className="w-5 h-5 text-red-600" />
+                  <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 p-4 rounded-2xl flex items-center gap-4">
+                    <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center shrink-0">
+                      <Archive className="w-5 h-5 text-red-600 dark:text-red-400" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-[10px] font-black text-red-400 uppercase tracking-widest leading-none mb-1">Critical Alert</p>
-                      <p className="text-xs font-bold text-red-900">{stats.outOfStockItems} Products out of stock</p>
+                      <p className="text-[10px] font-black text-red-400 dark:text-red-500 uppercase tracking-widest leading-none mb-1">Critical Alert</p>
+                      <p className="text-xs font-bold text-red-900 dark:text-red-100">{stats.outOfStockItems} Products out of stock</p>
                     </div>
-                    <button onClick={() => handleTabChange('products')} className="text-[10px] font-black text-red-600 uppercase tracking-widest hover:underline whitespace-nowrap">Check</button>
+                    <button onClick={() => handleTabChange('products')} className="text-[10px] font-black text-red-600 dark:text-red-400 uppercase tracking-widest hover:underline whitespace-nowrap">Check</button>
                   </div>
                 )}
               </div>
@@ -332,64 +332,64 @@ export function VendorDashboard() {
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all duration-300">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 dark:bg-emerald-900/10 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
                 <div className="relative z-10">
-                  <div className="bg-emerald-50 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-emerald-100">
-                    <DollarSign className="w-6 h-6 text-emerald-600" />
+                  <div className="bg-emerald-50 dark:bg-emerald-900/30 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-emerald-100 dark:border-emerald-800">
+                    <DollarSign className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  <div className="text-3xl font-black text-gray-900 tracking-tight tabular-nums">${stats.totalSales.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2">Gross Revenue</p>
+                  <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums">${stats.totalSales.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">Gross Revenue</p>
                 </div>
               </div>
 
-              <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all duration-300">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 dark:bg-blue-900/10 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
                 <div className="relative z-10">
-                  <div className="bg-blue-50 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-blue-100">
-                    <ShoppingCart className="w-6 h-6 text-blue-600" />
+                  <div className="bg-blue-50 dark:bg-blue-900/30 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-blue-100 dark:border-blue-800">
+                    <ShoppingCart className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <div className="text-3xl font-black text-gray-900 tracking-tight tabular-nums">{stats.totalOrders}</div>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2">Lifetime Orders</p>
+                  <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums">{stats.totalOrders}</div>
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">Lifetime Orders</p>
                 </div>
               </div>
 
-              <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all duration-300">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-purple-50 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-purple-50 dark:bg-purple-900/10 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
                 <div className="relative z-10">
-                  <div className="bg-purple-50 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-purple-100">
-                    <Archive className="w-6 h-6 text-purple-600" />
+                  <div className="bg-purple-50 dark:bg-purple-900/30 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-purple-100 dark:border-purple-800">
+                    <Archive className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                   </div>
-                  <div className="text-3xl font-black text-gray-900 tracking-tight tabular-nums">{stats.totalProducts}</div>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2">Active Catalog</p>
+                  <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums">{stats.totalProducts}</div>
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">Active Catalog</p>
                 </div>
               </div>
 
-              <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all duration-300">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-amber-50 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-amber-50 dark:bg-amber-900/10 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
                 <div className="relative z-10">
-                  <div className="bg-amber-50 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-amber-100">
-                    <CreditCard className="w-6 h-6 text-amber-600" />
+                  <div className="bg-amber-50 dark:bg-amber-900/30 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-amber-100 dark:border-amber-800">
+                    <CreditCard className="w-6 h-6 text-amber-600 dark:text-amber-400" />
                   </div>
-                  <div className="text-3xl font-black text-gray-900 tracking-tight tabular-nums">${stats.walletBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2">Withdrawable Funds</p>
+                  <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums">${stats.walletBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">Withdrawable Funds</p>
                 </div>
               </div>
             </div>
 
             {/* Performance Visualization */}
-            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
+            <div className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-sm">
               <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Financial Performance</h3>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Revenue trend for the past 30 days</p>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Financial Performance</h3>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Revenue trend for the past 30 days</p>
                 </div>
                 <button onClick={() => handleTabChange('reports')} className="flex items-center gap-2 text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:underline">
                   View Full Report <TrendingUp className="w-3 h-3" />
                 </button>
               </div>
               <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <AreaChart data={stats.dailyRevenue}>
                     <defs>
                       <linearGradient id="dashboardRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -397,7 +397,7 @@ export function VendorDashboard() {
                         <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-100 dark:text-slate-800" />
                     <XAxis
                       dataKey="date"
                       axisLine={false}
@@ -423,46 +423,46 @@ export function VendorDashboard() {
             {/* Bottom Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Recent Orders Table */}
-              <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-                <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+              <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">
+                <div className="p-6 border-b border-gray-50 dark:border-slate-700 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-1.5 h-6 bg-emerald-600 rounded-full" />
-                    <h3 className="font-black text-gray-900 text-sm uppercase tracking-tight">Recent Orders</h3>
+                    <h3 className="font-black text-gray-900 dark:text-white text-sm uppercase tracking-tight">Recent Orders</h3>
                   </div>
-                  <button onClick={() => handleTabChange('orders')} className="text-[10px] font-black text-emerald-600 hover:text-emerald-700 uppercase tracking-widest">See All Orders</button>
+                  <button onClick={() => handleTabChange('orders')} className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-500 uppercase tracking-widest">See All Orders</button>
                 </div>
                 <div className="overflow-x-auto flex-1">
                   <table className="w-full text-left">
                     <thead>
-                      <tr className="bg-gray-50/30">
-                        <th className="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Order ID</th>
-                        <th className="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Total</th>
-                        <th className="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Status</th>
-                        <th className="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-right">Activity</th>
+                      <tr className="bg-slate-50/30 dark:bg-slate-900/30">
+                        <th className="px-6 py-4 text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Order ID</th>
+                        <th className="px-6 py-4 text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Total</th>
+                        <th className="px-6 py-4 text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Status</th>
+                        <th className="px-6 py-4 text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-right">Activity</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50">
+                    <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                       {recentOrders.length === 0 ? (
                         <tr>
                           <td colSpan={4} className="px-6 py-12 text-center text-[11px] font-bold text-gray-400 uppercase">No recent transactions</td>
                         </tr>
                       ) : (
                         recentOrders.map((order) => (
-                          <tr key={order.id} className="hover:bg-gray-50/50 transition-colors group">
+                          <tr key={order.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors group">
                             <td className="px-6 py-4">
-                              <div className="font-black text-gray-900 tabular-nums group-hover:text-emerald-600 transition-colors uppercase">#{order.order_number}</div>
-                              <div className="text-[9px] text-gray-400 font-bold uppercase mt-0.5">{new Date(order.created_at).toLocaleDateString()}</div>
+                              <div className="font-black text-slate-900 dark:text-white tabular-nums group-hover:text-emerald-600 transition-colors uppercase">#{order.order_number}</div>
+                              <div className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-0.5">{new Date(order.created_at).toLocaleDateString()}</div>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-xs font-black text-gray-900 tabular-nums">${order.total}</span>
+                              <span className="text-xs font-black text-gray-900 dark:text-white tabular-nums">${order.total}</span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-gray-100 text-gray-600 border border-gray-200`}>
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600`}>
                                 {order.status}
                               </span>
                             </td>
                             <td className="px-6 py-4 text-right">
-                              <div className="text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-full inline-block">Active</div>
+                              <div className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full inline-block border border-emerald-100 dark:border-emerald-800/50">Active</div>
                             </td>
                           </tr>
                         ))
@@ -474,35 +474,35 @@ export function VendorDashboard() {
 
               {/* Shop Insights / Quick Actions */}
               <div className="space-y-6">
-                <div className="bg-white rounded-3xl p-6 text-gray-900 shadow-xl shadow-gray-200 relative overflow-hidden border border-gray-100">
+                <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 text-slate-900 dark:text-white shadow-xl shadow-slate-200 dark:shadow-slate-950/50 relative overflow-hidden border border-slate-100 dark:border-slate-700">
                   <div className="absolute top-0 right-0 p-2 opacity-5">
                     <Store className="w-24 h-24" />
                   </div>
                   <div className="relative z-10">
                     <h3 className="text-xl font-black uppercase tracking-tight mb-2">Shop Profile</h3>
-                    <p className="text-xs text-gray-500 font-medium mb-6">Your store's visibility: <span className="text-emerald-500 font-black">HIGH</span></p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-6">Your store's visibility: <span className="text-emerald-500 font-black">HIGH</span></p>
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl border border-gray-200">
-                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Support Rating</span>
-                        <span className="text-sm font-black text-emerald-600">{stats.rating.toFixed(1)}/5.0</span>
+                      <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-600">
+                        <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Support Rating</span>
+                        <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">{stats.rating.toFixed(1)}/5.0</span>
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl border border-gray-200">
-                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Join Date</span>
-                        <span className="text-xs font-bold text-gray-900">{new Date(vendorProfile.created_at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>
+                      <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-600">
+                        <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Join Date</span>
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">{new Date(vendorProfile.created_at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>
                       </div>
                     </div>
                     <button
                       onClick={() => handleTabChange('settings')}
-                      className="w-full mt-6 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-[10px] py-4 rounded-2xl transition-all shadow-lg shadow-emerald-200"
+                      className="w-full mt-6 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-[10px] py-4 rounded-2xl transition-all shadow-lg shadow-emerald-500/20"
                     >
                       Edit Shop Profile
                     </button>
                   </div>
                 </div>
 
-                <div className="bg-emerald-50 rounded-3xl p-6 border border-emerald-100">
-                  <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-4">Quick Tip</h4>
-                  <p className="text-xs text-emerald-900 font-bold leading-relaxed italic">
+                <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-3xl p-6 border border-emerald-100 dark:border-emerald-900/20">
+                  <h4 className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-4">Quick Tip</h4>
+                  <p className="text-xs text-emerald-900 dark:text-emerald-100 font-bold leading-relaxed italic">
                     "Updating your product stock regularly helps improve your visibility in customer search results."
                   </p>
                 </div>

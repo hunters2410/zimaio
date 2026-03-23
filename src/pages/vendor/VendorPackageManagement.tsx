@@ -14,6 +14,7 @@ export function VendorPackageManagement() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [vendorId, setVendorId] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<any>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
@@ -47,14 +48,15 @@ export function VendorPackageManagement() {
         setVendorId(user.id);
 
         // 3. Fetch Subscription
-        const { data: subscription } = await supabase
+        const { data: sub } = await supabase
           .from('vendor_subscriptions')
-          .select('package_id')
+          .select('*, package:vendor_packages(*)')
           .eq('vendor_id', user.id)
           .maybeSingle();
 
-        if (subscription) {
-          setCurrentPackageId(subscription.package_id);
+        if (sub) {
+          setSubscription(sub);
+          setCurrentPackageId(sub.package_id);
         }
       }
     } catch (error) {
@@ -127,9 +129,9 @@ export function VendorPackageManagement() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 gap-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
-        <p className="text-gray-500 text-sm font-medium">Syncing packages...</p>
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500/20 border-t-emerald-600 shadow-xl"></div>
+        <p className="text-slate-500 dark:text-slate-400 font-black uppercase tracking-widest text-[10px]">Syncing packages...</p>
       </div>
     );
   }
@@ -138,27 +140,34 @@ export function VendorPackageManagement() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Vendor Packages</h2>
-          <p className="text-xs text-gray-500 mt-1">Select the plan that best fits your business growth.</p>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Vendor Packages</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Select the plan that best fits your business growth.</p>
         </div>
-        <div className="flex items-center gap-2 bg-emerald-50 px-4 py-2 rounded-xl text-emerald-700 text-[10px] font-black uppercase tracking-widest border border-emerald-100">
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all shadow-sm ${subscription?.status === 'expired'
+          ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-100 dark:border-red-800 animate-pulse'
+          : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'}`}>
           <Zap className="w-3 h-3" />
           {packages.find(p => p.id === currentPackageId)?.price_monthly === 0 ? (
             <span>Lifetime Access</span>
           ) : (
-            <span>Next Billing: {new Date(new Date().setMonth(new Date().getMonth() + 1)).toLocaleDateString()}</span>
+            <span>
+              {subscription?.status === 'expired' ? 'Subscription Expired' : 'Next Billing'}: {subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : 'N/A'}
+            </span>
           )}
         </div>
       </div>
 
       {message && (
-        <div className={`p-4 rounded-2xl flex items-center justify-between ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+        <div className={`p-4 rounded-[20px] flex items-center justify-between animate-in fade-in slide-in-from-top-2 border ${message.type === 'success'
+          ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'
+          : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-100 dark:border-red-800'
+          }`}>
           <div className="flex items-center gap-3">
             <Check className="w-5 h-5" />
-            <span className="text-sm font-bold">{message.text}</span>
+            <span className="text-[11px] font-black uppercase tracking-widest">{message.text}</span>
           </div>
-          <button onClick={() => setMessage(null)} className="text-gray-400 hover:text-gray-600">
-            <XCircle />
+          <button onClick={() => setMessage(null)} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors text-slate-400 dark:text-slate-500">
+            <XCircle className="w-5 h-5" />
           </button>
         </div>
       )}
@@ -172,9 +181,9 @@ export function VendorPackageManagement() {
           return (
             <div
               key={pkg.id}
-              className={`relative bg-white rounded-[32px] border transition-all duration-500 overflow-hidden flex flex-col p-8 ${isCurrent
+              className={`relative bg-white dark:bg-slate-900 rounded-[32px] border transition-all duration-500 overflow-hidden flex flex-col p-8 ${isCurrent
                 ? 'border-emerald-500 ring-4 ring-emerald-500/10 shadow-xl'
-                : 'border-gray-100 hover:border-emerald-200 hover:shadow-2xl hover:shadow-gray-200/50'
+                : 'border-slate-100 dark:border-slate-800 hover:border-emerald-200 dark:hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-purple-500/5'
                 }`}
             >
               {pkg.sort_order === 2 && (
@@ -185,42 +194,55 @@ export function VendorPackageManagement() {
 
               {isCurrent && (
                 <div className="mb-6 flex">
-                  <span className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-100">Current active plan</span>
+                  <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm ${subscription?.status === 'expired'
+                    ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800'
+                    : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'
+                    }`}>
+                    {subscription?.status === 'expired' ? 'Plan Expired' : 'Current active plan'}
+                  </span>
                 </div>
               )}
 
               <div className="mb-8">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{pkg.name.split(' ')[0]}</p>
-                <h3 className="text-2xl font-black text-gray-900 tracking-tight">{pkg.name}</h3>
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{pkg.name.split(' ')[0]}</p>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{pkg.name}</h3>
                 <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-4xl font-black text-gray-900 tabular-nums">${pkg.price_monthly}</span>
-                  <span className="text-gray-400 text-sm font-bold uppercase tracking-widest">/ Month</span>
+                  <span className="text-4xl font-black text-slate-900 dark:text-white tabular-nums">${pkg.price_monthly}</span>
+                  <span className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest">/ Month</span>
                 </div>
               </div>
 
               <div className="space-y-4 mb-10 flex-1">
-                <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">What's included:</p>
+                <p className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest">What's included:</p>
                 {features.map((feature, i) => (
                   <div key={i} className="flex items-center gap-3">
-                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${isCurrent ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-50 text-gray-300'}`}>
-                      <Check className="w-3 h-3" strokeWidth={3} />
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border border-transparent ${isCurrent
+                      ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-100/50 dark:border-emerald-800'
+                      : 'bg-slate-50 dark:bg-slate-800/50 text-slate-300 dark:text-slate-600 border-slate-100 dark:border-slate-800'
+                      }`}>
+                      <Check className="w-2.5 h-2.5" strokeWidth={4} />
                     </div>
-                    <span className="text-xs font-bold text-gray-600">{feature}</span>
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{feature}</span>
                   </div>
                 ))}
               </div>
 
               <button
-                disabled={isCurrent || (updating === pkg.id)}
+                disabled={isCurrent && subscription?.status !== 'expired' || (updating === pkg.id)}
                 onClick={() => handleUpgrade(pkg.id)}
-                className={`w-full py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${isCurrent
-                  ? 'bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-100'
-                  : color === 'blue'
-                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-200 active:scale-95'
-                    : 'bg-gray-900 text-white hover:bg-black shadow-lg shadow-gray-200 active:scale-95'
+                className={`w-full py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 ${isCurrent && subscription?.status !== 'expired'
+                    ? 'bg-slate-50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-600 cursor-not-allowed border border-slate-100 dark:border-slate-800'
+                    : color === 'purple' || color === 'blue'
+                      ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xl shadow-emerald-600/20'
+                      : 'bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-950 dark:hover:bg-slate-600 shadow-xl shadow-slate-900/10'
                   }`}
               >
-                {updating === pkg.id ? 'Processing...' : isCurrent ? 'Active Plan' : 'Select Plan'}
+                {updating === pkg.id ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Processing...
+                  </div>
+                ) : (isCurrent && subscription?.status === 'expired' ? 'Renew Plan' : isCurrent ? 'Active Plan' : 'Select Plan')}
               </button>
             </div>
           );

@@ -1,6 +1,8 @@
 import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { PermissionsProvider } from './contexts/PermissionsContext';
+
 import { CurrencyProvider } from './contexts/CurrencyContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { CartProvider } from './contexts/CartContext';
@@ -50,6 +52,7 @@ const CustomerWallet = lazy(() => import('./pages/customer/CustomerWallet').then
 const OrderDetailsPage = lazy(() => import('./pages/customer/OrderDetailsPage').then(module => ({ default: module.OrderDetailsPage })));
 const TrackOrderPage = lazy(() => import('./pages/TrackOrderPage').then(module => ({ default: module.TrackOrderPage })));
 const CustomerManagement = lazy(() => import('./pages/admin/CustomerManagement').then(module => ({ default: module.CustomerManagement })));
+const AdminUsers = lazy(() => import('./pages/admin/AdminUsers').then(module => ({ default: module.AdminUsers })));
 const UserRolesManagement = lazy(() => import('./pages/admin/UserRolesManagement').then(module => ({ default: module.UserRolesManagement })));
 const KYCVerification = lazy(() => import('./pages/admin/KYCVerification').then(module => ({ default: module.KYCVerification })));
 const WalletManagement = lazy(() => import('./pages/admin/WalletManagement').then(module => ({ default: module.WalletManagement })));
@@ -60,7 +63,9 @@ const WishlistPage = lazy(() => import('./pages/WishlistPage').then(module => ({
 const FAQPage = lazy(() => import('./pages/FAQPage').then(module => ({ default: module.FAQPage })));
 const DynamicPage = lazy(() => import('./pages/DynamicPage').then(module => ({ default: module.DynamicPage })));
 const PreRegisterPage = lazy(() => import('./pages/PreRegisterPage').then(module => ({ default: module.PreRegisterPage })));
+const VendorPreRegisterPage = lazy(() => import('./pages/VendorPreRegisterPage').then(module => ({ default: module.VendorPreRegisterPage })));
 const PreRegistrations = lazy(() => import('./pages/admin/PreRegistrations'));
+const VendorPreRegistrations = lazy(() => import('./pages/admin/VendorPreRegistrations'));
 
 // Admin Pages Lazy Load
 const PaymentGateways = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.PaymentGateways })));
@@ -78,7 +83,7 @@ const AdsManagement = lazy(() => import('./pages/admin/AllAdminPages').then(modu
 const SliderManagement = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.SliderManagement })));
 const SystemConfigurations = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.SystemConfigurations })));
 const PromotionManagement = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.PromotionManagement })));
-const EmailManagement = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.EmailManagement })));
+const EmailManagement = lazy(() => import('./pages/admin/EmailManagement'));
 const NotificationsManagement = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.NotificationsManagement })));
 const VendorAnalytics = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.VendorAnalytics })));
 const FraudDetection = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.FraudDetection })));
@@ -94,6 +99,7 @@ const Reports = lazy(() => import('./pages/admin/AllAdminPages').then(module => 
 const AdminCommissions = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.AdminCommissions })));
 const Documentation = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.Documentation })));
 const ContentManagement = lazy(() => import('./pages/admin/AllAdminPages').then(module => ({ default: module.ContentManagement })));
+const EmailTemplates = lazy(() => import('./pages/admin/EmailTemplates'));
 
 import { WishlistProvider } from './contexts/WishlistContext';
 import { ChatProvider } from './contexts/ChatContext';
@@ -114,7 +120,8 @@ function AppContent() {
   const isAdmin = profile?.role === 'admin';
   const isExemptPage = location.pathname.startsWith('/admin') ||
     location.pathname === '/login' ||
-    location.pathname === '/pre-register';
+    location.pathname === '/pre-register' ||
+    location.pathname === '/vendor-pre-register';
 
   // Show loading while checking settings and auth
   if (loading || authLoading) {
@@ -129,12 +136,17 @@ function AppContent() {
   const hideHeaderFooter = location.pathname.startsWith('/admin') ||
     location.pathname.startsWith('/vendor/') ||
     location.pathname.startsWith('/logistic/') ||
-    location.pathname === '/pre-register';
+    location.pathname === '/pre-register' ||
+    location.pathname === '/vendor-pre-register';
 
   return (
     <div className="min-h-screen flex flex-col">
       {!hideHeaderFooter && <Header />}
-      {location.pathname !== '/pre-register' && <FloatingChat />}
+      {location.pathname !== '/pre-register' &&
+        location.pathname !== '/vendor-pre-register' &&
+        !isAdmin &&
+        profile?.role !== 'vendor' &&
+        <FloatingChat />}
       <main className="flex-grow">
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
@@ -166,6 +178,7 @@ function AppContent() {
             <Route path="/returns" element={<DynamicPage />} />
             <Route path="/p/:slug" element={<DynamicPage />} />
             <Route path="/pre-register" element={<PreRegisterPage />} />
+            <Route path="/vendor-pre-register" element={<VendorPreRegisterPage />} />
 
             <Route
               path="/dashboard"
@@ -305,7 +318,7 @@ function AppContent() {
             <Route
               path="/admin/dashboard"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <AdminDashboard />
                 </ProtectedRoute>
               }
@@ -313,7 +326,7 @@ function AppContent() {
             <Route
               path="/admin/pos"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <AdminPOS />
                 </ProtectedRoute>
               }
@@ -322,7 +335,7 @@ function AppContent() {
             <Route
               path="/admin/navigation"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <NavigationSettings />
                 </ProtectedRoute>
               }
@@ -331,7 +344,7 @@ function AppContent() {
             <Route
               path="/admin/vendors"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <VendorManagement />
                 </ProtectedRoute>
               }
@@ -340,7 +353,7 @@ function AppContent() {
             <Route
               path="/admin/vendor-packages"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <VendorPackages />
                 </ProtectedRoute>
               }
@@ -349,7 +362,7 @@ function AppContent() {
             <Route
               path="/admin/appearance"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <AppearanceSettings />
                 </ProtectedRoute>
               }
@@ -358,7 +371,7 @@ function AppContent() {
             <Route
               path="/admin/delivery"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <DeliveryManagement />
                 </ProtectedRoute>
               }
@@ -367,7 +380,7 @@ function AppContent() {
             <Route
               path="/admin/customers"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <CustomerManagement />
                 </ProtectedRoute>
               }
@@ -376,16 +389,26 @@ function AppContent() {
             <Route
               path="/admin/logistics"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <LogisticManagement />
                 </ProtectedRoute>
               }
             />
 
             <Route
-              path="/admin/user-roles"
+              path="/admin/users"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
+                  <AdminUsers />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/user-roles"
+
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <UserRolesManagement />
                 </ProtectedRoute>
               }
@@ -394,7 +417,7 @@ function AppContent() {
             <Route
               path="/admin/roles-permissions"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <RolesPermissions />
                 </ProtectedRoute>
               }
@@ -403,7 +426,7 @@ function AppContent() {
             <Route
               path="/admin/roles-permissions/new"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <RoleForm />
                 </ProtectedRoute>
               }
@@ -412,7 +435,7 @@ function AppContent() {
             <Route
               path="/admin/roles-permissions/edit/:id"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <RoleForm />
                 </ProtectedRoute>
               }
@@ -421,7 +444,7 @@ function AppContent() {
             <Route
               path="/admin/kyc-verification"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <KYCVerification />
                 </ProtectedRoute>
               }
@@ -430,7 +453,7 @@ function AppContent() {
             <Route
               path="/admin/vendor-contracts"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <VendorContracts />
                 </ProtectedRoute>
               }
@@ -439,7 +462,7 @@ function AppContent() {
             <Route
               path="/admin/customer-contracts"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <CustomerContracts />
                 </ProtectedRoute>
               }
@@ -448,7 +471,7 @@ function AppContent() {
             <Route
               path="/admin/logistic-contracts"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <LogisticContracts />
                 </ProtectedRoute>
               }
@@ -457,7 +480,7 @@ function AppContent() {
             <Route
               path="/admin/ads"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <AdsManagement />
                 </ProtectedRoute>
               }
@@ -466,7 +489,7 @@ function AppContent() {
             <Route
               path="/admin/slider"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <SliderManagement />
                 </ProtectedRoute>
               }
@@ -475,7 +498,7 @@ function AppContent() {
             <Route
               path="/admin/wallets"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <WalletManagement />
                 </ProtectedRoute>
               }
@@ -484,7 +507,7 @@ function AppContent() {
             <Route
               path="/admin/payment-gateways"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <PaymentGateways />
                 </ProtectedRoute>
               }
@@ -493,7 +516,7 @@ function AppContent() {
             <Route
               path="/admin/payment-logs"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <PaymentLogs />
                 </ProtectedRoute>
               }
@@ -502,7 +525,7 @@ function AppContent() {
             <Route
               path="/admin/vat"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <VATManagement />
                 </ProtectedRoute>
               }
@@ -511,7 +534,7 @@ function AppContent() {
             <Route
               path="/admin/refunds"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <RefundManagement />
                 </ProtectedRoute>
               }
@@ -520,7 +543,7 @@ function AppContent() {
             <Route
               path="/admin/ledger"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <ImmutableLedger />
                 </ProtectedRoute>
               }
@@ -530,7 +553,7 @@ function AppContent() {
             <Route
               path="/admin/currencies"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <CurrencyManagement />
                 </ProtectedRoute>
               }
@@ -539,7 +562,7 @@ function AppContent() {
             <Route
               path="/admin/languages"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <LanguageManagement />
                 </ProtectedRoute>
               }
@@ -548,7 +571,7 @@ function AppContent() {
             <Route
               path="/admin/sms-config"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <SMSConfiguration />
                 </ProtectedRoute>
               }
@@ -557,7 +580,7 @@ function AppContent() {
             <Route
               path="/admin/email-config"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <EmailConfiguration />
                 </ProtectedRoute>
               }
@@ -566,7 +589,7 @@ function AppContent() {
             <Route
               path="/admin/triggers"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <TriggerModule />
                 </ProtectedRoute>
               }
@@ -575,7 +598,7 @@ function AppContent() {
             <Route
               path="/admin/settings"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <SystemConfigurations />
                 </ProtectedRoute>
               }
@@ -584,7 +607,7 @@ function AppContent() {
             <Route
               path="/admin/promotions"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <PromotionManagement />
                 </ProtectedRoute>
               }
@@ -593,8 +616,17 @@ function AppContent() {
             <Route
               path="/admin/emails"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <EmailManagement />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/email-templates"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
+                  <EmailTemplates />
                 </ProtectedRoute>
               }
             />
@@ -602,7 +634,7 @@ function AppContent() {
             <Route
               path="/admin/notifications"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <NotificationsManagement />
                 </ProtectedRoute>
               }
@@ -611,7 +643,7 @@ function AppContent() {
             <Route
               path="/admin/vendor-analytics"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <VendorAnalytics />
                 </ProtectedRoute>
               }
@@ -620,7 +652,7 @@ function AppContent() {
             <Route
               path="/admin/fraud-detection"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <FraudDetection />
                 </ProtectedRoute>
               }
@@ -629,7 +661,7 @@ function AppContent() {
             <Route
               path="/admin/catalog"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <CatalogManagement />
                 </ProtectedRoute>
               }
@@ -638,7 +670,7 @@ function AppContent() {
             <Route
               path="/admin/products"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <ProductsManagement />
                 </ProtectedRoute>
               }
@@ -647,7 +679,7 @@ function AppContent() {
             <Route
               path="/admin/orders"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <OrdersManagement />
                 </ProtectedRoute>
               }
@@ -656,7 +688,7 @@ function AppContent() {
             <Route
               path="/admin/shipping"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <ShippingManagement />
                 </ProtectedRoute>
               }
@@ -665,7 +697,7 @@ function AppContent() {
             <Route
               path="/admin/reports"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <Reports />
                 </ProtectedRoute>
               }
@@ -674,7 +706,7 @@ function AppContent() {
             <Route
               path="/admin/commissions"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <AdminCommissions />
                 </ProtectedRoute>
               }
@@ -683,7 +715,7 @@ function AppContent() {
             <Route
               path="/admin/documentation"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <Documentation />
                 </ProtectedRoute>
               }
@@ -691,7 +723,7 @@ function AppContent() {
             <Route
               path="/admin/content"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <ContentManagement />
                 </ProtectedRoute>
               }
@@ -699,8 +731,16 @@ function AppContent() {
             <Route
               path="/admin/pre-registrations"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
                   <PreRegistrations />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/vendor-pre-registrations"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'staff', 'sub_admin']}>
+                  <VendorPreRegistrations />
                 </ProtectedRoute>
               }
             />
@@ -718,21 +758,23 @@ function App() {
     <BrowserRouter>
       <ScrollToTop />
       <AuthProvider>
-        <ThemeProvider>
-          <SettingsProvider>
-            <SiteSettingsProvider>
-              <CartProvider>
-                <CurrencyProvider>
-                  <WishlistProvider>
-                    <ChatProvider>
-                      <AppContent />
-                    </ChatProvider>
-                  </WishlistProvider>
-                </CurrencyProvider>
-              </CartProvider>
-            </SiteSettingsProvider>
-          </SettingsProvider>
-        </ThemeProvider>
+        <PermissionsProvider>
+          <ThemeProvider>
+            <SettingsProvider>
+              <SiteSettingsProvider>
+                <CartProvider>
+                  <CurrencyProvider>
+                    <WishlistProvider>
+                      <ChatProvider>
+                        <AppContent />
+                      </ChatProvider>
+                    </WishlistProvider>
+                  </CurrencyProvider>
+                </CartProvider>
+              </SiteSettingsProvider>
+            </SettingsProvider>
+          </ThemeProvider>
+        </PermissionsProvider>
       </AuthProvider>
     </BrowserRouter>
   );

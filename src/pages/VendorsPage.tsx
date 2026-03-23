@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 import { Store, Star, ArrowRight, MapPin, ShieldCheck, Search } from 'lucide-react';
+import { AdSpace } from '../components/AdSpace';
 
 interface VendorShop {
     id: string;
@@ -50,6 +51,10 @@ export function VendorsPage() {
                         Discover premium shops and professional sellers curated for excellence and reliability.
                     </p>
                 </div>
+            </div>
+
+            <div className="container mx-auto px-4 mt-12">
+                <AdSpace type="featured" limit={1} />
             </div>
 
             <div className="container mx-auto px-4 -mt-8">

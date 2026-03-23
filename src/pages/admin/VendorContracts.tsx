@@ -149,22 +149,20 @@ export function VendorContracts() {
           <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
             <button
               onClick={() => setViewMode('list')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition ${
-                viewMode === 'list'
-                  ? 'bg-cyan-600 text-white'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition ${viewMode === 'list'
+                ? 'bg-cyan-600 text-white'
+                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
             >
               <List className="h-4 w-4" />
               List
             </button>
             <button
               onClick={() => setViewMode('grid')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition ${
-                viewMode === 'grid'
-                  ? 'bg-cyan-600 text-white'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition ${viewMode === 'grid'
+                ? 'bg-cyan-600 text-white'
+                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
             >
               <Grid className="h-4 w-4" />
               Grid
@@ -175,11 +173,10 @@ export function VendorContracts() {
 
       {message && (
         <div
-          className={`mb-6 p-4 rounded-lg flex items-start space-x-3 ${
-            message.type === 'success'
-              ? 'bg-green-50 border border-green-200 text-green-800'
-              : 'bg-red-50 border border-red-200 text-red-800'
-          }`}
+          className={`mb-6 p-4 rounded-lg flex items-start space-x-3 ${message.type === 'success'
+            ? 'bg-green-50 border border-green-200 text-green-800'
+            : 'bg-red-50 border border-red-200 text-red-800'
+            }`}
         >
           <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
           <span>{message.text}</span>
@@ -190,7 +187,7 @@ export function VendorContracts() {
       )}
 
       {viewMode === 'list' ? (
-        <div className={`${cardBg} rounded-lg shadow-sm border ${borderColor} overflow-hidden mb-8`}>
+        <div className={`${cardBg} rounded-lg shadow-sm border ${borderColor} overflow-hidden overflow-x-auto mb-8`}>
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
@@ -233,11 +230,10 @@ export function VendorContracts() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        contract.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
+                      className={`px-2 py-1 text-xs font-semibold rounded-full ${contract.is_active
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-800'
+                        }`}
                     >
                       {contract.is_active ? 'Active' : 'Inactive'}
                     </span>
@@ -265,11 +261,10 @@ export function VendorContracts() {
                       </button>
                       <button
                         onClick={() => handleToggleActive(contract)}
-                        className={`p-2 rounded-lg transition ${
-                          contract.is_active
-                            ? 'text-red-600 hover:bg-red-50'
-                            : 'text-green-600 hover:bg-green-50'
-                        }`}
+                        className={`p-2 rounded-lg transition ${contract.is_active
+                          ? 'text-red-600 hover:bg-red-50'
+                          : 'text-green-600 hover:bg-green-50'
+                          }`}
                         title={contract.is_active ? 'Deactivate' : 'Activate'}
                       >
                         {contract.is_active ? <X className="h-4 w-4" /> : <Check className="h-4 w-4" />}
@@ -305,11 +300,10 @@ export function VendorContracts() {
                       Version: {contract.version}
                     </span>
                     <span
-                      className={`px-2 py-1 text-xs rounded-full ${
-                        contract.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
+                      className={`px-2 py-1 text-xs rounded-full ${contract.is_active
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-800'
+                        }`}
                     >
                       {contract.is_active ? 'Active' : 'Inactive'}
                     </span>
@@ -342,11 +336,10 @@ export function VendorContracts() {
                 </button>
                 <button
                   onClick={() => handleToggleActive(contract)}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition ${
-                    contract.is_active
-                      ? 'bg-red-50 text-red-700 hover:bg-red-100'
-                      : 'bg-green-50 text-green-700 hover:bg-green-100'
-                  }`}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition ${contract.is_active
+                    ? 'bg-red-50 text-red-700 hover:bg-red-100'
+                    : 'bg-green-50 text-green-700 hover:bg-green-100'
+                    }`}
                 >
                   {contract.is_active ? 'Deactivate' : 'Activate'}
                 </button>
@@ -399,9 +392,8 @@ export function VendorContracts() {
                     required
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className={`w-full px-4 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
-                      isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                    }`}
+                    className={`w-full px-4 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                      }`}
                   />
                 </div>
 
@@ -414,9 +406,8 @@ export function VendorContracts() {
                     required
                     value={formData.version}
                     onChange={(e) => setFormData({ ...formData, version: e.target.value })}
-                    className={`w-full px-4 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
-                      isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                    }`}
+                    className={`w-full px-4 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                      }`}
                     placeholder="e.g., 2.0"
                   />
                 </div>
@@ -430,9 +421,8 @@ export function VendorContracts() {
                     value={formData.content}
                     onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                     rows={20}
-                    className={`w-full px-4 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 font-mono text-sm ${
-                      isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-                    }`}
+                    className={`w-full px-4 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 font-mono text-sm ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                      }`}
                   />
                 </div>
               </div>
@@ -471,11 +461,10 @@ export function VendorContracts() {
                 <div className="flex items-center gap-3 text-sm">
                   <span className={textSecondary}>Version {viewingContract.version}</span>
                   <span
-                    className={`px-2 py-1 text-xs rounded-full ${
-                      viewingContract.is_active
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
+                    className={`px-2 py-1 text-xs rounded-full ${viewingContract.is_active
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-800'
+                      }`}
                   >
                     {viewingContract.is_active ? 'Active' : 'Inactive'}
                   </span>
@@ -491,7 +480,8 @@ export function VendorContracts() {
 
             <div className="p-6 max-h-[70vh] overflow-y-auto">
               <div className={`prose max-w-none ${isDark ? 'prose-invert' : ''}`}>
-                <pre className="whitespace-pre-wrap font-sans">{viewingContract.content}</pre>
+                <pre className="whitespace-pre-wrap font-roboto
+">{viewingContract.content}</pre>
               </div>
             </div>
           </div>

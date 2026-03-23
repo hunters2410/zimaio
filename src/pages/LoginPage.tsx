@@ -49,6 +49,8 @@ export function LoginPage() {
           let redirectPath = '/';
           switch (profile.role) {
             case 'admin':
+            case 'staff':
+            case 'sub_admin':
               redirectPath = '/admin/dashboard';
               break;
             case 'vendor':
@@ -162,7 +164,7 @@ export function LoginPage() {
               Sign up
             </Link>
           </p>
-          <div className="pt-4 border-t border-gray-100 dark:border-slate-700">
+          <div className="pt-4 border-t border-gray-100 dark:border-slate-700 hidden">
             <Link to="/logistic-signup" className="text-sm text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-bold flex items-center justify-center gap-2">
               <Package className="h-4 w-4" /> Sign Up As Logistic
             </Link>

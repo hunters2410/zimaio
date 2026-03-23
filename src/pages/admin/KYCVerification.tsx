@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { supabase } from '../../lib/supabase';
 import { CheckCircle, XCircle, Eye, FileText, Search, Clock, AlertCircle } from 'lucide-react';
+import { dispatchTrigger } from '../../lib/eventDispatcher';
+import { Pagination } from '../../components/Pagination';
 
 interface KYCVerification {
   id: string; // This is vendor_profile.id
@@ -23,14 +25,17 @@ export function KYCVerification() {
   const [selectedVerification, setSelectedVerification] = useState<KYCVerification | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchVerifications();
-  }, []);
+  }, [currentPage, searchQuery]);
 
   const fetchVerifications = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from('vendor_profiles')
       .select(`
         id,
@@ -40,9 +45,16 @@ export function KYCVerification() {
         kyc_details,
         created_at,
         profiles!vendor_profiles_user_id_fkey(email, full_name)
-      `)
-      .neq('kyc_status', 'none')
-      .order('created_at', { ascending: false });
+      `, { count: 'exact' })
+      .neq('kyc_status', 'none');
+
+    if (searchQuery) {
+      query = query.ilike('shop_name', `%${searchQuery}%`);
+    }
+
+    const { data, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
 
     if (error) {
       console.error('Error fetching KYC:', error);
@@ -62,6 +74,7 @@ export function KYCVerification() {
         kyc_details: v.kyc_details
       }));
       setVerifications(formatted);
+      setTotalItems(count || 0);
     }
     setLoading(false);
   };
@@ -90,6 +103,13 @@ export function KYCVerification() {
           title: 'KYC Verification Approved',
           message: `Congratulations! Your business verification for "${verification.shop_name}" has been approved. You can now start trading.`,
           is_read: false
+        });
+
+        // Trigger automated email
+        dispatchTrigger('vendor_approved', {
+          email: verification.vendor_email,
+          vendor_name: verification.vendor_name || verification.shop_name,
+          shop_name: verification.shop_name
         });
       }
 
@@ -258,6 +278,15 @@ export function KYCVerification() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="mt-4">
+        <Pagination
+          currentPage={currentPage}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {selectedVerification && (

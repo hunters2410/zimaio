@@ -122,25 +122,25 @@ export default function EmailConfiguration() {
     setTestMessage(null);
 
     try {
-      // Call your backend API endpoint to send test email
-      const response = await fetch('/api/send-test-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // Call the Supabase Edge Function to send the email
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: {
           to: testEmail,
-          config: formData
-        })
+          config: formData,
+          subject: 'ZimAIo - Test Email Configuration',
+          htmlBody: 'Success! Your email configuration in ZimAIo is working correctly.'
+        }
       });
 
-      if (response.ok) {
-        setTestMessage({ type: 'success', text: `Test email sent successfully to ${testEmail}` });
-        setTestEmail('');
-      } else {
-        const error = await response.json();
-        setTestMessage({ type: 'error', text: error.message || 'Failed to send test email' });
+      if (error) {
+        throw new Error(error.message || 'Failed to trigger email function');
       }
+
+      setTestMessage({ type: 'success', text: `Test email sent successfully to ${testEmail}` });
+      setTestEmail('');
+
     } catch (e: any) {
-      setTestMessage({ type: 'error', text: 'Failed to send test email. Please check your configuration.' });
+      setTestMessage({ type: 'error', text: e.message || 'Failed to send test email. Please check your configuration.' });
     } finally {
       setTestSending(false);
     }

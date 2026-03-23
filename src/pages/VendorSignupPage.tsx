@@ -154,6 +154,15 @@ export function VendorSignupPage() {
           ]);
         }
 
+        // Trigger Welcome Email asynchronously
+        supabase.functions.invoke('send-email', {
+          body: {
+            to: email,
+            template_name: 'vendor_welcome',
+            variables: { vendor_name: fullName.split(' ')[0] || fullName }
+          }
+        }).catch(err => console.error('Failed to trigger welcome email:', err));
+
         navigate('/vendor/dashboard');
       } catch (error) {
         console.error('Error during signup:', error);
@@ -194,9 +203,9 @@ export function VendorSignupPage() {
                   <Users className="h-6 w-6 text-cyan-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Reach Millions of Customers</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Reach Customers</h3>
                   <p className="text-gray-600 dark:text-gray-400">
-                    Access a large customer base actively looking for products like yours.
+                    Access a large customer base looking for products like yours.
                   </p>
                 </div>
               </div>

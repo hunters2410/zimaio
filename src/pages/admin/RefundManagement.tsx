@@ -3,6 +3,8 @@ import { AdminLayout } from '../../components/AdminLayout';
 import { useTheme } from '../../contexts/ThemeContext';
 import { DollarSign, Filter, CheckCircle, XCircle, AlertCircle, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { dispatchTrigger } from '../../lib/eventDispatcher';
+import { Pagination } from '../../components/Pagination';
 
 interface RefundRequest {
   id: string;
@@ -33,6 +35,9 @@ export function RefundManagement() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [selectedRefund, setSelectedRefund] = useState<RefundRequest | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const itemsPerPage = 10;
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const cardBg = isDark ? 'bg-gray-800' : 'bg-white';
@@ -42,19 +47,11 @@ export function RefundManagement() {
 
   useEffect(() => {
     fetchRefunds();
-  }, []);
-
-  useEffect(() => {
-    if (filterStatus === 'all') {
-      setFilteredRefunds(refunds);
-    } else {
-      setFilteredRefunds(refunds.filter(r => r.status === filterStatus));
-    }
-  }, [filterStatus, refunds]);
+  }, [filterStatus, currentPage]);
 
   const fetchRefunds = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('order_refunds')
         .select(`
           *,
@@ -65,11 +62,20 @@ export function RefundManagement() {
             full_name,
             email
           )
-        `)
-        .order('created_at', { ascending: false });
+        `, { count: 'exact' });
+
+      if (filterStatus !== 'all') {
+        query = query.eq('status', filterStatus);
+      }
+
+      const { data, error, count } = await query
+        .order('created_at', { ascending: false })
+        .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
 
       if (error) throw error;
       setRefunds(data || []);
+      setFilteredRefunds(data || []);
+      setTotalItems(count || 0);
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message });
     } finally {
@@ -89,6 +95,20 @@ export function RefundManagement() {
 
       if (error) throw error;
       setMessage({ type: 'success', text: `Refund ${newStatus} successfully` });
+
+      // Trigger automated email if processed
+      if (newStatus === 'processed') {
+        const refund = refunds.find(r => r.id === refundId);
+        if (refund && refund.profiles) {
+          dispatchTrigger('refund_processed', {
+            email: refund.profiles.email,
+            customer_name: refund.profiles.full_name,
+            order_number: refund.orders?.order_number,
+            refund_amount: refund.amount
+          });
+        }
+      }
+
       setSelectedRefund(null);
       setAdminNotes('');
       fetchRefunds();
@@ -146,8 +166,8 @@ export function RefundManagement() {
       {message && (
         <div
           className={`mb-4 p-3 rounded-lg flex items-start space-x-2 text-sm ${message.type === 'success'
-              ? 'bg-green-50 border border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
-              : 'bg-red-50 border border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
+            ? 'bg-green-50 border border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
+            : 'bg-red-50 border border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
             }`}
         >
           {message.type === 'success' ? (
@@ -191,8 +211,8 @@ export function RefundManagement() {
                 key={status}
                 onClick={() => setFilterStatus(status)}
                 className={`px-3 py-1 text-xs rounded transition ${filterStatus === status
-                    ? 'bg-cyan-600 text-white'
-                    : `${textSecondary} hover:bg-gray-100 dark:hover:bg-gray-700`
+                  ? 'bg-cyan-600 text-white'
+                  : `${textSecondary} hover:bg-gray-100 dark:hover:bg-gray-700`
                   }`}
               >
                 {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -264,6 +284,16 @@ export function RefundManagement() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="mt-4">
+        <Pagination
+          currentPage={currentPage}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          isDark={isDark}
+        />
       </div>
 
       {selectedRefund && (

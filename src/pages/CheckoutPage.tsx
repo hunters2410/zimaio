@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import { ShieldCheck, Truck, CreditCard, Lock, User, Mail, Phone, Loader2, Smartphone, Wallet, Copy, Check, AlertCircle, XCircle, CheckCircle } from 'lucide-react';
 import { paymentService } from '../services/paymentService';
 import { PaymentGateway } from '../types/payment';
+import { dispatchTrigger } from '../lib/eventDispatcher';
 
 interface ShippingMethod {
     id: string;
@@ -59,11 +60,9 @@ export function CheckoutPage() {
         message: ''
     });
 
-    // Password Modal State (for guest signup)
-    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    // Status Modal State (removed showPasswordModal as per user request)
     const [tempPassword, setTempPassword] = useState('');
     const [tempEmail, setTempEmail] = useState('');
-    const [passwordCopied, setPasswordCopied] = useState(false);
 
     // Derived State
     const subtotal = cartItems.reduce((sum, item) => sum + (item.base_price * item.quantity), 0);
@@ -169,9 +168,14 @@ export function CheckoutPage() {
 
         if (error) throw error;
 
-        // If successful, the user is created. 
-        // Supabase auto-signs in if email confirmation is disabled. 
-        // If enabled, we have an issue. Assuming disabled for this "Guest Checkout" flow.
+        // Automatically dispatch "guest_registration" trigger to send the password via email
+        dispatchTrigger('guest_registration', {
+            email: email,
+            password: tempPassword,
+            customer_name: fullName.split(' ')[0] || fullName,
+            user_name: fullName.split(' ')[0] || fullName
+        });
+
         return { user: data.user, password: tempPassword };
     };
 
@@ -264,6 +268,14 @@ export function CheckoutPage() {
             }
 
             if (!currentUser) throw new Error("Authentication failed during order creation.");
+
+            // Trigger payment received email (since PayPal capture succeeded)
+            dispatchTrigger('payment_received', {
+                email: email,
+                order_number: details.id || 'N/A', // PayPal ID as fallback
+                payment_amount: grandTotal,
+                customer_name: fullName || email.split('@')[0]
+            });
 
             // 2. Create Order in Supabase
             // Group items by vendor
@@ -431,7 +443,7 @@ export function CheckoutPage() {
                     }
                     setTempPassword(password);
                     setTempEmail(email);
-                    setShowPasswordModal(true);
+                    // No longer showing modal - email sent via dispatchTrigger
                 }
             }
 
@@ -519,6 +531,18 @@ export function CheckoutPage() {
 
             const completedOrderResults = await Promise.all(orderPromises);
 
+            // Trigger "order_placed" email for each created order
+            completedOrderResults.forEach(result => {
+                if (result.data) {
+                    dispatchTrigger('order_placed', {
+                        email: email,
+                        order_number: result.data.order_number,
+                        order_total: result.data.total,
+                        customer_name: fullName || email.split('@')[0]
+                    });
+                }
+            });
+
             // 3. Process Payment
             if (['paynow', 'paypal'].includes(paymentMethod)) {
                 // Taking the first order to attach payment to (MVP). 
@@ -605,6 +629,15 @@ export function CheckoutPage() {
                             message: 'Your secure payment has been processed. Redirecting to your order summary...',
                             orderId: firstOrder.id
                         });
+
+                        // Trigger payment received email
+                        dispatchTrigger('payment_received', {
+                            email: email,
+                            order_number: firstOrder.order_number,
+                            payment_amount: grandTotal,
+                            customer_name: fullName || email.split('@')[0]
+                        });
+
                         clearCart();
                         setTimeout(() => {
                             navigate(`/orders/${firstOrder.id}?payment=success`);
@@ -697,6 +730,15 @@ export function CheckoutPage() {
                             message: 'Your EcoCash payment was processed successfully.',
                             orderId: firstOrder.id
                         });
+
+                        // Trigger payment received email
+                        dispatchTrigger('payment_received', {
+                            email: email,
+                            order_number: firstOrder.order_number,
+                            payment_amount: grandTotal,
+                            customer_name: fullName || email.split('@')[0]
+                        });
+
                         clearCart();
                         setTimeout(() => {
                             navigate(`/orders/${firstOrder.id}?payment=success`);
@@ -796,74 +838,7 @@ export function CheckoutPage() {
                 </div>
             )}
 
-            {/* Password Modal - For Guest Account Creation */}
-            {showPasswordModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-slate-700 transform scale-100 animate-in zoom-in-95 duration-300">
-                        <div className="text-center mb-6">
-                            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <User className="w-8 h-8 text-green-600 dark:text-green-400" />
-                            </div>
-                            <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Account Created!</h2>
-                            <p className="text-gray-500 dark:text-gray-400 text-sm">
-                                Welcome to ZimAIO! Your account has been successfully created.
-                            </p>
-                        </div>
-
-                        <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-700 dark:to-slate-900 rounded-2xl p-5 mb-6 border border-gray-200 dark:border-slate-600">
-                            <div className="mb-4">
-                                <label className="block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 tracking-wider mb-2">Email Address</label>
-                                <div className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-600">
-                                    <Mail className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{tempEmail}</span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 tracking-wider mb-2">Temporary Password</label>
-                                <div className="flex items-center gap-2">
-                                    <div className="flex-1 flex items-center gap-2 px-4 py-3 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-600">
-                                        <Lock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                        <code className="text-sm font-mono font-bold text-green-600 dark:text-green-400 flex-1">{tempPassword}</code>
-                                    </div>
-                                    <button
-                                        onClick={() => {
-                                            navigator.clipboard.writeText(tempPassword);
-                                            setPasswordCopied(true);
-                                            setTimeout(() => setPasswordCopied(false), 2000);
-                                        }}
-                                        className={`p-3 rounded-lg transition-all ${passwordCopied
-                                            ? 'bg-green-600 text-white'
-                                            : 'bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200'
-                                            }`}
-                                        title="Copy password"
-                                    >
-                                        {passwordCopied ? (
-                                            <Check className="w-5 h-5" />
-                                        ) : (
-                                            <Copy className="w-5 h-5" />
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-6">
-                            <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
-                                <strong className="font-bold">Important:</strong> Please save this password securely.
-                                You can change it after logging in from your account settings.
-                            </p>
-                        </div>
-
-                        <button
-                            onClick={() => setShowPasswordModal(false)}
-                            className="w-full py-4 bg-green-600 text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-xl shadow-green-200 hover:bg-green-700 active:scale-95 transition-all"
-                        >
-                            Continue to Checkout
-                        </button>
-                    </div>
-                </div>
-            )}
+            {/* Password Modal - REMOVED as per user request (Now sent via email) */}
 
             <div className="container mx-auto px-4 max-w-6xl">
                 <h1 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tight mb-8">Secure Checkout</h1>

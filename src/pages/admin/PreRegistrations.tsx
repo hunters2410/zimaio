@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { AdminLayout } from '../../components/AdminLayout';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Mail, Phone, MapPin, Building2, Calendar, Download, Trash2, Search } from 'lucide-react';
+import { Mail, Phone, MapPin, Building2, Calendar, Download, Trash2, Search, Link as LinkIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PreRegistration {
     id: string;
@@ -20,21 +20,47 @@ export function PreRegistrations() {
     const [registrations, setRegistrations] = useState<PreRegistration[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
+    const itemsPerPage = 10;
     const isDark = theme === 'dark';
+    const [copied, setCopied] = useState(false);
+    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+    const textSecondary = isDark ? 'text-gray-400' : 'text-gray-600';
+    const borderColor = isDark ? 'border-gray-700' : 'border-gray-200';
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setCurrentPage(1);
+            fetchRegistrations();
+        }, 500);
+
+        return () => clearTimeout(handler);
+    }, [searchTerm]);
 
     useEffect(() => {
         fetchRegistrations();
-    }, []);
+    }, [currentPage]);
 
     const fetchRegistrations = async () => {
+        setLoading(true);
         try {
-            const { data, error } = await supabase
+            let query = supabase
                 .from('customer_pre_registrations')
-                .select('*')
-                .order('created_at', { ascending: false });
+                .select('*', { count: 'exact' });
+
+            if (searchTerm) {
+                query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,city_area.ilike.%${searchTerm}%`);
+            }
+
+            const { data, count, error } = await query
+                .order('created_at', { ascending: false })
+                .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
 
             if (error) throw error;
             setRegistrations(data || []);
+            setTotalCount(count || 0);
         } catch (error) {
             console.error('Error fetching pre-registrations:', error);
         } finally {
@@ -52,42 +78,56 @@ export function PreRegistrations() {
                 .eq('id', id);
 
             if (error) throw error;
-            setRegistrations(registrations.filter(r => r.id !== id));
+            setMessage({ type: 'success', text: 'Registration deleted successfully' });
+            fetchRegistrations(); // Refresh current page
+            setTimeout(() => setMessage(null), 3000);
         } catch (error) {
             console.error('Error deleting registration:', error);
-            alert('Failed to delete registration');
+            setMessage({ type: 'error', text: 'Failed to delete registration' });
+            setTimeout(() => setMessage(null), 3000);
         }
     };
 
-    const exportToCSV = () => {
-        const headers = ['Full Name', 'Email', 'Company', 'Mobile', 'City/Area', 'Interests', 'Registration Date'];
-        const csvData = registrations.map(r => [
-            r.full_name,
-            r.email,
-            r.company_name || 'N/A',
-            r.mobile_number,
-            r.city_area,
-            r.interests.join(', '),
-            new Date(r.created_at).toLocaleString()
-        ]);
+    const exportToCSV = async () => {
+        try {
+            // Fetch ALL matching records for export
+            let query = supabase
+                .from('customer_pre_registrations')
+                .select('*');
 
-        const csvContent = [headers, ...csvData].map(e => `"${e.join('","')}"`).join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `customer-pre-registrations-${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+            if (searchTerm) {
+                query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,city_area.ilike.%${searchTerm}%`);
+            }
+
+            const { data, error } = await query.order('created_at', { ascending: false });
+            if (error) throw error;
+
+            const headers = ['Full Name', 'Email', 'Company', 'Mobile', 'City/Area', 'Interests', 'Registration Date'];
+            const csvData = (data || []).map(r => [
+                r.full_name,
+                r.email,
+                r.company_name || 'N/A',
+                r.mobile_number,
+                r.city_area,
+                r.interests.join(', '),
+                new Date(r.created_at).toLocaleString()
+            ]);
+
+            const csvContent = [headers, ...csvData].map(e => `"${e.join('","')}"`).join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `customer-pre-registrations-${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error('Error exporting CSV:', error);
+            alert('Failed to export data');
+        }
     };
-
-    const filteredRegistrations = registrations.filter(r =>
-        r.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.city_area.toLowerCase().includes(searchTerm.toLowerCase())
-    );
 
     return (
         <AdminLayout>
@@ -100,14 +140,37 @@ export function PreRegistrations() {
                         Manage early access interest and potential customers
                     </p>
                 </div>
-                <button
-                    onClick={exportToCSV}
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded font-bold text-xs hover:opacity-90 transition shadow-sm"
-                >
-                    <Download className="h-4 w-4" />
-                    EXPORT CSV
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => {
+                            navigator.clipboard.writeText(`${window.location.origin}/pre-register`);
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 2000);
+                        }}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 outline-none text-white rounded font-bold text-xs hover:opacity-90 transition shadow-sm"
+                    >
+                        <LinkIcon className="h-4 w-4" />
+                        {copied ? 'COPIED!' : 'COPY LINK'}
+                    </button>
+                    <button
+                        onClick={exportToCSV}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded font-bold text-xs hover:opacity-90 transition shadow-sm"
+                    >
+                        <Download className="h-4 w-4" />
+                        EXPORT CSV
+                    </button>
+                </div>
             </div>
+
+            {message && (
+                <div className={`mb-4 p-3 rounded flex items-center gap-2 text-xs font-bold animate-in fade-in slide-in-from-top-2 duration-300 ${message.type === 'success'
+                    ? 'bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400'
+                    : 'bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400'
+                    }`}>
+                    <div className={`h-1.5 w-1.5 rounded-full ${message.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`} />
+                    {message.text}
+                </div>
+            )}
 
             <div className={`${isDark ? 'bg-gray-800/40 border-gray-700' : 'bg-white border-gray-200'} rounded border shadow-sm`}>
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700">
@@ -144,14 +207,14 @@ export function PreRegistrations() {
                                         </div>
                                     </td>
                                 </tr>
-                            ) : filteredRegistrations.length === 0 ? (
+                            ) : registrations.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-12 text-center text-xs font-medium text-gray-500 uppercase">
                                         No records found
                                     </td>
                                 </tr>
                             ) : (
-                                filteredRegistrations.map((reg) => (
+                                registrations.map((reg) => (
                                     <tr key={reg.id} className={`${isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'} transition-colors`}>
                                         <td className="px-6 py-4">
                                             <div className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">{reg.full_name}</div>
@@ -188,6 +251,30 @@ export function PreRegistrations() {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Pagination */}
+                <div className={`px-6 py-4 border-t ${borderColor} flex items-center justify-between`}>
+                    <p className={`text-xs ${textSecondary} font-bold`}>
+                        Showing <span className="text-slate-900 dark:text-white">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-slate-900 dark:text-white">{Math.min(currentPage * itemsPerPage, totalCount)}</span> of <span className="text-slate-900 dark:text-white">{totalCount}</span> registrations
+                    </p>
+                    <div className="flex items-center gap-2">
+                        <button
+                            disabled={currentPage === 1 || loading}
+                            onClick={() => setCurrentPage(prev => prev - 1)}
+                            className="p-1.5 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                        >
+                            <ChevronLeft className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                        </button>
+                        <span className="px-3 py-1 font-black text-slate-900 dark:text-white text-xs">{currentPage}</span>
+                        <button
+                            disabled={currentPage * itemsPerPage >= totalCount || loading}
+                            onClick={() => setCurrentPage(prev => prev + 1)}
+                            className="p-1.5 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                        >
+                            <ChevronRight className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                        </button>
+                    </div>
                 </div>
             </div>
         </AdminLayout>

@@ -131,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await supabase.from('vendor_profiles').insert({
           user_id: data.user.id,
           shop_name: `${fullName}'s Shop`,
-          is_approved: true
+          is_approved: false // Requires admin KYC review at /admin/kyc-verification
         });
       }
 

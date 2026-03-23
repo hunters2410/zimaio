@@ -14,7 +14,7 @@ export function OrderTrendsChart({ data }: OrderTrendsChartProps) {
   const isDark = theme === 'dark';
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height={300} minWidth={0}>
       <BarChart data={data}>
         <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#e5e7eb'} />
         <XAxis

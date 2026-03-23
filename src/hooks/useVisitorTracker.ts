@@ -28,21 +28,20 @@ export function useVisitorTracker() {
                 // Method 1: Insert a new visit record (best for detailed analytics)
                 // Table: site_visits (id, created_at, page_url, user_agent)
 
-                const { error } = await supabase
-                    .from('site_visits')
-                    .insert([
-                        {
-                            page_url: window.location.pathname,
-                            user_agent: navigator.userAgent
-                        }
-                    ]);
+                // Temporarily disabled: 'site_visits' table does not exist
+                // const { error } = await supabase
+                //     .from('site_visits')
+                //     .insert([
+                //         {
+                //             page_url: window.location.pathname,
+                //             user_agent: navigator.userAgent
+                //         }
+                //     ]);
 
-                if (!error) {
-                    sessionStorage.setItem(SESSION_KEY, 'true');
-                } else {
-                    // If table doesn't exist, we might try a fallback or just log error
-                    // console.error("Failed to record visit", error);
-                }
+                // if (!error) {
+                //     sessionStorage.setItem(SESSION_KEY, 'true');
+                // }
+                sessionStorage.setItem(SESSION_KEY, 'true');
 
             } catch (err) {
                 // console.error("Error recording visit", err);

@@ -10,6 +10,32 @@ interface SiteSetting {
     setting_type: string;
 }
 
+const ConfigSection = ({ title, icon: Icon, children }: any) => (
+    <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden mb-4">
+        <div className="p-3 border-b border-gray-200 flex items-center gap-2 bg-gray-100">
+            <div className="p-1 bg-white rounded text-indigo-600">
+                <Icon className="w-4 h-4" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-900">{title}</h3>
+        </div>
+        <div className="p-3 space-y-3">{children}</div>
+    </div>
+);
+
+const InputField = ({ label, id, type = 'text', placeholder, value, onChange }: any) => (
+    <div>
+        <label className="block text-xs font-medium text-slate-700 mb-1">{label}</label>
+        <input
+            type={type}
+            id={id}
+            value={value || ''}
+            onChange={e => onChange(id, e.target.value)}
+            placeholder={placeholder}
+            className="w-full px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white text-sm"
+        />
+    </div>
+);
+
 export function SystemConfigurations() {
     const [settings, setSettings] = useState<SiteSetting[]>([]);
     const [loading, setLoading] = useState(true);
@@ -146,32 +172,6 @@ export function SystemConfigurations() {
         setFormData(prev => ({ ...prev, [key]: value }));
     };
 
-    const ConfigSection = ({ title, icon: Icon, children }: any) => (
-        <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden mb-4">
-            <div className="p-3 border-b border-gray-200 flex items-center gap-2 bg-gray-100">
-                <div className="p-1 bg-white rounded text-indigo-600">
-                    <Icon className="w-4 h-4" />
-                </div>
-                <h3 className="text-sm font-bold text-slate-900">{title}</h3>
-            </div>
-            <div className="p-3 space-y-3">{children}</div>
-        </div>
-    );
-
-    const InputField = ({ label, id, type = 'text', placeholder }: any) => (
-        <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">{label}</label>
-            <input
-                type={type}
-                id={id}
-                value={formData[id] || ''}
-                onChange={e => handleChange(id, e.target.value)}
-                placeholder={placeholder}
-                className="w-full px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white text-sm"
-            />
-        </div>
-    );
-
     return (
         <AdminLayout>
             <div className="space-y-4">
@@ -241,8 +241,8 @@ export function SystemConfigurations() {
 
                         <ConfigSection title="General Information" icon={Globe}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <InputField label="Site Name" id="site_name" placeholder="ZimAIO Marketplace" />
-                                <InputField label="Site Tagline" id="site_tagline" placeholder="Everything you need, all in one place" />
+                                <InputField label="Site Name" id="site_name" value={formData['site_name']} onChange={handleChange} placeholder="ZimAIO Marketplace" />
+                                <InputField label="Site Tagline" id="site_tagline" value={formData['site_tagline']} onChange={handleChange} placeholder="Everything you need, all in one place" />
                                 <div className="md:col-span-2">
                                     <label className="block text-xs font-medium text-slate-700 mb-1">Footer Text</label>
                                     <textarea
@@ -257,19 +257,65 @@ export function SystemConfigurations() {
 
                         <ConfigSection title="Contact & Support" icon={Mail}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <InputField label="Support Email" id="support_email" type="email" placeholder="support@zimaio.com" />
-                                <InputField label="Sales Email" id="sales_email" type="email" placeholder="sales@zimaio.com" />
-                                <InputField label="Contact Phone" id="contact_phone" placeholder="+263 77 123 4567" />
-                                <InputField label="Office Address" id="office_address" placeholder="123 Samora Machel Ave, Harare" />
+                                <InputField label="Support Email" id="support_email" type="email" value={formData['support_email']} onChange={handleChange} placeholder="support@zimaio.com" />
+                                <InputField label="Sales Email" id="sales_email" type="email" value={formData['sales_email']} onChange={handleChange} placeholder="sales@zimaio.com" />
+                                <InputField label="Contact Phone" id="contact_phone" value={formData['contact_phone']} onChange={handleChange} placeholder="+263 77 123 4567" />
+                                <InputField label="Office Address" id="office_address" value={formData['office_address']} onChange={handleChange} placeholder="123 Samora Machel Ave, Harare" />
                             </div>
                         </ConfigSection>
 
                         <ConfigSection title="Social Media Links" icon={Share2}>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <InputField label="Facebook" id="facebook_url" placeholder="https://facebook.com/zimaio" />
-                                <InputField label="Twitter/X" id="twitter_url" placeholder="https://twitter.com/zimaio" />
-                                <InputField label="Instagram" id="instagram_url" placeholder="https://instagram.com/zimaio" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-700 mb-1 flex items-center gap-1">
+                                        <span className="inline-block w-3 h-3 rounded-full bg-[#1877F2]" /> Facebook
+                                    </label>
+                                    <input
+                                        type="url"
+                                        value={formData['social_facebook'] || ''}
+                                        onChange={e => handleChange('social_facebook', e.target.value)}
+                                        placeholder="https://facebook.com/yourpage"
+                                        className="w-full px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-700 mb-1 flex items-center gap-1">
+                                        <span className="inline-block w-3 h-3 rounded-full bg-[#1DA1F2]" /> Twitter / X
+                                    </label>
+                                    <input
+                                        type="url"
+                                        value={formData['social_twitter'] || ''}
+                                        onChange={e => handleChange('social_twitter', e.target.value)}
+                                        placeholder="https://twitter.com/yourhandle"
+                                        className="w-full px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-700 mb-1 flex items-center gap-1">
+                                        <span className="inline-block w-3 h-3 rounded-full bg-[#E1306C]" /> Instagram
+                                    </label>
+                                    <input
+                                        type="url"
+                                        value={formData['social_instagram'] || ''}
+                                        onChange={e => handleChange('social_instagram', e.target.value)}
+                                        placeholder="https://instagram.com/yourpage"
+                                        className="w-full px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-700 mb-1 flex items-center gap-1">
+                                        <span className="inline-block w-3 h-3 rounded-full bg-[#25D366]" /> WhatsApp
+                                    </label>
+                                    <input
+                                        type="url"
+                                        value={formData['social_whatsapp'] || ''}
+                                        onChange={e => handleChange('social_whatsapp', e.target.value)}
+                                        placeholder="https://wa.me/263771234567"
+                                        className="w-full px-2 py-1 rounded border border-slate-300 focus:ring-2 focus:ring-indigo-500 bg-white text-sm"
+                                    />
+                                </div>
                             </div>
+                            <p className="text-xs text-slate-400 mt-1">Links show in the site footer. Leave blank to hide an icon.</p>
                         </ConfigSection>
 
                         <ConfigSection title="Appearance" icon={Layout}>
@@ -335,7 +381,7 @@ export function SystemConfigurations() {
                                 )}
                             </div>
                             <div className="mt-4">
-                                <InputField label="Google Analytics ID" id="ga_id" placeholder="G-XXXXXXXXXX" />
+                                <InputField label="Google Analytics ID" id="ga_id" value={formData['ga_id']} onChange={handleChange} placeholder="G-XXXXXXXXXX" />
                             </div>
                         </ConfigSection>
                     </form>

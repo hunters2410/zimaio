@@ -73,7 +73,7 @@ export function LogisticLayout({ children }: LogisticLayoutProps) {
     const sections = Array.from(new Set(navItems.map(item => item.section)));
 
     return (
-        <div className={`min-h-screen bg-white text-slate-900 flex font-sans transition-colors duration-300`}>
+        <div className={`min-h-screen bg-white text-slate-900 flex font-roboto transition-colors duration-300`}>
             {/* Sidebar */}
             <aside
                 className={`fixed inset-y-0 left-0 z-50 transition-all duration-500 ease-in-out transform 

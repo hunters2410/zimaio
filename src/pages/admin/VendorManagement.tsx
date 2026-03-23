@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { Store, Check, X, Star, Search, Mail, Calendar, DollarSign, Plus, Edit, Trash2, Eye, UserX, UserCheck, FileText, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { AdminLayout } from '../../components/AdminLayout';
+import { dispatchTrigger } from '../../lib/eventDispatcher';
+import { Pagination } from '../../components/Pagination';
 
 interface VendorProfile {
   id: string;
@@ -61,6 +63,9 @@ export function VendorManagement() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'approved' | 'pending'>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const itemsPerPage = 10;
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showShopInfoModal, setShowShopInfoModal] = useState(false);
@@ -85,7 +90,7 @@ export function VendorManagement() {
   useEffect(() => {
     fetchVendors();
     fetchPackages();
-  }, [filterStatus, startDate, endDate]);
+  }, [filterStatus, startDate, endDate, currentPage, searchTerm]);
 
   const fetchPackages = async () => {
     try {
@@ -139,7 +144,23 @@ export function VendorManagement() {
       query = query.lte('created_at', endDateTime.toISOString());
     }
 
-    const { data, error } = await query;
+    if (searchTerm) {
+      query = query.or(`shop_name.ilike.%${searchTerm}%,business_email.ilike.%${searchTerm}%`);
+    }
+
+    const { data, error, count } = await query
+      .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1)
+      .select(`
+        *,
+        profile:profiles!vendor_profiles_user_id_fkey(
+          email,
+          full_name,
+          phone,
+          is_active
+        ),
+        orders(subtotal, status, payment_status)
+      `, { count: 'exact' });
+
     if (error) {
       console.error('Error fetching vendors:', error);
       setMessage({ type: 'error', text: 'Error fetching vendors: ' + error.message });
@@ -147,14 +168,11 @@ export function VendorManagement() {
       const processedVendors = (data || []).map((v: any) => ({
         ...v,
         total_sales: (v.orders as any[])?.reduce((sum, order) => {
-          // Count paid, delivered, or completed orders
-          if (order.payment_status === 'paid' || ['delivered', 'completed'].includes(order.status)) {
-            return sum + (Number(order.subtotal) || 0);
-          }
-          return sum;
+          return sum + (order.status === 'delivered' ? order.subtotal : 0);
         }, 0) || 0
       }));
       setVendors(processedVendors);
+      setTotalItems(count || 0);
     }
     setLoading(false);
   };
@@ -200,6 +218,19 @@ export function VendorManagement() {
       setMessage({ type: 'error', text: 'Failed to update: ' + error.message });
     } else {
       setMessage({ type: 'success', text: 'Vendor approval status updated successfully!' });
+
+      // If now approved, trigger email
+      if (!currentStatus) {
+        const vendor = vendors.find(v => v.id === vendorId);
+        if (vendor) {
+          dispatchTrigger('vendor_approved', {
+            email: vendor.business_email || vendor.profile?.email,
+            vendor_name: vendor.profile?.full_name || vendor.shop_name,
+            shop_name: vendor.shop_name
+          });
+        }
+      }
+
       fetchVendors();
     }
   };
@@ -406,11 +437,6 @@ export function VendorManagement() {
     setShowKYCModal(true);
   };
 
-  const filteredVendors = vendors.filter(vendor =>
-    vendor.shop_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.business_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.profile?.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   if (loading) {
     return (
@@ -509,6 +535,13 @@ export function VendorManagement() {
         </div>
       </div>
 
+      <Pagination
+        currentPage={currentPage}
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
+        onPageChange={setCurrentPage}
+      />
+
       <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
         <table className="min-w-full border-collapse border border-gray-200">
           <thead className="bg-white">
@@ -534,7 +567,7 @@ export function VendorManagement() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredVendors.map((vendor) => (
+            {vendors.map((vendor) => (
               <tr key={vendor.id} className="hover:bg-white">
                 <td className="px-6 py-4 border border-gray-200 whitespace-nowrap">
                   <div className="flex items-center">
@@ -708,7 +741,7 @@ export function VendorManagement() {
           </tbody>
         </table>
 
-        {filteredVendors.length === 0 && (
+        {vendors.length === 0 && (
           <div className="text-center py-12 text-gray-500">
             No vendors found matching your criteria.
           </div>

@@ -11,6 +11,7 @@ import {
     Loader2
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Pagination } from '../../components/Pagination';
 
 interface Category {
     id: string;
@@ -43,6 +44,9 @@ export function CatalogManagement() {
     const [editingItem, setEditingItem] = useState<any>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [uploading, setUploading] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const itemsPerPage = 10;
 
     const [formData, setFormData] = useState<any>({
         name: '',
@@ -60,25 +64,34 @@ export function CatalogManagement() {
 
     useEffect(() => {
         fetchData();
+    }, [activeTab, currentPage]);
+
+    // Reset page when switching tabs
+    useEffect(() => {
+        setCurrentPage(1);
     }, [activeTab]);
 
     const fetchData = async () => {
         setLoading(true);
         try {
             if (activeTab === 'categories') {
-                const { data, error } = await supabase
+                const { data, error, count } = await supabase
                     .from('categories')
-                    .select('*')
-                    .order('sort_order', { ascending: true });
+                    .select('*', { count: 'exact' })
+                    .order('sort_order', { ascending: true })
+                    .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
                 if (error) throw error;
                 setCategories(data || []);
+                setTotalItems(count || 0);
             } else {
-                const { data, error } = await supabase
+                const { data, error, count } = await supabase
                     .from('brands')
-                    .select('*')
-                    .order('name', { ascending: true });
+                    .select('*', { count: 'exact' })
+                    .order('name', { ascending: true })
+                    .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
                 if (error) throw error;
                 setBrands(data || []);
+                setTotalItems(count || 0);
             }
         } catch (error: any) {
             setMessage({ type: 'error', text: error.message });
@@ -239,7 +252,7 @@ export function CatalogManagement() {
 
             {/* Content */}
             {/* Content Table */}
-            <div className="rounded border border-gray-200 overflow-hidden bg-white">
+            <div className="rounded border border-gray-200 overflow-hidden overflow-x-auto bg-white">
                 <table className="w-full text-left border-collapse">
                     <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>

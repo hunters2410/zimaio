@@ -14,7 +14,8 @@ import {
   ChevronLeft,
   RotateCcw,
   Search,
-  ArrowRight
+  ArrowRight,
+  ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -141,7 +142,7 @@ export function CustomerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex transition-colors duration-300">
+    <div className="flex min-h-screen bg-[#FAFAFA] dark:bg-slate-950 font-roboto">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div
@@ -151,7 +152,7 @@ export function CustomerDashboard() {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed lg:fixed top-[80px] lg:top-[184px] left-0 z-40 w-72 bg-white dark:bg-slate-800 border-r border-gray-100 dark:border-slate-700 transform transition-transform duration-200 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} h-[calc(100vh-80px)] lg:h-[calc(100vh-184px)]`}>
+      <aside className={`fixed top-0 lg:top-[184px] left-0 z-40 w-72 bg-white dark:bg-slate-800 border-r border-gray-100 dark:border-slate-700 transform transition-transform duration-200 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} h-screen lg:h-[calc(100vh-184px)]`}>
         <div className="h-full flex flex-col p-6 overflow-y-auto custom-scrollbar">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
@@ -159,7 +160,7 @@ export function CustomerDashboard() {
                 Z
               </div>
               <div>
-                <h1 className="font-bold text-gray-900 text-lg leading-none">ZimaShop</h1>
+                <h1 className="font-black text-slate-900 dark:text-white text-lg leading-none tracking-tighter">ZimAIO</h1>
                 <span className="text-xs text-cyan-600 font-medium">Customer Portal</span>
               </div>
             </div>
@@ -202,77 +203,112 @@ export function CustomerDashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col lg:ml-72">
-        {/* Header */}
-        <header className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md sticky top-[80px] lg:top-[184px] z-30 border-b border-gray-100 dark:border-slate-700 px-6 py-4 flex items-center justify-between lg:justify-end transition-all">
+      <main className="flex-1 flex flex-col lg:ml-72 w-full max-w-[100vw] overflow-x-hidden">
+        {/* Portal Header - Simplified, no longer sticky to avoid overlap clutter */}
+        <header className="px-6 py-6 flex items-center justify-between lg:justify-end">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg"
+            className="lg:hidden p-3 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 text-gray-600 dark:text-gray-400 rounded-xl shadow-sm"
           >
             <Menu className="w-6 h-6" />
           </button>
-
-          <div className="flex items-center gap-4">
-            <Link to="/products" className="bg-gray-900 dark:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 dark:hover:bg-slate-600 transition shadow-sm border border-transparent dark:border-slate-600">
-              Browse Products
-            </Link>
-          </div>
         </header>
 
         {/* Scrollable Content */}
-        <div className="flex-1 p-4 lg:p-8">
-          <div className="max-w-6xl mx-auto">
+        <div className="flex-1 p-3 sm:p-4 lg:p-8">
+          <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
 
             {activeTab === 'overview' && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div>
-                  <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Welcome back, {profile?.full_name?.split(' ')[0]}!</h2>
-                  <p className="text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest text-[10px] mt-1">Here's what's happening with your account today.</p>
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                {/* Theme-aware Welcome Banner */}
+                <div className="relative bg-white dark:bg-slate-900 rounded-[2rem] p-6 md:p-10 overflow-hidden group border border-slate-100 dark:border-slate-800 shadow-sm">
+                  <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-cyan-500/5 dark:from-cyan-500/10 to-transparent pointer-events-none" />
+                  <div className="absolute -bottom-20 -right-20 w-48 h-48 bg-cyan-600/5 dark:bg-cyan-600/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000" />
+
+                  <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="space-y-3">
+                      <div className="inline-flex items-center gap-2 px-2.5 py-0.5 bg-cyan-500/10 border border-cyan-500/20 rounded-full">
+                        <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
+                        <span className="text-[9px] font-black text-cyan-500 uppercase tracking-widest">Active Session</span>
+                      </div>
+                      <h2 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white leading-tight tracking-tighter">
+                        WELCOME BACK,<br />
+                        <span className="bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-400 dark:to-blue-400 bg-clip-text text-transparent">
+                          {profile?.full_name?.toUpperCase().split(' ')[0]}
+                        </span>
+                      </h2>
+                      <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-[10px] max-w-sm leading-relaxed">
+                        Here's a quick look at your account summary for today.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                      <Link to="/products" className="group/btn relative px-5 sm:px-6 py-2.5 sm:py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest hover:scale-105 transition-all overflow-hidden flex items-center justify-center gap-2">
+                        <span className="relative z-10">Start Shopping</span>
+                        <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
+                      </Link>
+                      <button onClick={fetchData} className="px-5 sm:px-6 py-2.5 sm:py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-700 transition-all border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2">
+                        Refresh
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Stats Cards */}
-                  <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all group">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 transition-colors">
-                        <ShoppingBag className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  {/* Stats Cards - Resized to average size */}
+                  <div className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-300 group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-blue-50 dark:bg-blue-900/10 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700" />
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-xl group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors">
+                          <ShoppingBag className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <span className="text-[9px] font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1 rounded-full uppercase tracking-widest border border-blue-100 dark:border-blue-800">Activity</span>
                       </div>
-                      <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full uppercase tracking-widest">Total</span>
+                      <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter tabular-nums">{stats.totalOrders}</div>
+                      <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">Lifetime Orders</p>
                     </div>
-                    <div className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter">{stats.totalOrders}</div>
-                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">Orders placed</p>
                   </div>
 
-                  <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:shadow-amber-500/5 transition-all group">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl group-hover:bg-amber-100 dark:group-hover:bg-amber-900/40 transition-colors">
-                        <Clock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                  <div className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-2xl hover:shadow-amber-500/10 transition-all duration-300 group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-amber-50 dark:bg-amber-900/10 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700" />
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="bg-amber-50 dark:bg-amber-900/30 p-3 rounded-xl group-hover:bg-amber-100 dark:group-hover:bg-amber-900/50 transition-colors">
+                          <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <span className="text-[9px] font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2.5 py-1 rounded-full uppercase tracking-widest border border-amber-100 dark:border-amber-800">Processing</span>
                       </div>
-                      <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-full uppercase tracking-widest">Pending</span>
+                      <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter tabular-nums">{stats.pendingOrders}</div>
+                      <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">Active Shipments</p>
                     </div>
-                    <div className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter">{stats.pendingOrders}</div>
-                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">Orders in progress</p>
                   </div>
 
-                  <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:shadow-emerald-500/5 transition-all group">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/40 transition-colors">
-                        <Wallet className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                  <div className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-300 group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-50 dark:bg-emerald-900/10 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700" />
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="bg-emerald-50 dark:bg-emerald-900/30 p-3 rounded-xl group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/50 transition-colors">
+                          <Wallet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-full uppercase tracking-widest border border-emerald-100 dark:border-emerald-800">Funds</span>
                       </div>
-                      <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-full uppercase tracking-widest">Balance</span>
+                      <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter tabular-nums">${stats.walletBalance.toFixed(2)}</div>
+                      <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">Available Balance</p>
                     </div>
-                    <div className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter">${stats.walletBalance.toFixed(2)}</div>
-                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">Available funds</p>
                   </div>
                 </div>
 
                 {/* Recent Orders Table */}
-                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-hidden">
-                  <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
-                    <h3 className="font-black text-gray-900 dark:text-white uppercase tracking-tight text-lg">Recent Orders</h3>
+                <div className="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+                  <div className="p-6 border-b border-slate-50 dark:border-slate-700/50 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1.5 h-5 bg-cyan-600 rounded-full" />
+                      <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-base">Recent Transactions</h3>
+                    </div>
                     <button
                       onClick={() => setActiveTab('orders')}
-                      className="text-[10px] font-black text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 uppercase tracking-widest"
+                      className="text-[9px] font-black text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 uppercase tracking-widest bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1.5 rounded-lg transition-all"
                     >
                       View All
                     </button>
@@ -287,32 +323,32 @@ export function CustomerDashboard() {
                       <table className="w-full text-left">
                         <thead className="bg-gray-50 dark:bg-slate-900/50">
                           <tr>
-                            <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Order ID</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</th>
+                            <th className="px-4 sm:px-6 py-4 text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest text-left">Order</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest hidden sm:table-cell">Date</th>
                             <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest hidden md:table-cell">Total</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Action</th>
+                            <th className="px-4 sm:px-6 py-4 text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest text-left">Status</th>
+                            <th className="px-4 sm:px-6 py-4 text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
                           {orders.slice(0, 5).map((order) => (
                             <tr key={order.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/50 transition-colors">
-                              <td className="px-6 py-4 font-black text-gray-900 dark:text-white uppercase">
+                              <td className="px-4 sm:px-6 py-4 font-black text-slate-900 dark:text-white uppercase text-xs sm:text-sm">
                                 #{order.order_number}
                               </td>
-                              <td className="px-6 py-4 text-gray-600 dark:text-gray-400 text-xs font-bold uppercase">
+                              <td className="px-6 py-4 text-gray-600 dark:text-gray-400 text-xs font-bold uppercase hidden sm:table-cell">
                                 {new Date(order.created_at).toLocaleDateString()}
                               </td>
-                              <td className="px-6 py-4 font-black text-gray-900 dark:text-white hidden md:table-cell">
+                              <td className="px-6 py-4 font-black text-slate-900 dark:text-white hidden md:table-cell">
                                 ${order.total}
                               </td>
-                              <td className="px-6 py-4">
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${getStatusColor(order.status)}`}>
+                              <td className="px-4 sm:px-6 py-4">
+                                <span className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[7px] sm:text-[8px] font-black uppercase tracking-widest border ${getStatusColor(order.status)}`}>
                                   {order.status}
                                 </span>
                               </td>
-                              <td className="px-6 py-4 text-right">
-                                <Link to={`/orders/${order.id}`} className="text-[9px] font-black text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 uppercase tracking-widest">
+                              <td className="px-4 sm:px-6 py-4 text-right">
+                                <Link to={`/orders/${order.id}`} className="text-[9px] sm:text-[10px] font-black text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 uppercase tracking-widest">
                                   Details
                                 </Link>
                               </td>
@@ -350,11 +386,11 @@ export function CustomerDashboard() {
                     <table className="w-full text-left">
                       <thead className="bg-gray-50/50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-slate-700">
                         <tr>
-                          <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Order ID</th>
-                          <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</th>
-                          <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Total</th>
-                          <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
-                          <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Details</th>
+                          <th className="px-4 sm:px-6 py-5 text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest text-left">Order</th>
+                          <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest hidden sm:table-cell">Date</th>
+                          <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest hidden md:table-cell">Total</th>
+                          <th className="px-4 sm:px-6 py-5 text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest text-left">Status</th>
+                          <th className="px-4 sm:px-6 py-5 text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Details</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
@@ -363,17 +399,17 @@ export function CustomerDashboard() {
                           .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                           .map((order) => (
                             <tr key={order.id} className="hover:bg-cyan-50/30 dark:hover:bg-cyan-900/10 transition-colors group">
-                              <td className="px-6 py-5 font-black text-gray-900 dark:text-white uppercase group-hover:text-cyan-600 transition-colors">#{order.order_number}</td>
-                              <td className="px-6 py-5 text-gray-600 dark:text-gray-400 font-bold text-xs uppercase">{new Date(order.created_at).toLocaleDateString()}</td>
-                              <td className="px-6 py-5 font-black text-gray-900 dark:text-white tabular-nums">${order.total}</td>
-                              <td className="px-6 py-5">
-                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border transition-all ${getStatusColor(order.status)}`}>
+                              <td className="px-4 sm:px-6 py-5 font-black text-slate-900 dark:text-white uppercase text-xs sm:text-sm group-hover:text-cyan-600 transition-colors">#{order.order_number}</td>
+                              <td className="px-6 py-5 text-gray-600 dark:text-gray-400 font-bold text-xs uppercase hidden sm:table-cell">{new Date(order.created_at).toLocaleDateString()}</td>
+                              <td className="px-6 py-5 font-black text-slate-900 dark:text-white tabular-nums hidden md:table-cell">${order.total}</td>
+                              <td className="px-4 sm:px-6 py-5">
+                                <span className={`inline-flex items-center px-1.5 sm:px-3 py-1 rounded-full text-[7px] sm:text-[8px] font-black uppercase tracking-widest border transition-all ${getStatusColor(order.status)}`}>
                                   {order.status}
                                 </span>
                               </td>
-                              <td className="px-6 py-5 text-right">
-                                <Link to={`/orders/${order.id}`} className="p-2 text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-all inline-block hover:scale-110 active:scale-95">
-                                  <ArrowRight className="w-5 h-5" />
+                              <td className="px-4 sm:px-6 py-5 text-right">
+                                <Link to={`/orders/${order.id}`} className="p-1 sm:p-2 text-gray-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-all inline-block hover:scale-110 active:scale-95">
+                                  <ArrowRight className="w-4 h-4 sm:w-5 h-5" />
                                 </Link>
                               </td>
                             </tr>
@@ -395,8 +431,8 @@ export function CustomerDashboard() {
                     </div>
                   ) : (
                     <div className="px-6 py-6 border-t border-gray-100 dark:border-slate-700 bg-gray-50/30 dark:bg-slate-900/30 flex flex-col sm:flex-row items-center justify-between gap-4">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                        SHOWING <span className="text-gray-900 dark:text-white">{(currentPage - 1) * itemsPerPage + 1}</span> TO <span className="text-gray-900 dark:text-white">{Math.min(currentPage * itemsPerPage, orders.filter(order => order.order_number.toLowerCase().includes(orderSearch.toLowerCase())).length)}</span> OF <span className="text-gray-900 dark:text-white">{orders.filter(order => order.order_number.toLowerCase().includes(orderSearch.toLowerCase())).length}</span> ENTRIES
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        SHOWING <span className="text-slate-900 dark:text-white">{(currentPage - 1) * itemsPerPage + 1}</span> TO <span className="text-slate-900 dark:text-white">{Math.min(currentPage * itemsPerPage, orders.filter(order => order.order_number.toLowerCase().includes(orderSearch.toLowerCase())).length)}</span> OF <span className="text-slate-900 dark:text-white">{orders.filter(order => order.order_number.toLowerCase().includes(orderSearch.toLowerCase())).length}</span> ENTRIES
                       </p>
                       <div className="flex items-center gap-2">
                         <button
@@ -443,30 +479,30 @@ export function CustomerDashboard() {
                   <table className="w-full text-left">
                     <thead className="bg-gray-50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-slate-700">
                       <tr>
-                        <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Order</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Reason</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Amount</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</th>
+                        <th className="px-4 sm:px-6 py-4 text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest text-left">Order</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest hidden sm:table-cell">Reason</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest hidden md:table-cell">Amount</th>
+                        <th className="px-4 sm:px-6 py-4 text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest text-left">Status</th>
+                        <th className="px-4 sm:px-6 py-4 text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest text-right sm:text-left">Date</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
                       {refunds.map((refund) => (
                         <tr key={refund.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/50 transition-colors">
-                          <td className="px-6 py-4 font-black text-gray-900 dark:text-white uppercase">
+                          <td className="px-4 sm:px-6 py-4 font-black text-slate-900 dark:text-white uppercase text-xs sm:text-sm">
                             #{refund.orders?.order_number || 'N/A'}
                           </td>
-                          <td className="px-6 py-4 text-gray-600 dark:text-gray-400 font-bold text-xs uppercase max-w-xs truncate" title={refund.reason}>{refund.reason}</td>
-                          <td className="px-6 py-4 font-black text-gray-900 dark:text-white">${refund.amount}</td>
-                          <td className="px-6 py-4">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${refund.status === 'approved' ? 'bg-green-100 text-green-700 border-green-200' :
+                          <td className="px-6 py-4 text-gray-600 dark:text-gray-400 font-bold text-xs uppercase max-w-xs truncate hidden sm:table-cell" title={refund.reason}>{refund.reason}</td>
+                          <td className="px-6 py-4 font-black text-slate-900 dark:text-white hidden md:table-cell">${refund.amount}</td>
+                          <td className="px-4 sm:px-6 py-4 text-[8px] sm:text-sm">
+                            <span className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[7px] sm:text-[8px] font-black uppercase tracking-widest border ${refund.status === 'approved' ? 'bg-green-100 text-green-700 border-green-200' :
                               refund.status === 'rejected' ? 'bg-red-100 text-red-700 border-red-200' :
                                 'bg-amber-100 text-amber-700 border-amber-200'
                               }`}>
                               {refund.status}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-gray-600 dark:text-gray-400 font-bold text-xs uppercase">
+                          <td className="px-4 sm:px-6 py-4 text-gray-600 dark:text-gray-400 font-bold text-[10px] sm:text-xs uppercase text-right sm:text-left">
                             {new Date(refund.created_at).toLocaleDateString()}
                           </td>
                         </tr>
@@ -484,51 +520,64 @@ export function CustomerDashboard() {
             )}
 
             {activeTab === 'wallet' && (
-              <div className="max-w-xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="max-w-xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="text-center">
-                  <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">My Wallet</h2>
-                  <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-1">Manage your funds and transactions</p>
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">My Wallet</h2>
+                  <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">Manage your funds and transactions</p>
                 </div>
 
-                <div className="bg-gradient-to-br from-gray-900 to-slate-800 dark:from-slate-900 dark:to-slate-950 rounded-[2.5rem] p-10 text-white shadow-2xl relative overflow-hidden border-4 border-white/5 group">
-                  <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-6 sm:p-8 md:p-10 text-slate-900 dark:text-white shadow-sm relative overflow-hidden border border-slate-100 dark:border-slate-800 group">
+                  <div className="absolute top-0 right-0 p-8 opacity-5 dark:opacity-10 group-hover:scale-110 transition-transform duration-700">
                     <Wallet className="w-32 h-32" />
                   </div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-400/80 mb-2">Available Balance</p>
-                  <div className="text-5xl font-black tracking-tighter mb-10">${stats.walletBalance.toFixed(2)}</div>
-                  <div className="flex gap-4 relative z-10">
-                    <button className="flex-1 bg-white/10 hover:bg-white/20 backdrop-blur-md py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all active:scale-95 border border-white/10">Top Up</button>
-                    <button className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all active:scale-95 shadow-lg shadow-cyan-900/40">History</button>
+                  <div className="relative z-10">
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-600 dark:text-cyan-400 mb-2">Available Balance</p>
+                    <div className="text-5xl font-black tracking-tighter mb-10 text-slate-900 dark:text-white tabular-nums">${stats.walletBalance.toFixed(2)}</div>
+                    <div className="flex gap-4">
+                      <button className="flex-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-3.5 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all hover:scale-[1.02] active:scale-95 shadow-lg">Top Up Account</button>
+                      <button className="flex-1 bg-white dark:bg-slate-800 text-slate-900 dark:text-white py-3.5 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 active:scale-95">Withdraw</button>
+                    </div>
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-slate-800 rounded-3xl border-2 border-dashed border-gray-100 dark:border-slate-700 p-8 text-center">
-                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Transaction history feature coming soon</p>
+                <div className="bg-slate-50/50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 p-8 text-center transition-colors">
+                  <div className="bg-slate-100 dark:bg-slate-800 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Clock className="w-6 h-6 text-slate-400" />
+                  </div>
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Transaction history feature coming soon</p>
                 </div>
               </div>
             )}
 
             {activeTab === 'settings' && (
               <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight mb-8">Profile Settings</h2>
-                <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-sm p-10">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="w-1.5 h-6 bg-cyan-600 rounded-full" />
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Profile Settings</h2>
+                </div>
+                <div className="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm p-8 md:p-10">
                   <div className="space-y-6">
-                    <div>
-                      <label className="block text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Full Name</label>
-                      <input type="text" disabled value={profile?.full_name || ''} className="w-full px-5 py-3 bg-gray-50 dark:bg-slate-900/50 border border-gray-100 dark:border-slate-700 rounded-2xl text-gray-900 dark:text-white font-bold text-sm" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Full Name</label>
+                        <input type="text" disabled value={profile?.full_name || ''} className="w-full px-5 py-3.5 bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-white font-bold text-sm cursor-not-allowed" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Email Address</label>
+                        <input type="email" disabled value={profile?.email || ''} className="w-full px-5 py-3.5 bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-white font-bold text-sm cursor-not-allowed" />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Email Address</label>
-                      <input type="email" disabled value={profile?.email || ''} className="w-full px-5 py-3 bg-gray-50 dark:bg-slate-900/50 border border-gray-100 dark:border-slate-700 rounded-2xl text-gray-900 dark:text-white font-bold text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Phone</label>
-                      <input type="text" disabled value={profile?.phone || 'Not set'} className="w-full px-5 py-3 bg-gray-50 dark:bg-slate-900/50 border border-gray-100 dark:border-slate-700 rounded-2xl text-gray-900 dark:text-white font-bold text-sm" />
+                    <div className="space-y-2">
+                      <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Phone Number</label>
+                      <input type="text" disabled value={profile?.phone || 'Not set'} className="w-full px-5 py-3.5 bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-white font-bold text-sm cursor-not-allowed" />
                     </div>
 
-                    <div className="pt-6 border-t border-gray-100 dark:border-slate-700">
-                      <button disabled className="px-8 py-3 bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 rounded-2xl font-black uppercase tracking-widest text-[10px] cursor-not-allowed">Save Changes</button>
-                      <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 mt-4 uppercase tracking-widest">Editing profile is currently disabled in this demo.</p>
+                    <div className="pt-8 border-t border-slate-50 dark:border-slate-700/50 flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <button disabled className="w-full sm:w-auto px-8 py-3.5 bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded-2xl font-black uppercase tracking-widest text-[10px] cursor-not-allowed">Save Profile</button>
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <ShieldCheck className="w-4 h-4" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Editing is locked in demo</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -536,11 +585,16 @@ export function CustomerDashboard() {
             )}
 
             {activeTab === 'favorites' && (
-              <div className="text-center py-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <Heart className="w-20 h-20 mx-auto text-gray-200 dark:text-slate-800 mb-6" />
-                <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Your Favorites</h2>
-                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-2">You haven't saved any items yet.</p>
-                <Link to="/products" className="mt-8 inline-block bg-cyan-600 dark:bg-cyan-500 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-cyan-700 transition shadow-xl shadow-cyan-900/40">Browse Shop</Link>
+              <div className="text-center py-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="w-20 h-20 bg-slate-50 dark:bg-slate-900 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
+                  <Heart className="w-10 h-10 text-slate-200 dark:text-slate-800" />
+                </div>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Your Favorites</h2>
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">You haven't saved any items yet.</p>
+                <Link to="/products" className="mt-8 inline-flex items-center gap-3 bg-cyan-600 dark:bg-cyan-500 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-cyan-700 hover:scale-105 transition-all shadow-xl shadow-cyan-900/20 active:scale-95">
+                  Explore Products
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
             )}
 

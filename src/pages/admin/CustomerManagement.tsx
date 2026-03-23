@@ -4,6 +4,7 @@ import { AdminLayout } from '../../components/AdminLayout';
 import { supabase } from '../../lib/supabase';
 import { Search, UserX, UserCheck, Mail, Phone, Calendar, Plus, Edit, Trash2, Eye, X, AlertCircle } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Pagination } from '../../components/Pagination';
 
 interface Customer {
   id: string;
@@ -41,6 +42,9 @@ export function CustomerManagement() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const itemsPerPage = 10;
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -59,7 +63,7 @@ export function CustomerManagement() {
 
   useEffect(() => {
     fetchCustomers();
-  }, [filterStatus, startDate, endDate]);
+  }, [filterStatus, startDate, endDate, currentPage, searchTerm]);
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -83,12 +87,19 @@ export function CustomerManagement() {
       query = query.lte('created_at', endDateTime.toISOString());
     }
 
-    const { data, error } = await query;
+    if (searchTerm) {
+      query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
+    }
+
+    const { data, error, count } = await query
+      .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1)
+      .select('*', { count: 'exact' });
 
     if (error) {
       setMessage({ type: 'error', text: error.message });
     } else {
       setCustomers(data || []);
+      setTotalItems(count || 0);
     }
     setLoading(false);
   };
@@ -254,11 +265,7 @@ export function CustomerManagement() {
     });
   };
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCustomers = customers;
 
   const cardBg = isDark ? 'bg-gray-800' : 'bg-white';
   const textPrimary = isDark ? 'text-gray-100' : 'text-gray-900';
@@ -477,6 +484,16 @@ export function CustomerManagement() {
             No customers found matching your criteria.
           </div>
         )}
+      </div>
+
+      <div className="mt-4">
+        <Pagination
+          currentPage={currentPage}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          isDark={isDark}
+        />
       </div>
 
       {showModal && (

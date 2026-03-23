@@ -5,8 +5,11 @@ import {
     Search,
     ChevronRight,
     ChevronLeft,
-    X
+    X,
+    Filter
 } from 'lucide-react';
+import { Pagination } from '../../components/Pagination';
+import { dispatchTrigger } from '../../lib/eventDispatcher';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCurrency } from '../../contexts/CurrencyContext';
 
@@ -54,7 +57,7 @@ export function OrdersManagement() {
 
     useEffect(() => {
         fetchOrders();
-    }, [statusFilter, currentPage]);
+    }, [statusFilter, currentPage, searchTerm]);
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -97,6 +100,31 @@ export function OrdersManagement() {
             fetchOrders();
             if (selectedOrder?.id === orderId) {
                 setSelectedOrder({ ...selectedOrder, status: newStatus as any });
+            }
+
+            // Trigger automated email based on status
+            const order = orders.find(o => o.id === orderId) || selectedOrder;
+            if (order && order.profiles) {
+                if (newStatus === 'shipped') {
+                    dispatchTrigger('order_shipped', {
+                        email: order.profiles.email,
+                        customer_name: order.profiles.full_name,
+                        order_number: order.order_number,
+                        tracking_number: 'Standard Shipping' // Could be expanded later
+                    });
+                } else if (newStatus === 'delivered') {
+                    dispatchTrigger('order_delivered', {
+                        email: order.profiles.email,
+                        customer_name: order.profiles.full_name,
+                        order_number: order.order_number
+                    });
+                } else if (newStatus === 'cancelled') {
+                    dispatchTrigger('order_cancelled', {
+                        email: order.profiles.email,
+                        customer_name: order.profiles.full_name,
+                        order_number: order.order_number
+                    });
+                }
             }
         } catch (error: any) {
             alert('Error updating status: ' + error.message);
@@ -279,28 +307,14 @@ export function OrdersManagement() {
                     </table>
                 </div>
 
-                {/* Pagination */}
-                <div className={`px-8 py-6 border-t ${borderColor} flex items-center justify-between`}>
-                    <p className={`text-sm ${textSecondary} font-bold`}>
-                        Showing <span className="text-slate-900 dark:text-white">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-slate-900 dark:text-white">{Math.min(currentPage * itemsPerPage, totalOrders)}</span> of <span className="text-slate-900 dark:text-white">{totalOrders}</span> orders
-                    </p>
-                    <div className="flex items-center gap-2">
-                        <button
-                            disabled={currentPage === 1}
-                            onClick={() => setCurrentPage(prev => prev - 1)}
-                            className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-                        >
-                            <ChevronLeft className="h-5 w-5" />
-                        </button>
-                        <span className="px-4 py-2 font-black text-slate-900 dark:text-white">{currentPage}</span>
-                        <button
-                            disabled={currentPage * itemsPerPage >= totalOrders}
-                            onClick={() => setCurrentPage(prev => prev + 1)}
-                            className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-                        >
-                            <ChevronRight className="h-5 w-5" />
-                        </button>
-                    </div>
+                <div className="mt-4 p-4 border-t border-gray-100">
+                    <Pagination
+                        currentPage={currentPage}
+                        totalItems={totalOrders}
+                        itemsPerPage={itemsPerPage}
+                        onPageChange={setCurrentPage}
+                        isDark={isDark}
+                    />
                 </div>
             </div>
 

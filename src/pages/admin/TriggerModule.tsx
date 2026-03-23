@@ -37,6 +37,7 @@ const actionTypes = [
 
 export default function TriggerModule() {
   const [triggers, setTriggers] = useState<Trigger[]>([]);
+  const [emailTemplates, setEmailTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -55,9 +56,16 @@ export default function TriggerModule() {
 
   const loadTriggers = async () => {
     try {
-      const { data, error } = await supabase.from('event_triggers').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
-      setTriggers(data || []);
+      const [triggersReq, templatesReq] = await Promise.all([
+        supabase.from('event_triggers').select('*').order('created_at', { ascending: false }),
+        supabase.from('email_templates').select('template_name, template_subject').eq('is_active', true)
+      ]);
+
+      if (triggersReq.error) throw triggersReq.error;
+      if (templatesReq.error) throw templatesReq.error;
+
+      setTriggers(triggersReq.data || []);
+      setEmailTemplates(templatesReq.data || []);
     } catch (e) {
       console.error('Error loading triggers:', e);
     } finally {
@@ -219,16 +227,48 @@ export default function TriggerModule() {
                   className="w-full px-2 py-1 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 bg-white font-mono text-sm"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-0.5">Actions (JSON)</label>
-                <textarea
-                  rows={3}
-                  value={formData.actions}
-                  onChange={e => setFormData({ ...formData, actions: e.target.value })}
-                  placeholder='{"template":"order_confirmation","recipient":"customer_email"}'
-                  className="w-full px-2 py-1 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 bg-white font-mono text-sm"
-                />
-              </div>
+              {formData.action_type === 'send_email' ? (
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-0.5">Select Email Template *</label>
+                  <select
+                    value={(() => {
+                      try {
+                        return JSON.parse(formData.actions).template || '';
+                      } catch (e) {
+                        return '';
+                      }
+                    })()}
+                    onChange={(e) => {
+                      const currentActions = (() => {
+                        try { return JSON.parse(formData.actions); } catch { return {}; }
+                      })();
+                      currentActions.template = e.target.value;
+                      if (!currentActions.recipient) currentActions.recipient = 'customer_email'; // Set a default property
+                      setFormData({ ...formData, actions: JSON.stringify(currentActions, null, 2) });
+                    }}
+                    required
+                    className="w-full px-2 py-1 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                  >
+                    <option value="">Select a template...</option>
+                    {emailTemplates.map(tmpl => (
+                      <option key={tmpl.template_name} value={tmpl.template_name}>
+                        {tmpl.template_name} ({tmpl.template_subject})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-0.5">Actions (JSON)</label>
+                  <textarea
+                    rows={3}
+                    value={formData.actions}
+                    onChange={e => setFormData({ ...formData, actions: e.target.value })}
+                    placeholder='{"template":"order_confirmation","recipient":"customer_email"}'
+                    className="w-full px-2 py-1 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 bg-white font-mono text-sm"
+                  />
+                </div>
+              )}
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"

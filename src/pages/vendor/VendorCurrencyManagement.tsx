@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Wallet, Save, AlertCircle, RefreshCw, TrendingUp, Info, DollarSign, ArrowUpRight, History, X, CreditCard, CheckCircle, Store } from 'lucide-react';
+import { Wallet, Save, AlertCircle, RefreshCw, TrendingUp, Info, DollarSign, ArrowUpRight, History, X, CreditCard, CheckCircle, Store, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Pagination } from '../../components/Pagination';
 
 interface Currency {
   code: string;
@@ -47,6 +48,9 @@ export function VendorCurrencyManagement() {
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [editableRates, setEditableRates] = useState<Record<string, string>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const itemsPerPage = 5;
 
   // Modal states
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
@@ -56,7 +60,7 @@ export function VendorCurrencyManagement() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentPage]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -82,9 +86,10 @@ export function VendorCurrencyManagement() {
           .eq('is_active', true),
         supabase
           .from('withdrawal_requests')
-          .select('*')
+          .select('*', { count: 'exact' })
           .eq('vendor_id', user.id)
           .order('requested_at', { ascending: false })
+          .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1)
       ]);
 
       if (vendorProfileRes.error) throw vendorProfileRes.error;
@@ -99,7 +104,10 @@ export function VendorCurrencyManagement() {
       }
 
       if (gatewaysRes.data) setGateways(gatewaysRes.data);
-      if (historyRes.data) setWithdrawalHistory(historyRes.data);
+      if (historyRes.data) {
+        setWithdrawalHistory(historyRes.data);
+        setTotalItems(historyRes.count || 0);
+      }
 
       const [currenciesRes, ratesRes] = await Promise.all([
         supabase
@@ -477,7 +485,7 @@ export function VendorCurrencyManagement() {
             </div>
 
             <div className="p-0 overflow-hidden">
-              <div className="max-h-[500px] overflow-y-auto">
+              <div className="max-h-[500px] overflow-y-auto overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-gray-50/80 sticky top-0 backdrop-blur-sm">
                     <tr>

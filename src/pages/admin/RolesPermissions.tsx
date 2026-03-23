@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdminLayout } from '../../components/AdminLayout';
 import { supabase } from '../../lib/supabase';
-import { Shield, Plus, Edit, Trash2, Users, X, AlertCircle, Search } from 'lucide-react';
+import { Shield, Plus, Edit, Trash2, Users, X, AlertCircle, Search, LayoutGrid, List } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface Role {
@@ -24,6 +24,7 @@ export function RolesPermissions() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -116,11 +117,10 @@ export function RolesPermissions() {
       </div>
 
       {message && (
-        <div className={`mb-6 p-4 rounded-lg flex items-start space-x-3 ${
-          message.type === 'success'
-            ? 'bg-green-50 border border-green-200 text-green-800'
-            : 'bg-red-50 border border-red-200 text-red-800'
-        }`}>
+        <div className={`mb-6 p-4 rounded-lg flex items-start space-x-3 ${message.type === 'success'
+          ? 'bg-green-50 border border-green-200 text-green-800'
+          : 'bg-red-50 border border-red-200 text-red-800'
+          }`}>
           <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
           <span>{message.text}</span>
           <button onClick={() => setMessage(null)} className="ml-auto">
@@ -129,8 +129,8 @@ export function RolesPermissions() {
         </div>
       )}
 
-      <div className={`${cardBg} rounded-lg shadow-sm p-6 mb-6`}>
-        <div className="relative">
+      <div className={`${cardBg} rounded-lg shadow-sm p-6 mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between`}>
+        <div className="relative flex-1 w-full">
           <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${textSecondary} h-5 w-5`} />
           <input
             type="text"
@@ -140,75 +140,182 @@ export function RolesPermissions() {
             className={`w-full pl-10 pr-4 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'}`}
           />
         </div>
+        <div className={`flex items-center gap-1 p-1 rounded-lg border ${borderColor} ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`p-2 rounded-md transition-all flex items-center justify-center ${viewMode === 'list'
+              ? (isDark ? 'bg-gray-700 text-white shadow' : 'bg-white text-gray-900 shadow')
+              : (isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700')
+              }`}
+            title="List View"
+          >
+            <List className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded-md transition-all flex items-center justify-center ${viewMode === 'grid'
+              ? (isDark ? 'bg-gray-700 text-white shadow' : 'bg-white text-gray-900 shadow')
+              : (isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700')
+              }`}
+            title="Grid View"
+          >
+            <LayoutGrid className="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredRoles.map((role) => (
-          <div key={role.id} className={`${cardBg} rounded-lg shadow-sm p-6 border ${borderColor}`}>
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <Shield className="h-5 w-5 text-cyan-600" />
-                  <h3 className={`text-lg font-semibold ${textPrimary}`}>{role.role_name}</h3>
-                </div>
-                <p className={`text-sm ${textSecondary} mb-3`}>{role.role_description}</p>
-                <span className={`px-2 py-1 text-xs rounded-full ${
-                  role.is_active
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredRoles.map((role) => (
+            <div key={role.id} className={`${cardBg} rounded-lg shadow-sm p-6 border ${borderColor}`}>
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Shield className="h-5 w-5 text-cyan-600" />
+                    <h3 className={`text-lg font-semibold ${textPrimary}`}>{role.role_name}</h3>
+                  </div>
+                  <p className={`text-sm ${textSecondary} mb-3`}>{role.role_description}</p>
+                  <span className={`px-2 py-1 text-xs rounded-full ${role.is_active
                     ? 'bg-green-100 text-green-800'
                     : 'bg-red-100 text-red-800'
-                }`}>
-                  {role.is_active ? 'Active' : 'Inactive'}
-                </span>
+                    }`}>
+                    {role.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <p className={`text-xs font-medium ${textSecondary} mb-2`}>Permissions Summary:</p>
+                <div className="flex flex-wrap gap-1">
+                  {Object.entries(role.permissions || {}).map(([feature, perms]) => {
+                    const activePerms = Object.entries(perms as Record<string, boolean>)
+                      .filter(([_, value]) => value)
+                      .length;
+                    if (activePerms > 0) {
+                      return (
+                        <span key={feature} className="px-2 py-1 text-xs bg-cyan-100 text-cyan-800 rounded">
+                          {feature} ({activePerms})
+                        </span>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => navigate(`/admin/roles-permissions/edit/${role.id}`)}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-cyan-50 text-cyan-700 rounded-lg hover:bg-cyan-100 transition"
+                >
+                  <Edit className="h-4 w-4" />
+                  Edit
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedRole(role);
+                    setShowAssignModal(true);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition"
+                >
+                  <Users className="h-4 w-4" />
+                  Assign
+                </button>
+                <button
+                  onClick={() => handleDelete(role.id, role.role_name)}
+                  className="px-3 py-2 text-sm bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
             </div>
-
-            <div className="mb-4">
-              <p className={`text-xs font-medium ${textSecondary} mb-2`}>Permissions Summary:</p>
-              <div className="flex flex-wrap gap-1">
-                {Object.entries(role.permissions || {}).map(([feature, perms]) => {
-                  const activePerms = Object.entries(perms as Record<string, boolean>)
-                    .filter(([_, value]) => value)
-                    .length;
-                  if (activePerms > 0) {
-                    return (
-                      <span key={feature} className="px-2 py-1 text-xs bg-cyan-100 text-cyan-800 rounded">
-                        {feature} ({activePerms})
+          ))}
+        </div>
+      ) : (
+        <div className={`${cardBg} rounded-lg border ${borderColor} overflow-hidden shadow-sm`}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className={`text-xs ${textSecondary} uppercase bg-gray-50 dark:bg-gray-800/50 border-b ${borderColor}`}>
+                <tr>
+                  <th className="px-6 py-4 font-medium">Role Name</th>
+                  <th className="px-6 py-4 font-medium">Description</th>
+                  <th className="px-6 py-4 font-medium">Status</th>
+                  <th className="px-6 py-4 font-medium">Permissions Summary</th>
+                  <th className="px-6 py-4 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className={`divide-y ${borderColor}`}>
+                {filteredRoles.map((role) => (
+                  <tr key={role.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <Shield className="h-5 w-5 text-cyan-600 flex-shrink-0" />
+                        <span className={`font-semibold ${textPrimary}`}>{role.role_name}</span>
+                      </div>
+                    </td>
+                    <td className={`px-6 py-4 ${textSecondary} max-w-xs truncate`}>
+                      {role.role_description}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-1 text-xs rounded-full font-medium ${role.is_active
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                        }`}>
+                        {role.is_active ? 'Active' : 'Inactive'}
                       </span>
-                    );
-                  }
-                  return null;
-                })}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => navigate(`/admin/roles-permissions/edit/${role.id}`)}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-cyan-50 text-cyan-700 rounded-lg hover:bg-cyan-100 transition"
-              >
-                <Edit className="h-4 w-4" />
-                Edit
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedRole(role);
-                  setShowAssignModal(true);
-                }}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition"
-              >
-                <Users className="h-4 w-4" />
-                Assign
-              </button>
-              <button
-                onClick={() => handleDelete(role.id, role.role_name)}
-                className="px-3 py-2 text-sm bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {Object.entries(role.permissions || {}).map(([feature, perms]) => {
+                          const activePerms = Object.entries(perms as Record<string, boolean>)
+                            .filter(([_, value]) => value)
+                            .length;
+                          if (activePerms > 0) {
+                            return (
+                              <span key={feature} className="px-2 py-1 text-xs bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400 rounded">
+                                {feature} ({activePerms})
+                              </span>
+                            );
+                          }
+                          return null;
+                        })}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => navigate(`/admin/roles-permissions/edit/${role.id}`)}
+                          className="p-2 text-cyan-600 hover:bg-cyan-50 dark:hover:bg-cyan-900/30 rounded-lg transition"
+                          title="Edit"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedRole(role);
+                            setShowAssignModal(true);
+                          }}
+                          className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition"
+                          title="Assign"
+                        >
+                          <Users className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(role.id, role.role_name)}
+                          className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
       {filteredRoles.length === 0 && (
         <div className={`${cardBg} rounded-lg shadow-sm p-12 text-center`}>
@@ -255,7 +362,7 @@ function RoleAssignment({ role, onClose, isDark }: RoleAssignmentProps) {
     setLoading(true);
     try {
       const [usersData, assignmentsData] = await Promise.all([
-        supabase.from('profiles').select('id, email, full_name, role').eq('role', 'admin'),
+        supabase.from('profiles').select('id, email, full_name, role').in('role', ['admin', 'staff', 'sub_admin']),
         supabase
           .from('user_role_assignments')
           .select(`
@@ -329,11 +436,10 @@ function RoleAssignment({ role, onClose, isDark }: RoleAssignmentProps) {
 
         <div className="p-6">
           {message && (
-            <div className={`mb-6 p-4 rounded-lg flex items-start space-x-3 ${
-              message.type === 'success'
-                ? 'bg-green-50 border border-green-200 text-green-800'
-                : 'bg-red-50 border border-red-200 text-red-800'
-            }`}>
+            <div className={`mb-6 p-4 rounded-lg flex items-start space-x-3 ${message.type === 'success'
+              ? 'bg-green-50 border border-green-200 text-green-800'
+              : 'bg-red-50 border border-red-200 text-red-800'
+              }`}>
               <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
               <span>{message.text}</span>
               <button onClick={() => setMessage(null)} className="ml-auto">

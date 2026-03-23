@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env.VITE_SUPABASE_URL : '';
-const supabaseAnonKey = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env.VITE_SUPABASE_ANON_KEY : '';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 // Validate environment variables
 if (!supabaseUrl || supabaseUrl === '' || supabaseUrl.includes('placeholder')) {
@@ -27,15 +27,8 @@ export const supabase = createClient(
   }
 );
 
-// Expose to window for debugging
-if (typeof window !== 'undefined') {
-  (window as any).__SUPABASE_CLIENT__ = supabase;
-  console.log('✅ Supabase client initialized');
-  console.log('   URL:', supabaseUrl || 'NOT SET');
-  console.log('   Key:', supabaseAnonKey ? supabaseAnonKey.substring(0, 20) + '...' : 'NOT SET');
-}
 
-export type UserRole = 'customer' | 'vendor' | 'admin' | 'logistic';
+export type UserRole = 'customer' | 'vendor' | 'admin' | 'logistic' | 'staff' | 'sub_admin';
 
 export interface Profile {
   id: string;

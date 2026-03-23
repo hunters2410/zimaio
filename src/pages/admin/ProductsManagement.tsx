@@ -3,6 +3,7 @@ import { AdminLayout } from '../../components/AdminLayout';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Filter, Edit, Power, PowerOff, AlertCircle, X, CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { Pagination } from '../../components/Pagination';
 
 interface Product {
   id: string;
@@ -46,6 +47,9 @@ export function ProductsManagement() {
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const itemsPerPage = 12;
   const [vendors, setVendors] = useState<{ id: string; shop_name: string }[]>([]);
 
   const cardBg = isDark ? 'bg-gray-800' : 'bg-white';
@@ -55,22 +59,27 @@ export function ProductsManagement() {
 
   useEffect(() => {
     fetchData();
-  }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [products, filterVendor, filterStatus, filterApproval, filterDateFrom, filterDateTo, searchQuery]);
+  }, [currentPage, filterVendor, filterStatus, filterApproval, filterDateFrom, filterDateTo, searchQuery]);
 
   const fetchData = async () => {
     try {
+      let query = supabase
+        .from('products')
+        .select(`
+          *,
+          vendor:vendor_profiles(shop_name, user_id)
+        `, { count: 'exact' });
+
+      // Apply Filters directly in query for better performance with pagination
+      if (filterVendor !== 'all') query = query.eq('vendor_id', filterVendor);
+      if (filterStatus !== 'all') query = query.eq('is_active', filterStatus === 'active');
+      if (filterApproval !== 'all') query = query.eq('admin_approved', filterApproval === 'approved');
+      if (searchQuery) query = query.ilike('name', `%${searchQuery}%`);
+
       const [productsRes, vendorsRes] = await Promise.all([
-        supabase
-          .from('products')
-          .select(`
-            *,
-            vendor:vendor_profiles(shop_name, user_id)
-          `)
-          .order('created_at', { ascending: false }),
+        query
+          .order('created_at', { ascending: false })
+          .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1),
         supabase
           .from('vendor_profiles')
           .select('id, shop_name')
@@ -81,6 +90,8 @@ export function ProductsManagement() {
       if (vendorsRes.error) throw vendorsRes.error;
 
       setProducts(productsRes.data || []);
+      setFilteredProducts(productsRes.data || []); // With server-side pagination, filters are handled in query
+      setTotalItems(productsRes.count || 0);
       setVendors(vendorsRes.data || []);
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message });
@@ -89,43 +100,8 @@ export function ProductsManagement() {
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...products];
-
-    if (filterVendor !== 'all') {
-      filtered = filtered.filter(p => p.vendor_id === filterVendor);
-    }
-
-    if (filterStatus !== 'all') {
-      const isActive = filterStatus === 'active';
-      filtered = filtered.filter(p => p.is_active === isActive);
-    }
-
-    if (filterApproval !== 'all') {
-      const isApproved = filterApproval === 'approved';
-      filtered = filtered.filter(p => p.admin_approved === isApproved);
-    }
-
-    if (filterDateFrom) {
-      filtered = filtered.filter(p => new Date(p.created_at) >= new Date(filterDateFrom));
-    }
-    if (filterDateTo) {
-      const toDate = new Date(filterDateTo);
-      toDate.setHours(23, 59, 59, 999);
-      filtered = filtered.filter(p => new Date(p.created_at) <= toDate);
-    }
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(p =>
-        p.name.toLowerCase().includes(query) ||
-        p.sku?.toLowerCase().includes(query) ||
-        p.description?.toLowerCase().includes(query)
-      );
-    }
-
-    setFilteredProducts(filtered);
-  };
+  // fetchData is already called by the useEffect dependency [currentPage, filters]
+  const applyFilters = () => { };
 
   const resetFilters = () => {
     setFilterVendor('all');
@@ -543,6 +519,15 @@ export function ProductsManagement() {
           ))}
         </div>
       )}
+
+      <div className="mt-4">
+        <Pagination
+          currentPage={currentPage}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
+      </div>
 
       {editingProduct && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">

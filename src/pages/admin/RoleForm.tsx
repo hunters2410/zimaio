@@ -16,18 +16,18 @@ const FEATURES = [
   { key: 'customers', label: 'Customer Management', description: 'Manage customer accounts and data' },
   { key: 'vendors', label: 'Vendor Management', description: 'Manage vendor accounts and shops' },
   { key: 'products', label: 'Product Management', description: 'Manage product catalog' },
-  { key: 'orders', label: 'Order Management', description: 'Process and manage orders' },
-  { key: 'financial', label: 'Financial Management', description: 'Wallet, transactions, commissions' },
-  { key: 'analytics', label: 'Analytics & Reports', description: 'View analytics and reports' },
-  { key: 'settings', label: 'System Settings', description: 'Configure system settings' },
+  { key: 'orders', label: 'Order Management', description: 'Process and manage orders (includes POS)' },
+  { key: 'financial', label: 'Financial Management', description: 'Wallet, payment gateways, commissions, payment logs, immutable ledger' },
+  { key: 'analytics', label: 'Analytics & Reports', description: 'View analytics, reports, vendor performance, fraud detection' },
+  { key: 'settings', label: 'System Settings', description: 'Configure system settings, currencies, languages, sliders, content' },
   { key: 'support', label: 'Support Tickets', description: 'Manage customer support' },
-  { key: 'delivery', label: 'Delivery Management', description: 'Manage deliveries and drivers' },
-  { key: 'kyc', label: 'KYC Verification', description: 'Verify vendor documents' },
+  { key: 'delivery', label: 'Delivery & Logistics', description: 'Manage deliveries, drivers, shipping methods, logistics overview' },
+  { key: 'kyc', label: 'KYC Verification', description: 'Verify vendor documents and identity' },
   { key: 'roles', label: 'Roles & Permissions', description: 'Manage roles and permissions' },
   { key: 'refunds', label: 'Refund Management', description: 'Process refund requests' },
-  { key: 'coupons', label: 'Coupon Management', description: 'Create and manage coupons' },
+  { key: 'coupons', label: 'Coupon & Promotions', description: 'Create and manage coupons, promotions, ads' },
   { key: 'reviews', label: 'Review Management', description: 'Moderate product reviews' },
-  { key: 'notifications', label: 'Notifications', description: 'Send and manage notifications' },
+  { key: 'notifications', label: 'Notifications & Emails', description: 'Send notifications, email outreach, email templates' },
 ];
 
 const PERMISSIONS = [
@@ -209,11 +209,10 @@ export function RoleForm() {
       </div>
 
       {message && (
-        <div className={`mb-6 p-4 rounded-lg flex items-start space-x-3 ${
-          message.type === 'success'
+        <div className={`mb-6 p-4 rounded-lg flex items-start space-x-3 ${message.type === 'success'
             ? 'bg-green-50 border border-green-200 text-green-800'
             : 'bg-red-50 border border-red-200 text-red-800'
-        }`}>
+          }`}>
           <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
           <span>{message.text}</span>
         </div>
@@ -296,11 +295,10 @@ export function RoleForm() {
                   {PERMISSIONS.map((perm) => (
                     <label
                       key={perm.key}
-                      className={`flex items-center space-x-2 cursor-pointer p-3 rounded-lg border transition ${
-                        formData.permissions[feature.key]?.[perm.key]
+                      className={`flex items-center space-x-2 cursor-pointer p-3 rounded-lg border transition ${formData.permissions[feature.key]?.[perm.key]
                           ? `bg-cyan-50 dark:bg-cyan-900/20 border-cyan-300 dark:border-cyan-700`
                           : `${borderColor} hover:bg-gray-50 dark:hover:bg-gray-700`
-                      }`}
+                        }`}
                     >
                       <input
                         type="checkbox"

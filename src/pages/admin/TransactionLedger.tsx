@@ -3,6 +3,7 @@ import { AdminLayout } from '../../components/AdminLayout';
 import { useTheme } from '../../contexts/ThemeContext';
 import { FileText, Filter, Download, Shield, AlertCircle, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { Pagination } from '../../components/Pagination';
 
 interface Transaction {
   id: string;
@@ -32,6 +33,11 @@ export function TransactionLedger() {
   const [filterDateTo, setFilterDateTo] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const itemsPerPage = 20;
+
   const cardBg = isDark ? 'bg-gray-800' : 'bg-white';
   const textPrimary = isDark ? 'text-gray-100' : 'text-gray-900';
   const textSecondary = isDark ? 'text-gray-400' : 'text-gray-600';
@@ -39,22 +45,49 @@ export function TransactionLedger() {
 
   useEffect(() => {
     fetchTransactions();
-  }, []);
+  }, [currentPage, filterType, filterStatus, filterDateFrom, filterDateTo, searchQuery]);
 
+  // Reset to first page when filters change
   useEffect(() => {
-    applyFilters();
-  }, [transactions, filterType, filterStatus, filterDateFrom, filterDateTo, searchQuery]);
+    setCurrentPage(1);
+  }, [filterType, filterStatus, filterDateFrom, filterDateTo, searchQuery]);
 
   const fetchTransactions = async () => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('transaction_ledger')
-        .select('*')
+        .select('*', { count: 'exact' });
+
+      if (filterType !== 'all') {
+        query = query.eq('transaction_type', filterType);
+      }
+
+      if (filterStatus !== 'all') {
+        query = query.eq('status', filterStatus);
+      }
+
+      if (filterDateFrom) {
+        query = query.gte('created_at', filterDateFrom);
+      }
+
+      if (filterDateTo) {
+        const toDate = new Date(filterDateTo);
+        toDate.setHours(23, 59, 59, 999);
+        query = query.lte('created_at', toDate.toISOString());
+      }
+
+      if (searchQuery) {
+        query = query.or(`reference_id.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,id.ilike.%${searchQuery}%`);
+      }
+
+      const { data, error, count } = await query
         .order('created_at', { ascending: false })
-        .limit(500);
+        .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
 
       if (error) throw error;
       setTransactions(data || []);
+      setTotalItems(count || 0);
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message });
     } finally {
@@ -62,41 +95,7 @@ export function TransactionLedger() {
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...transactions];
-
-    // Filter by type
-    if (filterType !== 'all') {
-      filtered = filtered.filter(t => t.transaction_type === filterType);
-    }
-
-    // Filter by status
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(t => t.status === filterStatus);
-    }
-
-    // Filter by date range
-    if (filterDateFrom) {
-      filtered = filtered.filter(t => new Date(t.created_at) >= new Date(filterDateFrom));
-    }
-    if (filterDateTo) {
-      const toDate = new Date(filterDateTo);
-      toDate.setHours(23, 59, 59, 999);
-      filtered = filtered.filter(t => new Date(t.created_at) <= toDate);
-    }
-
-    // Search by reference ID or description
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(t =>
-        t.reference_id?.toLowerCase().includes(query) ||
-        t.description?.toLowerCase().includes(query) ||
-        t.id.toLowerCase().includes(query)
-      );
-    }
-
-    setFilteredTransactions(filtered);
-  };
+  // Removed local applyFilters as it's now handled server-side
 
   const resetFilters = () => {
     setFilterType('all');
@@ -108,7 +107,7 @@ export function TransactionLedger() {
 
   const exportToCSV = () => {
     const headers = ['Date', 'Type', 'Amount', 'Currency', 'Status', 'Reference', 'Description'];
-    const rows = filteredTransactions.map(t => [
+    const rows = transactions.map(t => [
       new Date(t.created_at).toLocaleString(),
       t.transaction_type,
       t.amount,
@@ -195,11 +194,10 @@ export function TransactionLedger() {
 
       {message && (
         <div
-          className={`mb-4 p-3 rounded-lg flex items-start space-x-2 text-sm ${
-            message.type === 'success'
+          className={`mb-4 p-3 rounded-lg flex items-start space-x-2 text-sm ${message.type === 'success'
               ? 'bg-green-50 border border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
               : 'bg-red-50 border border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'
-          }`}
+            }`}
         >
           <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
           <span>{message.text}</span>
@@ -212,19 +210,15 @@ export function TransactionLedger() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className={`${cardBg} rounded-lg shadow-sm border ${borderColor} p-4`}>
           <p className={`text-xs ${textSecondary} mb-1`}>Total Transactions</p>
-          <p className={`text-2xl font-bold ${textPrimary}`}>{stats.total}</p>
+          <p className={`text-2xl font-bold ${textPrimary}`}>{totalItems}</p>
         </div>
         <div className={`${cardBg} rounded-lg shadow-sm border ${borderColor} p-4`}>
-          <p className={`text-xs ${textSecondary} mb-1`}>Total Volume</p>
-          <p className={`text-2xl font-bold ${textPrimary}`}>${stats.totalAmount.toFixed(2)}</p>
+          <p className={`text-xs ${textSecondary} mb-1`}>Total Volume (This Page)</p>
+          <p className={`text-2xl font-bold ${textPrimary}`}>${transactions.reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0).toFixed(2)}</p>
         </div>
         <div className={`${cardBg} rounded-lg shadow-sm border ${borderColor} p-4`}>
-          <p className={`text-xs ${textSecondary} mb-1`}>Completed</p>
-          <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
-        </div>
-        <div className={`${cardBg} rounded-lg shadow-sm border ${borderColor} p-4`}>
-          <p className={`text-xs ${textSecondary} mb-1`}>Pending</p>
-          <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+          <p className={`text-xs ${textSecondary} mb-1`}>Current Page Results</p>
+          <p className={`text-2xl font-bold text-cyan-600`}>{transactions.length}</p>
         </div>
       </div>
 
@@ -240,9 +234,8 @@ export function TransactionLedger() {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-              }`}
+              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                }`}
             >
               <option value="all">All Types</option>
               <option value="deposit">Deposit</option>
@@ -258,9 +251,8 @@ export function TransactionLedger() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-              }`}
+              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                }`}
             >
               <option value="all">All Statuses</option>
               <option value="completed">Completed</option>
@@ -276,9 +268,8 @@ export function TransactionLedger() {
               type="date"
               value={filterDateFrom}
               onChange={(e) => setFilterDateFrom(e.target.value)}
-              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-              }`}
+              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                }`}
             />
           </div>
 
@@ -288,9 +279,8 @@ export function TransactionLedger() {
               type="date"
               value={filterDateTo}
               onChange={(e) => setFilterDateTo(e.target.value)}
-              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-              }`}
+              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                }`}
             />
           </div>
 
@@ -301,9 +291,8 @@ export function TransactionLedger() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="ID, reference..."
-              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${
-                isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
-              }`}
+              className={`w-full px-2 py-1.5 text-sm border ${borderColor} rounded focus:outline-none focus:ring-1 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'
+                }`}
             />
           </div>
         </div>
@@ -332,14 +321,14 @@ export function TransactionLedger() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredTransactions.length === 0 ? (
+              {transactions.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center">
                     <p className={`text-sm ${textSecondary}`}>No transactions found</p>
                   </td>
                 </tr>
               ) : (
-                filteredTransactions.map((transaction) => (
+                transactions.map((transaction) => (
                   <tr key={transaction.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className={`px-4 py-3 text-xs ${textSecondary}`}>
                       {new Date(transaction.created_at).toLocaleString()}
@@ -368,6 +357,15 @@ export function TransactionLedger() {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex justify-center">
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
     </AdminLayout>

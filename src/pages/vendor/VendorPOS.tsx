@@ -275,6 +275,9 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
 
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
             pdf.save(`Receipt-${orderComplete.order_number}.pdf`);
+
+            // Close modal after successful download
+            setTimeout(() => setOrderComplete(null), 800);
         } catch (error) {
             console.error('Error downloading receipt:', error);
             alert('Could not download receipt. Please try printing instead.');
@@ -282,6 +285,7 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
     };
 
     const [activeTab, setActiveTab] = useState('register');
+    const [mobilePanel, setMobilePanel] = useState<'products' | 'cart'>('products');
 
     if (loading) return (
         <div className="flex items-center justify-center h-[600px]">
@@ -290,7 +294,7 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
     );
 
     return (
-        <div className="flex h-screen bg-slate-50 overflow-hidden font-sans text-slate-900">
+        <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden font-roboto text-slate-900 dark:text-slate-100">
             {/* Left Navigation Sidebar */}
             <div className="w-20 md:w-24 bg-slate-900 flex flex-col items-center py-6 gap-8 z-20 shadow-xl">
                 <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
@@ -328,10 +332,10 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col min-w-0">
                 {/* Top Header */}
-                <div className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 md:px-8 shadow-sm z-10">
+                <div className="h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-6 md:px-8 shadow-sm z-10">
                     <div className="flex items-center gap-4">
-                        <h1 className="text-xl font-black uppercase tracking-tight text-slate-900">{shopName || 'POS Terminal'}</h1>
-                        <div className="h-6 w-px bg-slate-200"></div>
+                        <h1 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">{shopName || 'POS Terminal'}</h1>
+                        <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
                         <div className="flex items-center gap-2 text-slate-400">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                             <span className="text-xs font-bold uppercase tracking-wider">Online</span>
@@ -339,20 +343,20 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <div className="hidden md:flex items-center bg-slate-100 rounded-full px-4 py-2 border border-slate-200">
+                        <div className="hidden md:flex items-center bg-slate-100 dark:bg-slate-700 rounded-full px-4 py-2 border border-slate-200 dark:border-slate-600">
                             <Search className="h-4 w-4 text-slate-400 mr-2" />
                             <input
                                 type="text"
                                 placeholder="Global Search..."
-                                className="bg-transparent border-none outline-none text-xs font-bold text-slate-700 w-48 placeholder:text-slate-400"
+                                className="bg-transparent border-none outline-none text-xs font-bold text-slate-700 dark:text-slate-200 w-48 placeholder:text-slate-400"
                             />
                         </div>
-                        <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
+                        <div className="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-slate-700">
                             <div className="text-right hidden md:block">
-                                <p className="text-xs font-black text-slate-900">{profile?.full_name}</p>
+                                <p className="text-xs font-black text-slate-900 dark:text-white">{profile?.full_name}</p>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase">{profile?.role}</p>
                             </div>
-                            <div className="w-9 h-9 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-black text-xs border border-indigo-200">
+                            <div className="w-9 h-9 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-black text-xs border border-indigo-200 dark:border-indigo-800">
                                 {profile?.email?.charAt(0).toUpperCase()}
                             </div>
                         </div>
@@ -360,12 +364,12 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                 </div>
 
                 {/* Content Body (Register View) */}
-                <div className="flex-1 overflow-hidden p-4 md:p-6">
+                <div className="flex-1 overflow-hidden p-3 md:p-6">
                     {activeTab === 'register' && (
-                        <div className="h-full flex flex-col lg:flex-row gap-6">
-                            {/* Products Side */}
-                            <div className="flex-1 flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                                <div className="p-4 border-b border-slate-100 flex gap-4">
+                        <div className="h-full flex flex-col lg:flex-row gap-4 lg:gap-6">
+                            {/* ─── Products Panel ─── */}
+                            <div className={`flex-1 flex flex-col bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm ${mobilePanel !== 'products' ? 'hidden lg:flex' : 'flex'}`}>
+                                <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex gap-4">
                                     <div className="relative flex-1">
                                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                         <input
@@ -374,46 +378,46 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                                             placeholder="Search products..."
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
-                                            className="w-full bg-slate-50 border border-slate-200 focus:border-emerald-500 rounded-xl py-3 pl-10 pr-4 text-xs font-bold outline-none transition-all"
+                                            className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-600 focus:border-emerald-500 rounded-xl py-3 pl-10 pr-4 text-xs font-bold outline-none transition-all dark:text-white"
                                         />
                                     </div>
-                                    <div className="flex items-center gap-2 px-4 bg-slate-50 rounded-xl border border-slate-200">
+                                    <div className="flex items-center gap-2 px-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-600">
                                         <Package size={16} className="text-slate-400" />
-                                        <span className="text-xs font-black text-slate-700">{filteredProducts.length}</span>
+                                        <span className="text-xs font-black text-slate-700 dark:text-slate-300">{filteredProducts.length}</span>
                                     </div>
                                 </div>
 
-                                <div className="flex-1 overflow-y-auto p-4 bg-slate-50/50">
-                                    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                <div className="flex-1 overflow-y-auto p-3 md:p-4 bg-slate-50/50 dark:bg-slate-900/30">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
                                         {filteredProducts.map(product => (
                                             <button
                                                 key={product.id}
                                                 onClick={() => addToCart(product)}
-                                                className="group bg-white rounded-xl p-3 border border-slate-200 hover:border-emerald-500 hover:shadow-md transition-all text-left flex flex-col h-full"
+                                                className="group bg-white dark:bg-slate-700/50 rounded-xl p-3 border border-slate-200 dark:border-slate-600 hover:border-emerald-500 dark:hover:border-emerald-500 hover:shadow-md transition-all text-left flex flex-col h-full"
                                             >
-                                                <div className="w-full aspect-square rounded-lg bg-slate-100 mb-3 overflow-hidden relative">
+                                                <div className="w-full aspect-square rounded-lg bg-slate-100 dark:bg-slate-800 mb-3 overflow-hidden relative">
                                                     {product.image_url ? (
                                                         <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                                                     ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-slate-300 font-black text-xl">IMG</div>
+                                                        <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-600 font-black text-xl">IMG</div>
                                                     )}
                                                     <div className="absolute top-2 right-2 bg-slate-900/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded backdrop-blur-sm">
                                                         {product.stock_quantity}
                                                     </div>
                                                 </div>
-                                                <h3 className="font-bold text-slate-800 text-xs leading-snug line-clamp-2 mb-1 group-hover:text-emerald-600 transition-colors">{product.name}</h3>
-                                                <p className="text-[10px] font-medium text-slate-400 mb-2">{product.sku}</p>
-                                                <div className="mt-auto font-black text-sm text-slate-900">{formatPrice(product.price)}</div>
+                                                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-xs leading-snug line-clamp-2 mb-1 group-hover:text-emerald-600 transition-colors uppercase">{product.name}</h3>
+                                                <p className="text-[10px] font-medium text-slate-400 mb-2 uppercase">{product.sku}</p>
+                                                <div className="mt-auto font-black text-sm text-slate-900 dark:text-white">{formatPrice(product.price)}</div>
                                             </button>
                                         ))}
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Cart Side */}
-                            <div className="w-full lg:w-[400px] bg-white rounded-2xl border border-slate-200 flex flex-col shadow-xl shadow-slate-200/50 h-[calc(100vh-140px)] lg:h-auto">
-                                <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-t-2xl">
-                                    <h2 className="text-sm font-black uppercase tracking-wide text-slate-900 flex items-center gap-2">
+                            {/* ─── Cart Panel ─── */}
+                            <div className={`w-full lg:w-[380px] bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 ${mobilePanel !== 'cart' ? 'hidden lg:flex' : 'flex'} h-full`}>
+                                <div className="p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/30 rounded-t-2xl">
+                                    <h2 className="text-sm font-black uppercase tracking-wide text-slate-900 dark:text-white flex items-center gap-2">
                                         <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                                         Current Order
                                     </h2>
@@ -424,21 +428,21 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
 
                                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                                     {cart.map(item => (
-                                        <div key={item.id} className="flex gap-3 bg-white border border-slate-100 p-2 rounded-xl group hover:border-slate-200 transition-all">
+                                        <div key={item.id} className="flex gap-3 bg-white dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 p-2 rounded-xl group hover:border-slate-200 transition-all">
                                             <div className="w-12 h-12 bg-slate-100 rounded-lg shrink-0 overflow-hidden">
                                                 <img src={item.image_url} className="w-full h-full object-cover" />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-start">
-                                                    <p className="text-xs font-bold text-slate-900 truncate pr-2">{item.name}</p>
-                                                    <p className="text-xs font-black text-slate-900">{formatPrice(item.price * item.quantity)}</p>
+                                                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate pr-2 uppercase">{item.name}</p>
+                                                    <p className="text-xs font-black text-slate-900 dark:text-white">{formatPrice(item.price * item.quantity)}</p>
                                                 </div>
                                                 <div className="flex items-center justify-between mt-2">
                                                     <p className="text-[10px] text-slate-400">{formatPrice(item.price)} x {item.quantity}</p>
-                                                    <div className="flex items-center gap-1 bg-slate-50 rounded-lg p-0.5 border border-slate-100">
-                                                        <button onClick={() => updateQuantity(item.id, -1)} className="p-1 hover:bg-white rounded shadow-sm text-slate-500"><Minus size={10} /></button>
-                                                        <span className="text-[10px] font-bold w-4 text-center">{item.quantity}</span>
-                                                        <button onClick={() => updateQuantity(item.id, 1)} className="p-1 hover:bg-white rounded shadow-sm text-slate-500"><Plus size={10} /></button>
+                                                    <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-900 rounded-lg p-0.5 border border-slate-100 dark:border-slate-700">
+                                                        <button onClick={() => updateQuantity(item.id, -1)} className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded shadow-sm text-slate-500"><Minus size={10} /></button>
+                                                        <span className="text-[10px] font-bold w-4 text-center dark:text-white">{item.quantity}</span>
+                                                        <button onClick={() => updateQuantity(item.id, 1)} className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded shadow-sm text-slate-500"><Plus size={10} /></button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -452,19 +456,19 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                                     )}
                                 </div>
 
-                                <div className="p-5 bg-slate-50 border-t border-slate-100 rounded-b-2xl">
+                                <div className="p-5 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 rounded-b-2xl">
                                     <div className="space-y-2 mb-4">
                                         <div className="flex justify-between text-xs text-slate-500">
                                             <span>Subtotal</span>
-                                            <span className="font-bold">{formatPrice(total)}</span>
+                                            <span className="font-bold dark:text-slate-300">{formatPrice(total)}</span>
                                         </div>
                                         <div className="flex justify-between text-xs text-slate-500">
                                             <span>Tax</span>
-                                            <span className="font-bold">$0.00</span>
+                                            <span className="font-bold dark:text-slate-300">$0.00</span>
                                         </div>
-                                        <div className="flex justify-between text-lg font-black text-slate-900 pt-2 border-t border-slate-200">
+                                        <div className="flex justify-between text-lg font-black text-slate-900 dark:text-white pt-2 border-t border-slate-200 dark:border-slate-700">
                                             <span>Total</span>
-                                            <span className="text-emerald-600">{formatPrice(total)}</span>
+                                            <span className="text-emerald-600 dark:text-emerald-400">{formatPrice(total)}</span>
                                         </div>
                                     </div>
                                     <button
@@ -481,114 +485,138 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                 </div>
             </div>
 
-            {/* Checkout Modal */}
-            {checkoutModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white w-full max-w-md rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 border border-slate-200">
-                        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Checkout</h3>
-                            <button onClick={() => setCheckoutModal(false)} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
-                        </div>
-                        <div className="p-6 space-y-6">
-                            <div className="grid grid-cols-3 gap-3">
-                                {[
-                                    { id: 'cash', label: 'Cash', icon: <Banknote size={20} /> },
-                                    { id: 'card', label: 'Card', icon: <CreditCard size={20} /> },
-                                    { id: 'transfer', label: 'Other', icon: <User size={20} /> }
-                                ].map(method => (
-                                    <button
-                                        key={method.id}
-                                        onClick={() => setPaymentMethod(method.id as any)}
-                                        className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${paymentMethod === method.id ? 'border-emerald-500 bg-emerald-50 text-emerald-600' : 'border-slate-100 bg-slate-50 text-slate-400'}`}
-                                    >
-                                        {method.icon}
-                                        <span className="text-[10px] font-black uppercase">{method.label}</span>
-                                    </button>
-                                ))}
+            {/* ─── Mobile Floating Cart Toggle ─── */}
+            <div className="lg:hidden fixed bottom-6 right-6 z-50">
+                <button
+                    onClick={() => setMobilePanel(mobilePanel === 'products' ? 'cart' : 'products')}
+                    className="relative w-14 h-14 bg-slate-900 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white rounded-2xl shadow-2xl shadow-slate-900/40 flex items-center justify-center active:scale-95 transition-all"
+                >
+                    {mobilePanel === 'products' ? <ShoppingCart size={22} /> : <Package size={22} />}
+                    {mobilePanel === 'products' && cart.length > 0 && (
+                        <span className="absolute -top-2 -right-2 min-w-[22px] h-[22px] px-1 bg-emerald-500 dark:bg-white dark:text-emerald-600 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-lg">
+                            {cart.reduce((s, i) => s + i.quantity, 0)}
+                        </span>
+                    )}
+                </button>
+            </div>
+
+            {
+                checkoutModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-700">
+                            <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                                <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Checkout</h3>
+                                <button onClick={() => setCheckoutModal(false)} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
                             </div>
-
-                            <div className="text-center py-4">
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Amount Due</p>
-                                <p className="text-4xl font-black text-slate-900 mt-1">{formatPrice(total)}</p>
-                            </div>
-
-                            <button onClick={handleCheckout} disabled={submitting} className="w-full py-4 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200">
-                                {submitting ? 'Processing...' : 'Complete Sale'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Success Modal & Receipt - Simplified */}
-            {/* Success Modal & Receipt - Professional Design */}
-            {orderComplete && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center px-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
-                    <div className="bg-white w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-                        <div className="bg-emerald-500 p-6 text-center text-white shrink-0">
-                            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
-                                <CheckCircle size={24} />
-                            </div>
-                            <h2 className="text-xl font-black uppercase tracking-tight">Payment Success</h2>
-                        </div>
-
-                        <div className="p-6 overflow-y-auto bg-slate-50 flex flex-col items-center">
-                            {/* Receipt Container - This is captured for PDF */}
-                            <div id="printable-receipt" className="bg-white p-6 w-full shadow-sm border border-gray-100 text-center relative mb-6">
-                                {/* Receipt Header */}
-                                <div className="border-b-2 border-dashed border-gray-200 pb-4 mb-4 text-center">
-                                    <h3 className="font-black text-slate-900 uppercase text-lg leading-none mb-1">{shopName || 'Store Receipt'}</h3>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{new Date().toLocaleString()}</p>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Order #{orderComplete.order_number}</p>
-                                </div>
-
-                                {/* Items List */}
-                                <div className="space-y-3 mb-4 text-left min-h-[60px]">
-                                    {orderComplete.items?.map((item: any, idx: number) => (
-                                        <div key={idx} className="flex justify-between items-start text-xs font-bold text-slate-700">
-                                            <div className="flex flex-col">
-                                                <span>{item.name}</span>
-                                                <span className="text-[10px] text-slate-400">x{item.quantity} @ {formatPrice(item.price)}</span>
-                                            </div>
-                                            <span>{formatPrice(item.price * item.quantity)}</span>
-                                        </div>
+                            <div className="p-6 space-y-6">
+                                <div className="grid grid-cols-3 gap-3">
+                                    {[
+                                        { id: 'cash', label: 'Cash', icon: <Banknote size={20} /> },
+                                        { id: 'card', label: 'Card', icon: <CreditCard size={20} /> },
+                                        { id: 'transfer', label: 'Other', icon: <User size={20} /> }
+                                    ].map(method => (
+                                        <button
+                                            key={method.id}
+                                            onClick={() => setPaymentMethod(method.id as any)}
+                                            className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${paymentMethod === method.id ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-400'}`}
+                                        >
+                                            {method.icon}
+                                            <span className="text-[10px] font-black uppercase">{method.label}</span>
+                                        </button>
                                     ))}
                                 </div>
 
-                                {/* Totals */}
-                                <div className="border-t-2 border-dashed border-gray-200 pt-4 space-y-1">
-                                    <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                        <span>Subtotal</span>
-                                        <span>{formatPrice(orderComplete.subtotal)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-base font-black text-slate-900 uppercase tracking-tight mt-2">
-                                        <span>Total Paid</span>
-                                        <span>{formatPrice(orderComplete.total)}</span>
-                                    </div>
+                                <div className="text-center py-4">
+                                    <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Amount Due</p>
+                                    <p className="text-4xl font-black text-slate-900 dark:text-white mt-1">{formatPrice(total)}</p>
                                 </div>
 
-                                {/* Footer */}
-                                <div className="mt-6 pt-4 border-t border-gray-100 text-center">
-                                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Thank you for your business!</p>
-                                </div>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="grid grid-cols-2 gap-3 w-full">
-                                <button onClick={handleDownloadReceipt} className="py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-black transition-all flex items-center justify-center gap-2">
-                                    <Download size={16} /> Save PDF
-                                </button>
-                                <button onClick={() => window.print()} className="py-3 bg-white border border-gray-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-gray-50 transition-all flex items-center justify-center gap-2">
-                                    <Printer size={16} /> Print
-                                </button>
-                                <button onClick={() => setOrderComplete(null)} className="col-span-2 py-3 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-emerald-100 transition-all">
-                                    Start New Order
+                                <button onClick={handleCheckout} disabled={submitting} className="w-full py-4 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200">
+                                    {submitting ? 'Processing...' : 'Complete Sale'}
                                 </button>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+
+            {/* Success Modal & Receipt - Simplified */}
+            {/* Success Modal & Receipt - Professional Design */}
+            {
+                orderComplete && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center px-4 bg-slate-900/50 dark:bg-black/70 backdrop-blur-sm animate-in fade-in">
+                        <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                            <div className="bg-emerald-500 p-6 text-center text-white shrink-0 relative">
+                                <button
+                                    onClick={() => setOrderComplete(null)}
+                                    className="absolute top-4 right-4 w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-all"
+                                >
+                                    <X size={16} />
+                                </button>
+                                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
+                                    <CheckCircle size={24} />
+                                </div>
+                                <h2 className="text-xl font-black uppercase tracking-tight">Payment Success</h2>
+                            </div>
+
+                            <div className="p-6 overflow-y-auto bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center">
+                                {/* Receipt Container - This is captured for PDF */}
+                                <div id="printable-receipt" className="bg-white p-6 w-full shadow-sm border border-gray-100 text-center relative mb-6">
+                                    {/* Receipt Header */}
+                                    <div className="border-b-2 border-dashed border-gray-200 pb-4 mb-4 text-center">
+                                        <h3 className="font-black text-slate-900 uppercase text-lg leading-none mb-1">{shopName || 'Store Receipt'}</h3>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{new Date().toLocaleString()}</p>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Order #{orderComplete.order_number}</p>
+                                    </div>
+
+                                    {/* Items List */}
+                                    <div className="space-y-3 mb-4 text-left min-h-[60px]">
+                                        {orderComplete.items?.map((item: any, idx: number) => (
+                                            <div key={idx} className="flex justify-between items-start text-xs font-bold text-slate-700">
+                                                <div className="flex flex-col">
+                                                    <span>{item.name}</span>
+                                                    <span className="text-[10px] text-slate-400">x{item.quantity} @ {formatPrice(item.price)}</span>
+                                                </div>
+                                                <span>{formatPrice(item.price * item.quantity)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Totals */}
+                                    <div className="border-t-2 border-dashed border-gray-200 pt-4 space-y-1">
+                                        <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            <span>Subtotal</span>
+                                            <span>{formatPrice(orderComplete.subtotal)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-base font-black text-slate-900 uppercase tracking-tight mt-2">
+                                            <span>Total Paid</span>
+                                            <span>{formatPrice(orderComplete.total)}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Footer */}
+                                    <div className="mt-6 pt-4 border-t border-gray-100 text-center">
+                                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Thank you for your business!</p>
+                                    </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="grid grid-cols-2 gap-3 w-full">
+                                    <button onClick={handleDownloadReceipt} className="py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-black transition-all flex items-center justify-center gap-2">
+                                        <Download size={16} /> Save PDF
+                                    </button>
+                                    <button onClick={() => window.print()} className="py-3 bg-white border border-gray-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-gray-50 transition-all flex items-center justify-center gap-2">
+                                        <Printer size={16} /> Print
+                                    </button>
+                                    <button onClick={() => setOrderComplete(null)} className="col-span-2 py-3 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-emerald-100 transition-all">
+                                        Start New Order
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+        </div >
     );
 }

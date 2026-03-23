@@ -56,7 +56,7 @@ export function PreRegisterPage() {
 
     if (success) {
         return (
-            <div className="min-h-screen bg-[#fcfcfc] dark:bg-slate-950 flex items-center justify-center p-4 font-sans antialiased">
+            <div className="min-h-screen bg-[#fcfcfc] dark:bg-slate-950 flex items-center justify-center p-4 font-roboto antialiased">
                 <div className="max-w-sm w-full bg-white dark:bg-slate-900 rounded-lg shadow-sm p-6 text-center border border-gray-100 dark:border-slate-800">
                     <div className="flex justify-center mb-4">
                         <CheckCircle className="h-8 w-8 text-green-500" />
@@ -77,7 +77,7 @@ export function PreRegisterPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#fcfcfc] dark:bg-slate-950 flex flex-col items-center justify-center p-4 font-sans antialiased">
+        <div className="min-h-screen bg-[#fcfcfc] dark:bg-slate-950 flex flex-col items-center justify-center p-4 font-roboto antialiased">
             <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden p-6 sm:p-8">
                 <div className="text-center mb-6">
                     <div className="flex justify-center mb-4">
@@ -195,7 +195,7 @@ export function PreRegisterPage() {
                     </button>
                 </form>
 
-                <p className="mt-6 text-center text-[10px] text-gray-400 font-medium font-mono uppercase tracking-tighter">
+                <p className="mt-6 text-center text-[10px] text-gray-400 font-medium font-roboto uppercase tracking-tighter">
                     © {new Date().getFullYear()} {settings.site_name} · Exclusive Launch
                 </p>
             </div>

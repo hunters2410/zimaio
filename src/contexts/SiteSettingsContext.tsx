@@ -10,13 +10,16 @@ interface SiteSettings {
     sales_email: string;
     contact_phone: string;
     office_address: string;
-    facebook_url: string;
-    twitter_url: string;
-    instagram_url: string;
+    // Social media — keys match Footer.tsx reads
+    social_facebook: string;
+    social_twitter: string;
+    social_instagram: string;
+    social_whatsapp: string;
     font_family: string;
     maintenance_mode: string;
     maintenance_end_time: string;
     ga_id: string;
+    custom_footer_text?: string;
 }
 
 interface SiteSettingsContextType {
@@ -34,9 +37,10 @@ const defaultSettings: SiteSettings = {
     sales_email: 'sales@zimaio.com',
     contact_phone: '+263 77 123 4567',
     office_address: '123 Samora Machel Ave, Harare',
-    facebook_url: 'https://facebook.com/zimaio',
-    twitter_url: 'https://twitter.com/zimaio',
-    instagram_url: 'https://instagram.com/zimaio',
+    social_facebook: '',
+    social_twitter: '',
+    social_instagram: '',
+    social_whatsapp: '',
     font_family: 'Inter',
     maintenance_mode: 'false',
     maintenance_end_time: '',

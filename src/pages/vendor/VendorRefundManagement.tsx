@@ -5,8 +5,10 @@ import {
     RotateCcw,
     Search,
     CheckCircle,
-    XCircle
+    XCircle,
+    Filter
 } from 'lucide-react';
+import { Pagination } from '../../components/Pagination';
 
 type RefundStatus = 'pending' | 'approved' | 'rejected' | 'processed';
 
@@ -34,10 +36,13 @@ export function VendorRefundManagement() {
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const itemsPerPage = 10;
 
     useEffect(() => {
         fetchRefunds();
-    }, [profile]);
+    }, [profile, currentPage, filter, searchQuery]);
 
     const fetchRefunds = async () => {
         if (!profile?.id) return;
@@ -52,7 +57,7 @@ export function VendorRefundManagement() {
 
             if (!vendor) return;
 
-            const { data, error } = await supabase
+            let query = supabase
                 .from('order_refunds')
                 .select(`
           *,
@@ -63,12 +68,24 @@ export function VendorRefundManagement() {
             full_name,
             email
           )
-        `)
-                .eq('vendor_id', vendor.id)
-                .order('created_at', { ascending: false });
+        `, { count: 'exact' })
+                .eq('vendor_id', vendor.id);
+
+            if (filter !== 'all') {
+                query = query.eq('status', filter);
+            }
+
+            if (searchQuery) {
+                query = query.or(`reason.ilike.%${searchQuery}%,profiles.full_name.ilike.%${searchQuery}%`);
+            }
+
+            const { data, error, count } = await query
+                .order('created_at', { ascending: false })
+                .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
 
             if (error) throw error;
             setRefunds(data || []);
+            setTotalItems(count || 0);
         } catch (error) {
             console.error('Error fetching refunds:', error);
         } finally {
@@ -97,14 +114,7 @@ export function VendorRefundManagement() {
         }
     };
 
-    const filteredRefunds = refunds.filter(refund => {
-        const matchesFilter = filter === 'all' || refund.status === filter;
-        const matchesSearch =
-            refund.orders?.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            refund.profiles?.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            refund.profiles?.email.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesFilter && matchesSearch;
-    });
+    const filteredRefunds = refunds; // Now handled server-side
 
     const getStatusColor = (status: RefundStatus) => {
         switch (status) {
@@ -246,6 +256,15 @@ export function VendorRefundManagement() {
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <div className="mt-6">
+                <Pagination
+                    currentPage={currentPage}
+                    totalItems={totalItems}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={setCurrentPage}
+                />
             </div>
         </div>
     );

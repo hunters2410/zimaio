@@ -21,6 +21,7 @@ import {
   RefreshCcw,
   ShieldCheck
 } from 'lucide-react';
+import { Pagination as CustomPagination } from '../../components/Pagination';
 interface Wallet {
   id: string;
   user_id: string;
@@ -70,6 +71,15 @@ export function WalletManagement() {
   const [adjustDescription, setAdjustDescription] = useState('');
   const [processingWithdrawal, setProcessingWithdrawal] = useState<string | null>(null);
 
+  // Pagination states
+  const [walletPage, setWalletPage] = useState(1);
+  const [walletTotal, setWalletTotal] = useState(0);
+  const walletLimit = 10;
+
+  const [withdrawalPage, setWithdrawalPage] = useState(1);
+  const [withdrawalTotal, setWithdrawalTotal] = useState(0);
+  const withdrawalLimit = 10;
+
   const [stats, setStats] = useState({
     totalBalanceUSD: 0,
     totalBalanceZIG: 0,
@@ -82,7 +92,13 @@ export function WalletManagement() {
   useEffect(() => {
     ensureAdminWallet();
     fetchData();
-  }, []);
+  }, [walletPage, withdrawalPage, activeTab, searchTerm]);
+
+  // Reset pages when filters change
+  useEffect(() => {
+    setWalletPage(1);
+    setWithdrawalPage(1);
+  }, [activeTab, searchTerm]);
 
   const ensureAdminWallet = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -210,7 +226,7 @@ export function WalletManagement() {
 
   const fetchWallets = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('profiles')
         .select(`
           email, 
@@ -218,8 +234,19 @@ export function WalletManagement() {
           role,
           id,
           wallets (*)
-        `)
-        .order('full_name', { ascending: true });
+        `, { count: 'exact' });
+
+      if (activeTab !== 'ALL') {
+        query = query.eq('role', activeTab);
+      }
+
+      if (searchTerm) {
+        query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
+      }
+
+      const { data, error, count } = await query
+        .order('full_name', { ascending: true })
+        .range((walletPage - 1) * walletLimit, walletPage * walletLimit - 1);
 
       if (error) throw error;
 
@@ -243,6 +270,7 @@ export function WalletManagement() {
       });
 
       setWallets(formatted);
+      setWalletTotal(count || 0);
 
       // Identify Platform Revenue (Actual Earnings) directly from Orders to match Admin Dashboard
       const { data: ordersData, error: ordersError } = await supabase
@@ -286,13 +314,20 @@ export function WalletManagement() {
 
   const fetchWithdrawalRequests = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('withdrawal_requests')
         .select(`
           *,
           profiles!withdrawal_requests_vendor_id_fkey(email, full_name)
-        `)
-        .order('requested_at', { ascending: false });
+        `, { count: 'exact' });
+
+      if (searchTerm) {
+        query = query.or(`vendor_name.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%`);
+      }
+
+      const { data, error, count } = await query
+        .order('requested_at', { ascending: false })
+        .range((withdrawalPage - 1) * withdrawalLimit, withdrawalPage * withdrawalLimit - 1);
 
       if (error) throw error;
 
@@ -303,6 +338,7 @@ export function WalletManagement() {
       }));
 
       setWithdrawalRequests(formatted);
+      setWithdrawalTotal(count || 0);
       const pendingCount = formatted.filter((req: any) => req.status === 'pending').length;
       setStats(prev => ({ ...prev, pendingWithdrawals: pendingCount }));
     } catch (error: any) {
@@ -440,15 +476,6 @@ export function WalletManagement() {
     }
   };
 
-  const filteredWallets = wallets.filter(wallet => {
-    const matchesSearch =
-      wallet.user_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      wallet.user_name?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesTab = activeTab === 'ALL' || wallet.user_role === activeTab;
-
-    return matchesSearch && matchesTab;
-  });
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -619,6 +646,15 @@ export function WalletManagement() {
                 </div>
               ))}
             </div>
+
+            <div className="mt-8 flex justify-center">
+              <CustomPagination
+                currentPage={withdrawalPage}
+                totalItems={withdrawalTotal}
+                itemsPerPage={withdrawalLimit}
+                onPageChange={setWithdrawalPage}
+              />
+            </div>
           </div>
         )
       }
@@ -668,7 +704,7 @@ export function WalletManagement() {
               </tr>
             </thead>
             <tbody className="divide-y-2 divide-slate-50">
-              {filteredWallets.map((wallet) => (
+              {wallets.map((wallet) => (
                 <tr key={wallet.id} className="hover:bg-gray-50 transition-all group">
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-3">
@@ -720,7 +756,7 @@ export function WalletManagement() {
                   </td>
                 </tr>
               ))}
-              {filteredWallets.length === 0 && (
+              {wallets.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-8 py-20 text-center">
                     <Search className="w-12 h-12 text-slate-100 dark:text-slate-800 mx-auto mb-4" />
@@ -730,6 +766,14 @@ export function WalletManagement() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="p-8 border-t-2 border-slate-50 flex justify-center">
+          <CustomPagination
+            currentPage={walletPage}
+            totalItems={walletTotal}
+            itemsPerPage={walletLimit}
+            onPageChange={setWalletPage}
+          />
         </div>
       </div>
 

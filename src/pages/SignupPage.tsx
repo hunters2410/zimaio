@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import { supabase } from '../lib/supabase';
+import { dispatchTrigger } from '../lib/eventDispatcher';
 import { PuzzleCaptcha } from '../components/PuzzleCaptcha';
 
 export function SignupPage() {
@@ -83,6 +84,14 @@ export function SignupPage() {
           ]);
         }
       }
+
+      // Dispatch "user_registered" to the new universal trigger system
+      dispatchTrigger('user_registered', {
+        email: email,
+        customer_name: fullName.split(' ')[0] || fullName,
+        user_name: fullName.split(' ')[0] || fullName,
+      });
+
       navigate('/');
     }
   };
@@ -155,19 +164,6 @@ export function SignupPage() {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              I want to
-            </label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-gray-900 dark:text-white transition-all outline-none"
-            >
-              <option value="customer">Shop as a Customer</option>
-              <option value="vendor">Sell as a Vendor</option>
-            </select>
-          </div>
 
           {role === 'customer' && (
             <div className="space-y-3 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-700">

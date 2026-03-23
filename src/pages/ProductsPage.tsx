@@ -7,6 +7,8 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useCart } from '../contexts/CartContext';
 import { useWishlist } from '../contexts/WishlistContext';
 
+import { AdSpace } from '../components/AdSpace';
+
 interface Product {
   id: string;
   name: string;
@@ -24,19 +26,12 @@ interface Category {
   slug: string;
 }
 
-interface VendorAd {
-  id: string;
-  title: string;
-  image_url: string;
-  link_url: string;
-}
 
 export function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const categorySlug = searchParams.get('category');
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [sidebarAd, setSidebarAd] = useState<VendorAd | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categorySearch, setCategorySearch] = useState('');
@@ -48,7 +43,7 @@ export function ProductsPage() {
 
   useEffect(() => {
     const fetchContent = async () => {
-      const [productsRes, categoriesRes, adsRes] = await Promise.all([
+      const [productsRes, categoriesRes] = await Promise.all([
         supabase
           .from('products')
           .select('*')
@@ -57,16 +52,7 @@ export function ProductsPage() {
         supabase
           .from('categories')
           .select('*')
-          .order('name'),
-        supabase
-          .from('vendor_ads')
-          .select('*')
-          .eq('status', 'active')
-          .eq('ad_type', 'sidebar')
-          .lte('start_date', new Date().toISOString())
-          .gte('end_date', new Date().toISOString())
-          .limit(1)
-          .maybeSingle()
+          .order('name')
       ]);
 
       if (categoriesRes.data) {
@@ -79,10 +65,6 @@ export function ProductsPage() {
         }
       }
       if (productsRes.data) setProducts(productsRes.data);
-      if (adsRes.data) {
-        setSidebarAd(adsRes.data);
-        await supabase.rpc('increment_ad_impressions', { ad_ids: [adsRes.data.id] });
-      }
       setLoading(false);
     };
 
@@ -131,9 +113,6 @@ export function ProductsPage() {
     c.name.toLowerCase().includes(categorySearch.toLowerCase())
   );
 
-  const handleAdClick = async (adId: string) => {
-    await supabase.rpc('increment_ad_clicks', { ad_id: adId });
-  };
 
   const handleFindSimilar = (categoryId: string) => {
     const category = categories.find(c => c.id === categoryId);
@@ -214,22 +193,7 @@ export function ProductsPage() {
               </div>
             </div>
 
-            {sidebarAd && (
-              <a
-                href={sidebarAd.link_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => handleAdClick(sidebarAd.id)}
-                className="block bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 group overflow-hidden"
-              >
-                <div className="relative aspect-[4/5] rounded-lg overflow-hidden mb-3">
-                  <img src={sidebarAd.image_url} alt={sidebarAd.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                  <div className="absolute top-2 right-2 px-2 py-1 bg-black/50 backdrop-blur-md rounded text-white text-[8px] font-black uppercase tracking-widest">Sponsored</div>
-                </div>
-                <h4 className="font-bold text-gray-900 dark:text-white text-sm line-clamp-1 px-2 mb-1 uppercase tracking-tight">{sidebarAd.title}</h4>
-                <p className="text-[10px] text-green-600 dark:text-green-400 font-black px-2 uppercase tracking-widest">Shop Now</p>
-              </a>
-            )}
+            <AdSpace type="sidebar" limit={2} />
           </aside>
 
           <main className="flex-1">

@@ -62,7 +62,7 @@ export function AdminDashboard() {
         supabase.from('vendor_profiles').select('id', { count: 'exact', head: true }).eq('is_approved', false),
         supabase.from('vendor_profiles').select('id', { count: 'exact', head: true }).eq('kyc_status', 'pending'),
         supabase.from('fraud_detections').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('site_visits').select('id', { count: 'exact', head: true })
+        Promise.resolve({ count: 0 }) // supabase.from('site_visits').select('id', { count: 'exact', head: true })
       ]);
 
       const totalRevenue = (ordersRes.data || []).reduce((sum, order) => sum + Number(order.total), 0);
@@ -269,8 +269,8 @@ export function AdminDashboard() {
                   }
                 }}
                 className={`flex items-center gap-2 w-full text-left px-3 py-2 ${settings.maintenance_mode === 'true'
-                    ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400'
-                    : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400'
+                  ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400'
+                  : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400'
                   } rounded-lg text-sm font-bold transition`}
               >
                 <Construction className="h-4 w-4" />

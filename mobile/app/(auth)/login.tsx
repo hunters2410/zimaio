@@ -34,14 +34,21 @@ export default function LoginScreen() {
             if (error) throw error;
 
             if (data.user) {
-                // Check user role from profiles table (consistent with web app)
+                // Check user role and status from profiles table (consistent with web app)
                 const { data: profile, error: profileError } = await supabase
                     .from('profiles')
-                    .select('role')
+                    .select('role, is_active')
                     .eq('id', data.user.id)
                     .single();
 
                 if (!profileError && profile) {
+                    // Check if account is active
+                    if (profile.is_active === false) {
+                        await supabase.auth.signOut();
+                        Alert.alert('Login Failed', 'Account is deactivated. Please contact support.');
+                        return;
+                    }
+
                     if (profile.role === 'vendor') {
                         // Redirect to Vendor Portal
                         router.replace('/vendor-portal' as any);

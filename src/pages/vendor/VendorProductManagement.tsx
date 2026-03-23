@@ -21,6 +21,7 @@ import {
     Image,
     X,
 } from 'lucide-react';
+import { Pagination } from '../../components/Pagination';
 
 interface Product {
     id: string;
@@ -72,7 +73,15 @@ export function VendorProductManagement() {
     const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all');
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const itemsPerPage = 12;
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+    // Package Limit State
+    const [packageLimit, setPackageLimit] = useState<number | null>(null);
+    const [currentProductCount, setCurrentProductCount] = useState(0);
+    const isAtLimit = packageLimit !== null && currentProductCount >= packageLimit;
 
     // Add Product State
     const [vendorId, setVendorId] = useState<string | null>(null);
@@ -106,7 +115,7 @@ export function VendorProductManagement() {
             newParams.delete('add');
             setSearchParams(newParams);
         }
-    }, []);
+    }, [currentPage, searchQuery, statusFilter, stockFilter, categoryFilter]);
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isEditing: boolean) => {
         const files = e.target.files;
@@ -238,35 +247,70 @@ export function VendorProductManagement() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            const [productsRes, categoriesRes, brandsRes, vendorRes] = await Promise.all([
-                supabase
+            const { data: vendor } = await supabase
+                .from('vendor_profiles')
+                .select('id')
+                .eq('user_id', user.id)
+                .single();
+
+            if (vendor) {
+                setVendorId(vendor.id);
+
+                // Fetch package limit and current count
+                const [limitRes, countRes] = await Promise.all([
+                    supabase
+                        .rpc('get_vendor_package_limit', { vendor_user_id: user.id }),
+                    supabase
+                        .from('products')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('vendor_id', vendor.id)
+                ]);
+
+                if (!limitRes.error) setPackageLimit(limitRes.data);
+                if (!countRes.error) setCurrentProductCount(countRes.count || 0);
+
+                let query = supabase
                     .from('products')
-                    .select('*, category:categories(name)')
-                    .order('created_at', { ascending: false }),
-                supabase
-                    .from('categories')
-                    .select('id, name')
-                    .eq('is_active', true),
-                supabase
-                    .from('brands')
-                    .select('id, name')
-                    .eq('is_active', true),
-                supabase
-                    .from('vendor_profiles')
-                    .select('id')
-                    .eq('user_id', user.id)
-                    .single()
-            ]);
+                    .select('*, category:categories(name)', { count: 'exact' })
+                    .eq('vendor_id', vendor.id);
 
-            if (vendorRes.data) {
-                setVendorId(vendorRes.data.id);
-                // Filter products by vendor if not already handled by RLS
-                const vendorProducts = productsRes.data?.filter(p => p.vendor_id === vendorRes.data.id) || [];
-                setProducts(vendorProducts);
+                if (statusFilter !== 'all') {
+                    query = query.eq('is_active', statusFilter === 'active');
+                }
+
+                if (categoryFilter !== 'all') {
+                    query = query.eq('category_id', categoryFilter);
+                }
+
+                if (stockFilter === 'low') {
+                    query = query.gt('stock_quantity', 0).lte('stock_quantity', 10);
+                } else if (stockFilter === 'out') {
+                    query = query.eq('stock_quantity', 0);
+                }
+
+                if (searchQuery) {
+                    query = query.ilike('name', `%${searchQuery}%`);
+                }
+
+                const [productsRes, categoriesRes, brandsRes] = await Promise.all([
+                    query
+                        .order('created_at', { ascending: false })
+                        .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1),
+                    supabase
+                        .from('categories')
+                        .select('id, name')
+                        .eq('is_active', true),
+                    supabase
+                        .from('brands')
+                        .select('id, name')
+                        .eq('is_active', true)
+                ]);
+
+                setProducts(productsRes.data || []);
+                setTotalItems(productsRes.count || 0);
+                setCategories(categoriesRes.data || []);
+                setBrands(brandsRes.data || []);
             }
-
-            setCategories(categoriesRes.data || []);
-            setBrands(brandsRes.data || []);
         } catch (error) {
             console.error('Error fetching products:', error);
         } finally {
@@ -303,6 +347,7 @@ export function VendorProductManagement() {
             if (error) throw error;
 
             setProducts(prev => [data, ...prev]);
+            setCurrentProductCount(prev => prev + 1);
             setShowAddModal(false);
             setNewProduct({
                 name: '',
@@ -418,6 +463,7 @@ export function VendorProductManagement() {
             if (error) throw error;
 
             setProducts(prev => prev.filter(p => p.id !== productId));
+            setCurrentProductCount(prev => Math.max(0, prev - 1));
             setMessage({ type: 'success', text: 'Product deleted successfully.' });
         } catch (error: any) {
             setMessage({ type: 'error', text: error.message });
@@ -475,34 +521,19 @@ export function VendorProductManagement() {
         setShowEditModal(true);
     };
 
-    const filteredProducts = products.filter(product => {
-        const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (product.sku?.toLowerCase() || '').includes(searchQuery.toLowerCase());
-
-        const matchesStatus = statusFilter === 'all' ||
-            (statusFilter === 'active' && product.is_active) ||
-            (statusFilter === 'inactive' && !product.is_active);
-
-        const matchesStock = stockFilter === 'all' ||
-            (stockFilter === 'low' && product.stock_quantity > 0 && product.stock_quantity <= 10) ||
-            (stockFilter === 'out' && product.stock_quantity === 0);
-
-        const matchesCategory = categoryFilter === 'all' || product.category_id === categoryFilter;
-
-        return matchesSearch && matchesStatus && matchesStock && matchesCategory;
-    });
+    const filteredProducts = products; // Now handled server-side
 
     const getStockStatus = (quantity: number) => {
-        if (quantity === 0) return { label: 'Out of Stock', color: 'text-red-600 bg-red-50 border-red-100', icon: <XCircle className="w-3 h-3" /> };
-        if (quantity <= 10) return { label: 'Low Stock', color: 'text-amber-600 bg-amber-50 border-amber-100', icon: <AlertTriangle className="w-3 h-3" /> };
-        return { label: 'In Stock', color: 'text-emerald-600 bg-emerald-50 border-emerald-100', icon: <CheckCircle className="w-3 h-3" /> };
+        if (quantity === 0) return { label: 'Out of Stock', color: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800/50', icon: <XCircle className="w-3 h-3" /> };
+        if (quantity <= 10) return { label: 'Low Stock', color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800/50', icon: <AlertTriangle className="w-3 h-3" /> };
+        return { label: 'In Stock', color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/50', icon: <CheckCircle className="w-3 h-3" /> };
     };
 
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center h-96 gap-4">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
-                <p className="text-gray-500 text-sm font-medium">Loading your inventory...</p>
+                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Loading your inventory...</p>
             </div>
         );
     }
@@ -511,99 +542,115 @@ export function VendorProductManagement() {
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-xl font-bold text-gray-900">Product Management</h2>
-                    <p className="text-xs text-gray-500 mt-1">Manage your shop inventory, stock levels and visibility.</p>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Product Management</h2>
+                    <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Manage your shop inventory, stock levels and visibility.</p>
+                        {packageLimit !== null && (
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${isAtLimit ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-800' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800'}`}>
+                                Usage: {currentProductCount} / {packageLimit} Products
+                            </span>
+                        )}
+                    </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <div className="bg-white p-1 rounded-xl border border-gray-200 flex shadow-sm">
+                    <div className="bg-white dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 flex shadow-sm">
                         <button
                             onClick={() => setViewMode('table')}
-                            className={`p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-emerald-50 text-emerald-600' : 'text-gray-400 hover:text-gray-600'}`}
+                            className={`p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}
                         >
                             <ListIcon className="w-4 h-4" />
                         </button>
                         <button
                             onClick={() => setViewMode('grid')}
-                            className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-emerald-50 text-emerald-600' : 'text-gray-400 hover:text-gray-600'}`}
+                            className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}
                         >
                             <LayoutGrid className="w-4 h-4" />
                         </button>
                     </div>
                     <button
                         onClick={() => setShowAddModal(true)}
-                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-600/20 active:scale-95"
+                        disabled={isAtLimit}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg active:scale-95 ${isAtLimit
+                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed shadow-none'
+                            : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'}`}
                     >
                         <Plus className="w-4 h-4" />
-                        Add Product
+                        {isAtLimit ? 'Limit Reached' : 'Add Product'}
                     </button>
+                    {isAtLimit && (
+                        <div className="hidden md:flex items-center gap-2 text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-lg border border-amber-100 dark:border-amber-800/50">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            Upgrade to add more
+                        </div>
+                    )}
                 </div>
             </div>
 
             {message && (
-                <div className={`p-3 rounded-xl flex items-center gap-3 text-sm font-medium animate-in fade-in slide-in-from-top-2 ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                <div className={`p-3 rounded-xl flex items-center gap-3 text-sm font-medium animate-in fade-in slide-in-from-top-2 ${message.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-100 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-100 dark:border-red-800'}`}>
                     {message.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
                     {message.text}
-                    <button onClick={() => setMessage(null)} className="ml-auto text-gray-400 hover:text-gray-600">
+                    <button onClick={() => setMessage(null)} className="ml-auto text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
                         <MoreVertical className="w-4 h-4 rotate-90" />
                     </button>
                 </div>
             )}
 
             {/* Filters & Search */}
-            <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-4">
+            <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl p-4 shadow-sm space-y-4">
                 <div className="flex flex-col lg:flex-row gap-4">
                     <div className="relative flex-1 group">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                         <input
                             type="text"
                             placeholder="Search by product name, SKU..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-transparent rounded-xl text-sm focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
+                            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all placeholder:text-slate-400"
                         />
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
                         <div className="relative group">
-                            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value as any)}
-                                className="pl-8 pr-10 py-2.5 bg-gray-50 border border-transparent rounded-xl text-sm font-medium focus:bg-white focus:border-emerald-500 outline-none transition-all appearance-none cursor-pointer"
+                                className="pl-8 pr-10 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 outline-none transition-all appearance-none cursor-pointer"
                             >
                                 <option value="all">All Status</option>
                                 <option value="active">Active</option>
                                 <option value="inactive">Inactive</option>
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
                         </div>
 
                         <div className="relative group">
-                            <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                            <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                             <select
                                 value={stockFilter}
                                 onChange={(e) => setStockFilter(e.target.value as any)}
-                                className="pl-8 pr-10 py-2.5 bg-gray-50 border border-transparent rounded-xl text-sm font-medium focus:bg-white focus:border-emerald-500 outline-none transition-all appearance-none cursor-pointer"
+                                className="pl-8 pr-10 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 outline-none transition-all appearance-none cursor-pointer"
                             >
                                 <option value="all">Stock Levels</option>
                                 <option value="low">Low Stock</option>
                                 <option value="out">Out of Stock</option>
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
                         </div>
 
                         <div className="relative group">
-                            <LayoutGrid className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                            <LayoutGrid className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                             <select
                                 value={categoryFilter}
                                 onChange={(e) => setCategoryFilter(e.target.value)}
-                                className="pl-8 pr-10 py-2.5 bg-gray-50 border border-transparent rounded-xl text-sm font-medium focus:bg-white focus:border-emerald-500 outline-none transition-all appearance-none cursor-pointer"
+                                className="pl-8 pr-10 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 outline-none transition-all appearance-none cursor-pointer"
                             >
                                 <option value="all">Categories</option>
                                 {categories.map(cat => (
                                     <option key={cat.id} value={cat.id}>{cat.name}</option>
                                 ))}
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
                         </div>
 
                         {(searchQuery || statusFilter !== 'all' || stockFilter !== 'all' || categoryFilter !== 'all') && (
@@ -625,28 +672,28 @@ export function VendorProductManagement() {
 
             {/* Product List */}
             {viewMode === 'table' ? (
-                <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+                <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl shadow-sm overflow-hidden text-sm">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <thead>
-                                <tr className="bg-gray-50/50 border-b border-gray-100">
-                                    <th className="px-4 py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Product</th>
-                                    <th className="px-4 py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Category</th>
-                                    <th className="px-4 py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Price</th>
-                                    <th className="px-4 py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Stock</th>
-                                    <th className="px-4 py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
-                                    <th className="px-4 py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                                <tr className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700">
+                                    <th className="px-4 py-2.5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Product</th>
+                                    <th className="px-4 py-2.5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Category</th>
+                                    <th className="px-4 py-2.5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Price</th>
+                                    <th className="px-4 py-2.5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Stock</th>
+                                    <th className="px-4 py-2.5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Status</th>
+                                    <th className="px-4 py-2.5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-50">
+                            <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                                 {filteredProducts.length === 0 ? (
                                     <tr>
                                         <td colSpan={6} className="px-6 py-20 text-center">
                                             <div className="flex flex-col items-center gap-3">
-                                                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center">
-                                                    <Package className="w-8 h-8 text-gray-200" />
+                                                <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center">
+                                                    <Package className="w-8 h-8 text-slate-200 dark:text-slate-700" />
                                                 </div>
-                                                <p className="text-gray-400 text-sm font-medium">No products found matching your criteria</p>
+                                                <p className="text-slate-400 dark:text-slate-500 text-sm font-medium">No products found matching your criteria</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -654,36 +701,36 @@ export function VendorProductManagement() {
                                     filteredProducts.map((product) => {
                                         const stock = getStockStatus(product.stock_quantity);
                                         return (
-                                            <tr key={product.id} className="hover:bg-gray-50/30 group transition-all">
+                                            <tr key={product.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-700/30 group transition-all">
                                                 <td className="px-4 py-2.5">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden shadow-sm shrink-0">
+                                                        <div className="w-10 h-10 bg-slate-100 dark:bg-slate-700 rounded-lg overflow-hidden shadow-sm shrink-0">
                                                             {product.images?.[0] ? (
                                                                 <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
                                                             ) : (
                                                                 <div className="w-full h-full flex items-center justify-center">
-                                                                    <Package className="w-5 h-5 text-gray-300" />
+                                                                    <Package className="w-5 h-5 text-slate-300 dark:text-slate-600" />
                                                                 </div>
                                                             )}
                                                         </div>
                                                         <div>
-                                                            <h4 className="text-xs font-black text-gray-900 leading-none group-hover:text-emerald-600 transition-colors uppercase tracking-tight line-clamp-1">{product.name}</h4>
-                                                            <p className="text-[10px] text-gray-400 font-bold mt-0.5 uppercase tracking-tighter">SKU: {product.sku || 'N/A'}</p>
+                                                            <h4 className="text-xs font-black text-slate-900 dark:text-white leading-none group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors uppercase tracking-tight line-clamp-1">{product.name}</h4>
+                                                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold mt-0.5 uppercase tracking-tighter">SKU: {product.sku || 'N/A'}</p>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-2.5">
-                                                    <span className="text-[10px] font-black text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full uppercase tracking-widest truncate max-w-[100px] inline-block">
+                                                    <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full uppercase tracking-widest truncate max-w-[100px] inline-block">
                                                         {product.category?.name || 'Uncategorized'}
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-2.5">
-                                                    <span className="text-xs font-black text-gray-900">${product.base_price.toFixed(2)}</span>
+                                                    <span className="text-xs font-black text-slate-900 dark:text-white tabular-nums">${product.base_price.toFixed(2)}</span>
                                                 </td>
                                                 <td className="px-4 py-2.5">
                                                     <div className="flex flex-col gap-1">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="text-xs font-black text-gray-900">{product.stock_quantity}</span>
+                                                            <span className="text-xs font-black text-slate-900 dark:text-white tabular-nums">{product.stock_quantity}</span>
                                                             <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-widest ${stock.color}`}>
                                                                 {stock.icon}
                                                                 {stock.label}
@@ -692,11 +739,11 @@ export function VendorProductManagement() {
                                                         <div className="flex gap-1 group-hover:opacity-100 opacity-50 transition-opacity">
                                                             <button
                                                                 onClick={() => updateStock(product.id, product.stock_quantity - 1)}
-                                                                className="w-5 h-5 border border-gray-200 rounded flex items-center justify-center hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all text-xs"
+                                                                className="w-5 h-5 border border-slate-200 dark:border-slate-700 rounded flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 transition-all text-xs"
                                                             >-</button>
                                                             <button
                                                                 onClick={() => updateStock(product.id, product.stock_quantity + 1)}
-                                                                className="w-5 h-5 border border-gray-200 rounded flex items-center justify-center hover:bg-emerald-50 hover:text-emerald-500 hover:border-emerald-200 transition-all text-xs"
+                                                                className="w-5 h-5 border border-slate-200 dark:border-slate-700 rounded flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-500 dark:hover:text-emerald-400 hover:border-emerald-200 dark:hover:border-emerald-800 transition-all text-xs"
                                                             >+</button>
                                                         </div>
                                                     </div>
@@ -705,8 +752,8 @@ export function VendorProductManagement() {
                                                     <button
                                                         onClick={() => toggleProductStatus(product.id, product.is_active)}
                                                         className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all ${product.is_active
-                                                            ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                                                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                                            ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40'
+                                                            : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600'
                                                             }`}
                                                     >
                                                         {product.is_active ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
@@ -717,14 +764,14 @@ export function VendorProductManagement() {
                                                     <div className="flex items-center justify-end gap-1.5">
                                                         <button
                                                             onClick={() => handleEditProductClick(product)}
-                                                            className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                                                            className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all"
                                                             title="Edit Product"
                                                         >
                                                             <Edit2 className="w-3.5 h-3.5" />
                                                         </button>
                                                         <button
                                                             onClick={() => handleDeleteProduct(product.id)}
-                                                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                            className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
                                                             title="Delete Product"
                                                         >
                                                             <Trash2 className="w-3.5 h-3.5" />
@@ -742,21 +789,26 @@ export function VendorProductManagement() {
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filteredProducts.length === 0 ? (
-                        <div className="col-span-full py-20 text-center bg-white rounded-2xl border border-gray-100">
-                            <Package className="w-12 h-12 text-gray-100 mx-auto mb-4" />
-                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">No products found</p>
+                        <div className="col-span-full py-20 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-3xl flex flex-col items-center gap-4">
+                            <div className="w-20 h-20 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center">
+                                <Package className="w-10 h-10 text-slate-200 dark:text-slate-700" />
+                            </div>
+                            <div className="text-center">
+                                <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">No Items Found</h3>
+                                <p className="text-sm text-slate-400 dark:text-slate-500 font-medium">Try adjusting your filters or search query</p>
+                            </div>
                         </div>
                     ) : (
-                        filteredProducts.map(product => {
+                        filteredProducts.map((product) => {
                             const stock = getStockStatus(product.stock_quantity);
                             return (
-                                <div key={product.id} className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:shadow-gray-100 transition-all group">
-                                    <div className="h-48 relative overflow-hidden bg-gray-50">
+                                <div key={product.id} className="group bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:shadow-emerald-500/5 dark:hover:shadow-emerald-900/20 transition-all duration-300">
+                                    <div className="h-48 relative overflow-hidden bg-slate-50 dark:bg-slate-900">
                                         {product.images?.[0] ? (
                                             <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center">
-                                                <Package className="w-12 h-12 text-gray-200" />
+                                                <Package className="w-12 h-12 text-slate-200 dark:text-slate-700" />
                                             </div>
                                         )}
                                         <div className="absolute top-3 left-3 flex flex-col gap-2">
@@ -764,7 +816,10 @@ export function VendorProductManagement() {
                                                 {stock.icon}
                                                 {stock.label}
                                             </div>
-                                            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest shadow-sm backdrop-blur-md border-opacity-50 ${product.is_active ? 'bg-emerald-50/80 text-emerald-600 border-emerald-100' : 'bg-gray-100/80 text-gray-400 border-gray-200'}`}>
+                                            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest shadow-sm backdrop-blur-md border-opacity-50 ${product.is_active
+                                                ? 'bg-emerald-50/80 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800/50'
+                                                : 'bg-slate-100/80 dark:bg-slate-700/80 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-600'
+                                                }`}>
                                                 {product.is_active ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                                                 {product.is_active ? 'Visible' : 'Hidden'}
                                             </div>
@@ -773,25 +828,25 @@ export function VendorProductManagement() {
                                     <div className="p-5">
                                         <div className="flex items-start justify-between mb-2">
                                             <div>
-                                                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">{product.category?.name || 'Uncategorized'}</p>
-                                                <h4 className="text-sm font-black text-gray-900 uppercase tracking-tight line-clamp-1">{product.name}</h4>
+                                                <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">{product.category?.name || 'Uncategorized'}</p>
+                                                <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight line-clamp-1">{product.name}</h4>
                                             </div>
-                                            <p className="text-lg font-black text-gray-900 leading-none">${product.base_price}</p>
+                                            <p className="text-lg font-black text-slate-900 dark:text-white leading-none tabular-nums">${product.base_price}</p>
                                         </div>
-                                        <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-50">
+                                        <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-50 dark:border-slate-700/50">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">STOCK: {product.stock_quantity}</span>
+                                                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">STOCK: {product.stock_quantity}</span>
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 <button
                                                     onClick={() => handleEditProductClick(product)}
-                                                    className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                                                    className="p-2 text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all"
                                                 >
                                                     <Edit2 className="w-3.5 h-3.5" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteProduct(product.id)}
-                                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                    className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
                                                 >
                                                     <Trash2 className="w-3.5 h-3.5" />
                                                 </button>
@@ -807,19 +862,19 @@ export function VendorProductManagement() {
 
             {/* Low Stock Warning Banner */}
             {products.some(p => p.stock_quantity > 0 && p.stock_quantity <= 10) && (
-                <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex items-center justify-between">
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/50 rounded-2xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
-                            <AlertTriangle className="w-5 h-5 text-amber-600" />
+                        <div className="w-10 h-10 bg-amber-100 dark:bg-amber-800/40 rounded-xl flex items-center justify-center">
+                            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                         </div>
                         <div>
-                            <p className="text-sm font-black text-amber-900 uppercase tracking-tight">Low Stock Alert</p>
-                            <p className="text-xs text-amber-700 font-medium">Some of your products are running low. Consider restocking soon to avoid lost sales.</p>
+                            <p className="text-sm font-black text-amber-900 dark:text-amber-100 uppercase tracking-tight">Low Stock Alert</p>
+                            <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">Some of your products are running low. Consider restocking soon to avoid lost sales.</p>
                         </div>
                     </div>
                     <button
                         onClick={() => setStockFilter('low')}
-                        className="text-xs font-black text-amber-600 hover:text-amber-700 uppercase tracking-widest px-4 py-2 bg-white rounded-xl shadow-sm border border-amber-200 transition-all hover:shadow-md"
+                        className="text-xs font-black text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 uppercase tracking-widest px-4 py-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-amber-200 dark:border-amber-800 transition-all hover:shadow-md"
                     >
                         Review Items
                     </button>
@@ -828,15 +883,15 @@ export function VendorProductManagement() {
 
             {/* Add Product Modal */}
             {showAddModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-2xl rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
-                        <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-gray-50/50 shrink-0">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/70 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh] border border-slate-100 dark:border-slate-700">
+                        <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
                             <div>
-                                <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">Add New Product</h3>
-                                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">List a new item in your store inventory</p>
+                                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">Add New Product</h3>
+                                <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">List a new item in your store inventory</p>
                             </div>
-                            <button onClick={() => setShowAddModal(false)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-all">
-                                <XCircle className="w-5 h-5 text-gray-300" />
+                            <button onClick={() => setShowAddModal(false)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-all">
+                                <XCircle className="w-5 h-5 text-slate-300 dark:text-slate-600" />
                             </button>
                         </div>
 
@@ -844,7 +899,7 @@ export function VendorProductManagement() {
                             <div className="p-5 overflow-y-auto space-y-3 custom-scrollbar">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Product Name *</label>
+                                        <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Product Name *</label>
                                         <input
                                             required
                                             type="text"
@@ -857,12 +912,12 @@ export function VendorProductManagement() {
                                                     sku: skuManuallyEdited ? prev.sku : generateSKU(name)
                                                 }));
                                             }}
-                                            className="w-full px-3 py-2 bg-gray-50 border border-transparent rounded-xl text-[13px] focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
+                                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-[13px] text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all placeholder:text-slate-400"
                                             placeholder="e.g. Wireless Headphones"
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">SKU (Auto-generated)</label>
+                                        <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">SKU (Auto-generated)</label>
                                         <div className="relative">
                                             <input
                                                 type="text"
@@ -871,7 +926,7 @@ export function VendorProductManagement() {
                                                     setNewProduct({ ...newProduct, sku: e.target.value });
                                                     setSkuManuallyEdited(true);
                                                 }}
-                                                className="w-full px-3 py-2 bg-gray-50 border border-transparent rounded-xl text-[13px] focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-mono"
+                                                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-[13px] text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-roboto placeholder:text-slate-400"
                                                 placeholder="WH-001"
                                             />
                                             <button
@@ -880,7 +935,7 @@ export function VendorProductManagement() {
                                                     setNewProduct({ ...newProduct, sku: generateSKU(newProduct.name) });
                                                     setSkuManuallyEdited(false);
                                                 }}
-                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all"
                                                 title="Regenerate SKU"
                                             >
                                                 <Plus className="w-3.5 h-3.5 rotate-45" />
@@ -888,38 +943,38 @@ export function VendorProductManagement() {
                                         </div>
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Base Price ($) *</label>
+                                        <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Base Price ($) *</label>
                                         <input
                                             required
                                             type="number"
                                             step="0.01"
                                             value={newProduct.base_price}
                                             onChange={e => setNewProduct({ ...newProduct, base_price: e.target.value })}
-                                            className="w-full px-3 py-2 bg-gray-50 border border-transparent rounded-xl text-[13px] focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
+                                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-[13px] text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all placeholder:text-slate-400"
                                             placeholder="29.99"
                                         />
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Stock Quantity *</label>
+                                        <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Stock Quantity *</label>
                                         <input
                                             required
                                             type="number"
                                             value={newProduct.stock_quantity}
                                             onChange={e => setNewProduct({ ...newProduct, stock_quantity: e.target.value })}
-                                            className="w-full px-3 py-2 bg-gray-50 border border-transparent rounded-xl text-[13px] focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
+                                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-[13px] text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all placeholder:text-slate-400"
                                             placeholder="100"
                                         />
                                     </div>
                                     <div className="col-span-full space-y-2">
                                         <div className="flex items-center justify-between">
-                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Category *</label>
+                                            <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Category *</label>
                                             <div className="relative group">
-                                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 dark:text-slate-500" />
                                                 <input
                                                     type="text"
                                                     placeholder="Search category..."
-                                                    className="pl-7 pr-3 py-1 bg-gray-100 border-none rounded-lg text-[10px] focus:ring-0 w-32 font-bold placeholder:text-gray-300 transition-all focus:w-48"
+                                                    className="pl-7 pr-3 py-1 bg-slate-100 dark:bg-slate-900 border-none rounded-lg text-[10px] focus:ring-0 w-32 font-bold text-slate-700 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 transition-all focus:w-48"
                                                     value={categorySearchTerm}
                                                     onChange={e => setCategorySearchTerm(e.target.value)}
                                                 />
@@ -929,7 +984,7 @@ export function VendorProductManagement() {
                                             required
                                             value={newProduct.category_id}
                                             onChange={e => setNewProduct({ ...newProduct, category_id: e.target.value })}
-                                            className="w-full px-3 py-2.5 bg-gray-50 border border-transparent rounded-xl text-[13px] focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all appearance-none cursor-pointer font-bold text-gray-700"
+                                            className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-[13px] text-slate-700 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all appearance-none cursor-pointer font-bold"
                                         >
                                             <option value="">Select Category</option>
                                             {categories
@@ -940,11 +995,11 @@ export function VendorProductManagement() {
                                         </select>
                                     </div>
                                     <div className="col-span-full space-y-2">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Brand</label>
+                                        <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Brand</label>
                                         <select
                                             value={newProduct.brand_id}
                                             onChange={e => setNewProduct({ ...newProduct, brand_id: e.target.value })}
-                                            className="w-full px-3 py-2.5 bg-gray-50 border border-transparent rounded-xl text-[13px] focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all appearance-none cursor-pointer font-bold text-gray-700"
+                                            className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-[13px] text-slate-700 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all appearance-none cursor-pointer font-bold"
                                         >
                                             <option value="">Select Brand (Optional)</option>
                                             {brands.map(brand => (
@@ -953,26 +1008,26 @@ export function VendorProductManagement() {
                                         </select>
                                     </div>
                                     <div className="col-span-full space-y-1.5">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Product Description</label>
+                                        <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Product Description</label>
                                         <textarea
                                             rows={3}
                                             value={newProduct.description}
                                             onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
-                                            className="w-full px-3 py-2 bg-gray-50 border border-transparent rounded-xl text-[13px] focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all resize-none"
+                                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-[13px] text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all resize-none placeholder:text-slate-400"
                                             placeholder="Tell customers about your product..."
                                         />
                                     </div>
                                     <div className="col-span-full space-y-2">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Product Colors (Hex codes)</label>
+                                        <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Product Colors (Hex codes)</label>
                                         <div className="flex flex-wrap gap-2 mb-2">
                                             {(newProduct.attributes.colors || []).map((color: string, idx: number) => (
-                                                <div key={idx} className="flex items-center gap-1.5 px-2 py-1 rounded-lg border border-gray-100 bg-white shadow-sm transition-all hover:border-emerald-200 group">
+                                                <div key={idx} className="flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm transition-all hover:border-emerald-200 group">
                                                     <div className="w-3 h-3 rounded-full shadow-inner" style={{ backgroundColor: color }} />
-                                                    <span className="text-[10px] font-bold text-gray-600 font-mono tracking-tighter">{color}</span>
+                                                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 font-roboto tracking-tighter">{color}</span>
                                                     <button
                                                         type="button"
                                                         onClick={() => removeColor(color, 'add')}
-                                                        className="p-0.5 text-gray-400 hover:text-red-500 rounded transition-colors"
+                                                        className="p-0.5 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 rounded transition-colors"
                                                     >
                                                         <X className="w-2.5 h-2.5" />
                                                     </button>
@@ -981,14 +1036,14 @@ export function VendorProductManagement() {
                                         </div>
                                         <div className="flex gap-2">
                                             <div className="relative flex-1 group">
-                                                <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-gray-200" style={{ backgroundColor: newColor }} />
+                                                <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-slate-200 dark:border-slate-700" style={{ backgroundColor: newColor }} />
                                                 <input
                                                     type="text"
                                                     value={newColor}
                                                     onChange={e => setNewColor(e.target.value)}
                                                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addColor('add'))}
                                                     placeholder="#FF5733"
-                                                    className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-transparent rounded-xl text-[12px] focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-mono"
+                                                    className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-[12px] text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-roboto placeholder:text-slate-400"
                                                 />
                                             </div>
                                             <button
@@ -1000,7 +1055,7 @@ export function VendorProductManagement() {
                                             </button>
                                         </div>
                                     </div>
-                                    <div className="col-span-full py-2 border-t border-gray-50 mt-2">
+                                    <div className="col-span-full py-2 border-t border-slate-100 dark:border-slate-700 mt-2">
                                         <label className="flex items-center gap-3 cursor-pointer group w-fit">
                                             <div className="relative">
                                                 <input
@@ -1009,21 +1064,21 @@ export function VendorProductManagement() {
                                                     checked={newProduct.is_featured}
                                                     onChange={e => setNewProduct({ ...newProduct, is_featured: e.target.checked })}
                                                 />
-                                                <div className={`w-10 h-5 rounded-full transition-all duration-300 ${newProduct.is_featured ? 'bg-emerald-500 shadow-lg shadow-emerald-200' : 'bg-gray-200'}`}>
+                                                <div className={`w-10 h-5 rounded-full transition-all duration-300 ${newProduct.is_featured ? 'bg-emerald-500 shadow-lg shadow-emerald-200 dark:shadow-emerald-900/40' : 'bg-slate-200 dark:bg-slate-700'}`}>
                                                     <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform duration-300 ${newProduct.is_featured ? 'translate-x-5' : ''}`} />
                                                 </div>
                                             </div>
                                             <div>
-                                                <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest block leading-none">Featured Product</span>
-                                                <span className="text-[8px] text-gray-400 font-bold uppercase tracking-tighter">Show this in featured products sections</span>
+                                                <span className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest block leading-none">Featured Product</span>
+                                                <span className="text-[8px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tighter">Show this in featured products sections</span>
                                             </div>
                                         </label>
                                     </div>
                                     <div className="col-span-full space-y-2">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Product Images (up to 5)</label>
+                                        <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Product Images (up to 5)</label>
                                         <div className="grid grid-cols-5 gap-3">
                                             {newProduct.images.map((img, idx) => (
-                                                <div key={idx} className="relative aspect-square rounded-xl overflow-hidden group border border-gray-100 shadow-sm">
+                                                <div key={idx} className="relative aspect-square rounded-xl overflow-hidden group border border-slate-100 dark:border-slate-700 shadow-sm">
                                                     <img src={img} className="w-full h-full object-cover" alt="" />
                                                     <button
                                                         type="button"
@@ -1035,7 +1090,7 @@ export function VendorProductManagement() {
                                                 </div>
                                             ))}
                                             {newProduct.images.length < 5 && (
-                                                <label className="relative aspect-square rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/30 transition-all group">
+                                                <label className="relative aspect-square rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-400 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/20 transition-all group">
                                                     <input
                                                         type="file"
                                                         accept=".jpg,.jpeg,.png,.svg,.webp,.gif"
@@ -1048,9 +1103,9 @@ export function VendorProductManagement() {
                                                         <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                                                     ) : (
                                                         <>
-                                                            <Upload className="w-4 h-4 text-gray-400 group-hover:text-emerald-500 transition-colors" />
-                                                            <span className="text-[8px] font-black text-gray-400 uppercase group-hover:text-emerald-500 transition-colors">Upload</span>
-                                                            <span className="text-[7px] text-gray-300 font-bold uppercase mt-0.5">800x800px</span>
+                                                            <Upload className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-emerald-500 transition-colors" />
+                                                            <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase group-hover:text-emerald-500 transition-colors">Upload</span>
+                                                            <span className="text-[7px] text-slate-300 dark:text-slate-600 font-bold uppercase mt-0.5">800x800px</span>
                                                         </>
                                                     )}
                                                 </label>
@@ -1061,11 +1116,11 @@ export function VendorProductManagement() {
 
                             </div>
 
-                            <div className="p-4 bg-gray-50/50 border-t border-gray-50 flex gap-3 shrink-0">
+                            <div className="p-4 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 flex gap-3 shrink-0">
                                 <button
                                     type="button"
                                     onClick={() => setShowAddModal(false)}
-                                    className="flex-1 px-4 py-2 bg-white text-gray-500 font-bold rounded-xl hover:bg-gray-100 transition-all uppercase tracking-widest text-[9px] border border-gray-200"
+                                    className="flex-1 px-4 py-2 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all uppercase tracking-widest text-[9px] border border-slate-200 dark:border-slate-700"
                                 >
                                     Cancel
                                 </button>
@@ -1095,15 +1150,15 @@ export function VendorProductManagement() {
             )}
             {/* Edit Product Modal */}
             {showEditModal && editingProduct && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-2xl rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
-                        <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-gray-50/50 shrink-0">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/70 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh] border border-slate-100 dark:border-slate-700">
+                        <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
                             <div>
-                                <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">Edit Product</h3>
-                                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Update your product information</p>
+                                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">Edit Product</h3>
+                                <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Update your product information</p>
                             </div>
-                            <button onClick={() => setShowEditModal(false)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-all">
-                                <XCircle className="w-5 h-5 text-gray-300" />
+                            <button onClick={() => setShowEditModal(false)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-all">
+                                <XCircle className="w-5 h-5 text-slate-300 dark:text-slate-600" />
                             </button>
                         </div>
 
@@ -1111,55 +1166,55 @@ export function VendorProductManagement() {
                             <div className="p-5 overflow-y-auto space-y-3 custom-scrollbar">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Product Name *</label>
+                                        <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Product Name *</label>
                                         <input
                                             required
                                             type="text"
                                             value={editingProduct.name}
                                             onChange={e => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                                            className="w-full px-3 py-2 bg-gray-50 border border-transparent rounded-xl text-[13px] focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
+                                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-[13px] text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all placeholder:text-slate-400"
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">SKU</label>
+                                        <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">SKU</label>
                                         <input
                                             type="text"
                                             value={editingProduct.sku}
                                             onChange={e => setEditingProduct({ ...editingProduct, sku: e.target.value })}
-                                            className="w-full px-3 py-2 bg-gray-50 border border-transparent rounded-xl text-[13px] focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-mono"
+                                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-[13px] text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-roboto placeholder:text-slate-400"
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Base Price ($) *</label>
+                                        <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Base Price ($) *</label>
                                         <input
                                             required
                                             type="number"
                                             step="0.01"
                                             value={editingProduct.base_price}
                                             onChange={e => setEditingProduct({ ...editingProduct, base_price: parseFloat(e.target.value) })}
-                                            className="w-full px-3 py-2 bg-gray-50 border border-transparent rounded-xl text-[13px] focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
+                                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-[13px] text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all placeholder:text-slate-400"
                                         />
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Stock Quantity *</label>
+                                        <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Stock Quantity *</label>
                                         <input
                                             required
                                             type="number"
                                             value={editingProduct.stock_quantity}
                                             onChange={e => setEditingProduct({ ...editingProduct, stock_quantity: parseInt(e.target.value) })}
-                                            className="w-full px-3 py-2 bg-gray-50 border border-transparent rounded-xl text-[13px] focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
+                                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-[13px] text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all placeholder:text-slate-400"
                                         />
                                     </div>
                                     <div className="col-span-full space-y-2">
                                         <div className="flex items-center justify-between">
-                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Category *</label>
+                                            <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Category *</label>
                                             <div className="relative group">
-                                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 dark:text-slate-500" />
                                                 <input
                                                     type="text"
                                                     placeholder="Search category..."
-                                                    className="pl-7 pr-3 py-1 bg-gray-100 border-none rounded-lg text-[10px] focus:ring-0 w-32 font-bold placeholder:text-gray-300 transition-all focus:w-48"
+                                                    className="pl-7 pr-3 py-1 bg-slate-100 dark:bg-slate-900 border-none rounded-lg text-[10px] focus:ring-0 w-32 font-bold text-slate-700 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 transition-all focus:w-48"
                                                     value={categorySearchTerm}
                                                     onChange={e => setCategorySearchTerm(e.target.value)}
                                                 />
@@ -1169,7 +1224,7 @@ export function VendorProductManagement() {
                                             required
                                             value={editingProduct.category_id}
                                             onChange={e => setEditingProduct({ ...editingProduct, category_id: e.target.value })}
-                                            className="w-full px-3 py-2.5 bg-gray-50 border border-transparent rounded-xl text-[13px] focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all appearance-none cursor-pointer font-bold text-gray-700"
+                                            className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-[13px] text-slate-700 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all appearance-none cursor-pointer font-bold"
                                         >
                                             <option value="">Select Category</option>
                                             {categories
@@ -1180,11 +1235,11 @@ export function VendorProductManagement() {
                                         </select>
                                     </div>
                                     <div className="col-span-full space-y-2">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Brand</label>
+                                        <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Brand</label>
                                         <select
                                             value={editingProduct.brand_id}
                                             onChange={e => setEditingProduct({ ...editingProduct, brand_id: e.target.value })}
-                                            className="w-full px-3 py-2.5 bg-gray-50 border border-transparent rounded-xl text-[13px] focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all appearance-none cursor-pointer font-bold text-gray-700"
+                                            className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-[13px] text-slate-700 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all appearance-none cursor-pointer font-bold"
                                         >
                                             <option value="">Select Brand (Optional)</option>
                                             {brands.map(brand => (
@@ -1192,7 +1247,7 @@ export function VendorProductManagement() {
                                             ))}
                                         </select>
                                     </div>
-                                    <div className="col-span-full py-2 border-t border-gray-50 mt-2">
+                                    <div className="col-span-full py-2 border-t border-slate-50 dark:border-slate-700 mt-2">
                                         <label className="flex items-center gap-3 cursor-pointer group w-fit">
                                             <div className="relative">
                                                 <input
@@ -1201,36 +1256,36 @@ export function VendorProductManagement() {
                                                     checked={editingProduct.is_featured}
                                                     onChange={e => setEditingProduct({ ...editingProduct, is_featured: e.target.checked })}
                                                 />
-                                                <div className={`w-10 h-5 rounded-full transition-all duration-300 ${editingProduct.is_featured ? 'bg-emerald-500 shadow-lg shadow-emerald-200' : 'bg-gray-200'}`}>
+                                                <div className={`w-10 h-5 rounded-full transition-all duration-300 ${editingProduct.is_featured ? 'bg-emerald-500 shadow-lg shadow-emerald-200 dark:shadow-emerald-900/40' : 'bg-slate-200 dark:bg-slate-700'}`}>
                                                     <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform duration-300 ${editingProduct.is_featured ? 'translate-x-5' : ''}`} />
                                                 </div>
                                             </div>
                                             <div>
-                                                <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest block leading-none">Featured Product</span>
-                                                <span className="text-[8px] text-gray-400 font-bold uppercase tracking-tighter">Show this in featured products sections</span>
+                                                <span className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest block leading-none">Featured Product</span>
+                                                <span className="text-[8px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tighter">Show this in featured products sections</span>
                                             </div>
                                         </label>
                                     </div>
                                     <div className="col-span-full space-y-1.5">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Product Description</label>
+                                        <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Product Description</label>
                                         <textarea
                                             rows={3}
                                             value={editingProduct.description}
                                             onChange={e => setEditingProduct({ ...editingProduct, description: e.target.value })}
-                                            className="w-full px-3 py-2 bg-gray-50 border border-transparent rounded-xl text-[13px] focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all resize-none"
+                                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-[13px] text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all resize-none placeholder:text-slate-400"
                                         />
                                     </div>
                                     <div className="col-span-full space-y-2">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Product Colors (Hex codes)</label>
+                                        <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Product Colors (Hex codes)</label>
                                         <div className="flex flex-wrap gap-2 mb-2">
                                             {(editingProduct.attributes?.colors || []).map((color: string, idx: number) => (
-                                                <div key={idx} className="flex items-center gap-1.5 px-2 py-1 rounded-lg border border-gray-100 bg-white shadow-sm transition-all hover:border-emerald-200 group">
+                                                <div key={idx} className="flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm transition-all hover:border-emerald-200 group">
                                                     <div className="w-3 h-3 rounded-full shadow-inner" style={{ backgroundColor: color }} />
-                                                    <span className="text-[10px] font-bold text-gray-600 font-mono tracking-tighter">{color}</span>
+                                                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 font-roboto tracking-tighter">{color}</span>
                                                     <button
                                                         type="button"
                                                         onClick={() => removeColor(color, 'edit')}
-                                                        className="p-0.5 text-gray-400 hover:text-red-500 rounded transition-colors"
+                                                        className="p-0.5 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 rounded transition-colors"
                                                     >
                                                         <X className="w-2.5 h-2.5" />
                                                     </button>
@@ -1239,14 +1294,14 @@ export function VendorProductManagement() {
                                         </div>
                                         <div className="flex gap-2">
                                             <div className="relative flex-1 group">
-                                                <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-gray-200" style={{ backgroundColor: newColor }} />
+                                                <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-slate-200 dark:border-slate-700" style={{ backgroundColor: newColor }} />
                                                 <input
                                                     type="text"
                                                     value={newColor}
                                                     onChange={e => setNewColor(e.target.value)}
                                                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addColor('edit'))}
                                                     placeholder="#FF5733"
-                                                    className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-transparent rounded-xl text-[12px] focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-mono"
+                                                    className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700 rounded-xl text-[12px] text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-roboto placeholder:text-slate-400"
                                                 />
                                             </div>
                                             <button
@@ -1260,15 +1315,15 @@ export function VendorProductManagement() {
                                     </div>
                                     <div className="col-span-full space-y-2">
                                         <div className="flex items-center justify-between">
-                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Product Images (up to 5)</label>
+                                            <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Product Images (up to 5)</label>
                                             <div className="flex gap-2">
-                                                <span className="text-[8px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full uppercase tracking-tighter">Recommended: 800x800px</span>
-                                                <span className="text-[8px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full uppercase tracking-tighter">JPG, PNG, SVG, WEBP</span>
+                                                <span className="text-[8px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full uppercase tracking-tighter">Recommended: 800x800px</span>
+                                                <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900/50 px-2 py-0.5 rounded-full uppercase tracking-tighter">JPG, PNG, SVG, WEBP</span>
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-5 gap-3">
                                             {(editingProduct.images || []).map((img: string, idx: number) => (
-                                                <div key={idx} className="relative aspect-square rounded-xl overflow-hidden group border border-gray-100 shadow-sm bg-gray-50">
+                                                <div key={idx} className="relative aspect-square rounded-xl overflow-hidden group border border-slate-100 dark:border-slate-700 shadow-sm bg-slate-50 dark:bg-slate-900/50">
                                                     <img
                                                         src={img}
                                                         className="w-full h-full object-cover"
@@ -1287,7 +1342,7 @@ export function VendorProductManagement() {
                                                 </div>
                                             ))}
                                             {(editingProduct.images || []).length < 5 && (
-                                                <label className="relative aspect-square rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/30 transition-all group">
+                                                <label className="relative aspect-square rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-400 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/20 transition-all group">
                                                     <input
                                                         type="file"
                                                         accept=".jpg,.jpeg,.png,.svg,.webp,.gif"
@@ -1300,8 +1355,8 @@ export function VendorProductManagement() {
                                                         <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                                                     ) : (
                                                         <>
-                                                            <Upload className="w-4 h-4 text-gray-400 group-hover:text-emerald-500 transition-colors" />
-                                                            <span className="text-[8px] font-black text-gray-400 uppercase group-hover:text-emerald-500 transition-colors">Upload</span>
+                                                            <Upload className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-emerald-500 transition-colors" />
+                                                            <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase group-hover:text-emerald-500 transition-colors">Upload</span>
                                                         </>
                                                     )}
                                                 </label>
@@ -1312,11 +1367,11 @@ export function VendorProductManagement() {
 
                             </div>
 
-                            <div className="p-4 bg-gray-50/50 border-t border-gray-50 flex gap-3 shrink-0">
+                            <div className="p-4 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 flex gap-3 shrink-0">
                                 <button
                                     type="button"
                                     onClick={() => setShowEditModal(false)}
-                                    className="flex-1 px-4 py-2 bg-white text-gray-500 font-bold rounded-xl hover:bg-gray-100 transition-all uppercase tracking-widest text-[9px] border border-gray-200"
+                                    className="flex-1 px-4 py-2 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all uppercase tracking-widest text-[9px] border border-slate-200 dark:border-slate-700"
                                 >
                                     Cancel
                                 </button>

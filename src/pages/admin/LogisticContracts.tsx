@@ -187,7 +187,7 @@ export function LogisticContracts() {
             )}
 
             {viewMode === 'list' ? (
-                <div className={`${cardBg} rounded-lg shadow-sm border ${borderColor} overflow-hidden mb-8`}>
+                <div className={`${cardBg} rounded-lg shadow-sm border ${borderColor} overflow-hidden overflow-x-auto mb-8`}>
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead className="bg-gray-50 dark:bg-gray-700">
                             <tr>
@@ -482,7 +482,7 @@ export function LogisticContracts() {
 
                         <div className="p-6 max-h-[70vh] overflow-y-auto">
                             <div className={`prose max-w-none ${isDark ? 'prose-invert' : ''}`}>
-                                <pre className="whitespace-pre-wrap font-sans">{viewingContract.content}</pre>
+                                <pre className="whitespace-pre-wrap font-roboto">{viewingContract.content}</pre>
                             </div>
                         </div>
                     </div>

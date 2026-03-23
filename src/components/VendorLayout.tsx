@@ -86,6 +86,14 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
     const [showMessageAlert, setShowMessageAlert] = useState(false);
     const [lastMessageSender, setLastMessageSender] = useState<string | null>(null);
 
+    // Clear unread badge when vendor navigates to the messages tab
+    useEffect(() => {
+        if (activeTab === 'messages') {
+            setUnreadMessages(0);
+            setShowMessageAlert(false);
+        }
+    }, [activeTab]);
+
     // Close quick actions on click outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -118,6 +126,7 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
     }, []);
 
     const [kycStatus, setKycStatus] = useState<string | null>(null);
+    const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
 
     useEffect(() => {
         if (profile?.id) {
@@ -128,6 +137,15 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
                 .maybeSingle()
                 .then(({ data }) => {
                     if (data) setKycStatus(data.kyc_status);
+                });
+
+            supabase
+                .from('vendor_subscriptions')
+                .select('status')
+                .eq('vendor_id', profile.id)
+                .maybeSingle()
+                .then(({ data }) => {
+                    if (data) setSubscriptionStatus(data.status);
                 });
 
             // Fetch initial unread count
@@ -158,8 +176,9 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
                     table: 'chat_messages'
                 }, (payload) => {
                     if (payload.new.sender_id !== profile.id) {
-                        setUnreadMessages(prev => prev + 1);
+                        // Only increment badge if not currently on the messages tab
                         if (activeTab !== 'messages') {
+                            setUnreadMessages(prev => prev + 1);
                             setShowMessageAlert(true);
                             supabase
                                 .from('profiles')
@@ -227,7 +246,7 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
     const collapsedWidth = 'w-20';
 
     return (
-        <div className={`min-h-screen ${bgColor} font-sans transition-colors duration-300`}>
+        <div className={`min-h-screen ${bgColor} font-roboto transition-colors duration-300`}>
 
             {/* Sidebar */}
             <aside
@@ -555,7 +574,26 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
 
                 {/* Page Content */}
                 <main className="flex-1 p-6 lg:p-10 overflow-x-hidden">
-                    <div className="max-w-[1600px] mx-auto animate-fadeIn">
+                    <div className="max-w-[1600px] mx-auto animate-fadeIn space-y-6">
+                        {subscriptionStatus === 'expired' && activeTab !== 'packages' && (
+                            <div className="bg-rose-50 dark:bg-rose-900/10 border-2 border-rose-100 dark:border-rose-900/20 rounded-[2rem] p-8 flex flex-col md:flex-row items-center justify-between gap-6 mb-8 animate-in slide-in-from-top-4 duration-500 shadow-xl shadow-rose-900/5">
+                                <div className="flex items-center gap-6 text-center md:text-left">
+                                    <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 rounded-3xl flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
+                                        <Package className="w-8 h-8" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-black text-rose-900 dark:text-rose-100 uppercase tracking-tight">Subscription Expired</h3>
+                                        <p className="text-sm text-rose-700 dark:text-rose-300 font-medium mt-1">Your current package has reached its end date. Your shop is currently suspended.</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => onTabChange('packages')}
+                                    className="px-8 py-4 bg-rose-600 text-white font-black rounded-2xl hover:bg-rose-700 transition-all uppercase tracking-widest text-xs shadow-lg shadow-rose-600/20 active:scale-95 whitespace-nowrap"
+                                >
+                                    Renew Package Now
+                                </button>
+                            </div>
+                        )}
                         {children}
                     </div>
                 </main>

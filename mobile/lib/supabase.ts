@@ -2,9 +2,15 @@ import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
-// Replace with your actual Supabase URL and Anon Key
-const supabaseUrl = 'https://mnkncdqalkamhmtfcykm.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ua25jZHFhbGthbWhtdGZjeWttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4MjQ1OTAsImV4cCI6MjA4NDQwMDU5MH0.9Hxdgh_-wQImFfq3Tb8OHPkSN2oRjR_AzMAY1jn1ZQk';
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+        'Missing Supabase env vars.\n' +
+        'Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to mobile/.env'
+    );
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
@@ -14,3 +20,4 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
         detectSessionInUrl: false,
     },
 });
+

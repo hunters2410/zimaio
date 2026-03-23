@@ -31,7 +31,7 @@ export function FraudDetection() {
     const fetchAlerts = async () => {
         setLoading(true);
         try {
-            let query = supabase.from('fraud_alerts').select('*, profiles(full_name, email)');
+            let query = supabase.from('fraud_detections').select('*, profiles!fraud_detections_user_id_fkey(full_name, email)');
             if (filterStatus !== 'all') {
                 query = query.eq('status', filterStatus);
             }
@@ -47,7 +47,7 @@ export function FraudDetection() {
 
     const handleUpdateStatus = async (alertId: string, newStatus: string) => {
         try {
-            const { error } = await supabase.from('fraud_alerts').update({ status: newStatus }).eq('id', alertId);
+            const { error } = await supabase.from('fraud_detections').update({ status: newStatus }).eq('id', alertId);
             if (error) throw error;
             fetchAlerts();
             setSelectedAlert(null);

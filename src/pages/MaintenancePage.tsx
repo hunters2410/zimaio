@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSiteSettings } from '../contexts/SiteSettingsContext';
-import { Construction, Mail, Phone } from 'lucide-react';
+import { Rocket, Mail, Phone, UserPlus, Store } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export function MaintenancePage() {
     const { settings } = useSiteSettings();
@@ -60,22 +61,40 @@ export function MaintenancePage() {
                 {/* Status Indicator */}
                 <div className="flex justify-center mb-6">
                     <div className="bg-cyan-50 dark:bg-cyan-900/20 p-4 rounded-full border border-cyan-100 dark:border-cyan-800 overflow-hidden relative">
-                        <Construction className="h-8 w-8 text-cyan-600 dark:text-cyan-400" />
+                        <Rocket className="h-8 w-8 text-cyan-600 dark:text-cyan-400" />
                     </div>
                 </div>
 
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-3">
-                    Under Maintenance
+                <h1 className="text-3xl md:text-4xl font-black text-gray-900 dark:text-white mb-3 tracking-tight">
+                    Coming Soon
                 </h1>
 
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-8 leading-relaxed max-w-xs mx-auto">
-                    We're currently performing some scheduled updates to improve our services.
+                <p className="text-sm md:text-base font-medium text-gray-500 dark:text-gray-400 mb-8 leading-relaxed max-w-sm mx-auto">
+                    We're building Zimbabwe's premier online marketplace. Pre-register now to secure your spot and get early access!
                 </p>
+
+                {/* Pre-registration Buttons */}
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
+                    <Link
+                        to="/pre-register"
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:-translate-y-0.5 transition-all text-sm uppercase tracking-widest"
+                    >
+                        <UserPlus className="w-4 h-4" />
+                        Customer Sign Up
+                    </Link>
+                    <Link
+                        to="/vendor-pre-register"
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-green-500/30 hover:shadow-green-500/50 hover:-translate-y-0.5 transition-all text-sm uppercase tracking-widest"
+                    >
+                        <Store className="w-4 h-4" />
+                        Vendor Sign Up
+                    </Link>
+                </div>
 
                 {/* Countdown Timer */}
                 {timeLeft && (
                     <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-                        <p className="text-[10px] font-black text-cyan-600 dark:text-cyan-400 uppercase tracking-[0.2em] mb-4">Estimated Return In</p>
+                        <p className="text-[10px] font-black text-cyan-600 dark:text-cyan-400 uppercase tracking-[0.2em] mb-4">Estimated Launch In</p>
                         <div className="flex items-center justify-center gap-3">
                             {timeLeft.days > 0 && <CountdownBox value={timeLeft.days} label="Days" />}
                             <CountdownBox value={timeLeft.hours} label="Hrs" />

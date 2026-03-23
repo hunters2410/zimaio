@@ -40,9 +40,9 @@ export function VendorAnalytics() {
                     // Get total sales from orders
                     const { data: orders } = await supabase
                         .from('orders')
-                        .select('total_amount, created_at')
+                        .select('total, created_at')
                         .eq('vendor_id', vendor.id)
-                        .eq('status', 'completed');
+                        .eq('status', 'delivered');
 
                     // Get product count
                     const { data: products } = await supabase
@@ -57,7 +57,7 @@ export function VendorAnalytics() {
                         .select('rating')
                         .in('product_id', products?.map(p => p.id) || []);
 
-                    const totalSales = orders?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+                    const totalSales = orders?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
                     const totalOrders = orders?.length || 0;
                     const avgRating = reviews?.length
                         ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
@@ -75,8 +75,8 @@ export function VendorAnalytics() {
                         return date >= sixtyDaysAgo && date < thirtyDaysAgo;
                     }) || [];
 
-                    const recentSales = recentOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
-                    const previousSales = previousOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+                    const recentSales = recentOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+                    const previousSales = previousOrders.reduce((sum, o) => sum + (o.total || 0), 0);
                     const growth = previousSales > 0 ? ((recentSales - previousSales) / previousSales) * 100 : 0;
 
                     return {

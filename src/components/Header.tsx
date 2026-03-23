@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Search, Menu, MessageCircle, LogOut, Package, LayoutDashboard, MapPin, Heart, ChevronDown, DollarSign, ArrowRight, Moon, Sun } from 'lucide-react';
+import { ShoppingCart, User, Search, Menu, MessageCircle, LogOut, Package, LayoutDashboard, MapPin, Heart, ChevronDown, DollarSign, ArrowRight, Moon, Sun, Check } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { useCart } from '../contexts/CartContext';
@@ -25,6 +25,7 @@ interface Category {
 
 
 import { GlobalChatModal } from './GlobalChatModal';
+import { SearchableCategoryDropdown } from './SearchableCategoryDropdown';
 
 export function Header() {
   const { user, profile, signOut } = useAuth();
@@ -63,6 +64,7 @@ export function Header() {
         };
 
         if (sellIndex !== -1) {
+          /* 
           filtered.splice(sellIndex + 1, 0, {
             id: 'logistics-synthetic',
             label: 'Join Our Logistics',
@@ -70,8 +72,10 @@ export function Header() {
             icon: 'MapPin',
             order_position: 0
           });
-          filtered.splice(sellIndex + 2, 0, contactItem);
+          */
+          filtered.splice(sellIndex + 1, 0, contactItem);
         } else {
+          /*
           filtered.push({
             id: 'logistics-synthetic',
             label: 'Join Our Logistics',
@@ -79,6 +83,7 @@ export function Header() {
             icon: 'MapPin',
             order_position: 0
           });
+          */
           filtered.push(contactItem);
         }
 
@@ -151,7 +156,7 @@ export function Header() {
         <div className="bg-white border-b border-gray-100 hidden sm:block dark:bg-slate-900 dark:border-slate-800 transition-colors">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between h-10 text-[11px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">
-              <span className="bg-gradient-to-r from-blue-600 via-green-600 to-blue-600 bg-clip-text text-transparent font-['Poppins'] font-medium tracking-wide">Welcome To {settings.site_name} • {settings.site_tagline}</span>
+              <span className="bg-gradient-to-r from-blue-600 via-green-600 to-blue-600 bg-clip-text text-transparent font-['Poppins'] font-bold tracking-wide">Welcome To {settings.site_name} • {settings.site_tagline}</span>
               <div className="flex items-center space-x-6">
                 {user ? (
                   <Link to="/dashboard" className="hover:text-green-600 transition-colors flex items-center">
@@ -241,16 +246,12 @@ export function Header() {
 
               {/* Search Bar */}
               <div className="hidden lg:flex flex-1 max-w-2xl px-4">
-                <form onSubmit={handleSearch} className="flex w-full items-center bg-gray-50 rounded-2xl border border-gray-200 focus-within:border-green-500/50 focus-within:ring-4 focus-within:ring-green-500/5 transition-all group overflow-hidden">
-                  <select
-                    onChange={(e) => e.target.value && navigate(`/products?category=${e.target.value}`)}
-                    className="px-5 py-3.5 bg-transparent text-gray-500 text-[11px] font-bold uppercase tracking-widest focus:outline-none cursor-pointer border-r border-gray-200"
-                  >
-                    <option value="">ALL CATEGORIES</option>
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.slug}>{cat.name}</option>
-                    ))}
-                  </select>
+                <form onSubmit={handleSearch} className="flex w-full items-center bg-gray-50 rounded-2xl border border-gray-200 focus-within:border-green-500/50 focus-within:ring-4 focus-within:ring-green-500/5 transition-all group">
+                  <SearchableCategoryDropdown
+                    categories={categories}
+                    onSelect={(slug) => navigate(`/products?category=${slug}`)}
+                    isDark={theme === 'dark'}
+                  />
                   <div className="flex-1 flex items-center px-5">
                     <Search className="h-4 w-4 text-gray-400 mr-3 group-focus-within:text-green-600 transition-colors" />
                     <input
@@ -261,7 +262,7 @@ export function Header() {
                       className="w-full py-3.5 bg-transparent text-sm text-gray-700 placeholder-gray-400 focus:outline-none font-medium"
                     />
                   </div>
-                  <button type="submit" className="px-8 py-3.5 bg-gradient-to-r from-green-600 to-blue-600 text-white font-bold text-xs uppercase tracking-widest hover:from-green-700 hover:to-blue-700 transition-all">
+                  <button type="submit" className="px-8 py-3.5 bg-gradient-to-r from-green-600 to-blue-600 text-white font-bold text-xs uppercase tracking-widest hover:from-green-700 hover:to-blue-700 transition-all rounded-r-2xl">
                     Explore
                   </button>
                 </form>
@@ -305,10 +306,12 @@ export function Header() {
                               System Admin
                             </Link>
                           )}
+                          {/* 
                           <Link to="/orders" onClick={() => setShowUserMenu(false)} className="flex items-center px-4 py-3 text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-slate-700 hover:text-green-700 dark:hover:text-green-400 rounded-xl transition-all">
                             <Package className="h-4 w-4 mr-4 text-green-500" />
                             Logistics
                           </Link>
+                          */}
                           <button
                             onClick={() => {
                               setShowUserMenu(false);
@@ -507,7 +510,7 @@ export function Header() {
                   { label: 'Verified Vendors', url: '/vendors', icon: User },
                   { label: 'New Arrivals', url: '/products', icon: Package },
                   { label: 'Sell On ZimAIO', url: '/vendor-signup', icon: DollarSign },
-                  { label: 'Join Our Logistics', url: '/logistic-signup', icon: MapPin },
+                  /* { label: 'Join Our Logistics', url: '/logistic-signup', icon: MapPin }, */
                 ].map((link) => (
                   <Link
                     key={link.url}

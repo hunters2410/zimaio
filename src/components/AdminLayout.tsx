@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { ReactNode, useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissions } from '../contexts/PermissionsContext';
 import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { AdminNotifications } from './admin/AdminNotifications';
@@ -52,57 +53,62 @@ interface NavItem {
   label: string;
   icon: ReactNode;
   section: string;
+  permissionKey?: string; // maps to a Feature key in roles
 }
+
 
 const navItems: NavItem[] = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" />, section: 'Main' },
-  { path: '/admin/pos', label: 'Point of Sale (POS)', icon: <Scan className="h-5 w-5" />, section: 'Main' },
-  { path: '/admin/reports', label: 'Reports', icon: <BarChart3 className="h-5 w-5" />, section: 'Main' },
+  { path: '/admin/pos', label: 'Point of Sale (POS)', icon: <Scan className="h-5 w-5" />, section: 'Main', permissionKey: 'orders' },
+  { path: '/admin/reports', label: 'Reports', icon: <BarChart3 className="h-5 w-5" />, section: 'Main', permissionKey: 'analytics' },
 
-  { path: '/admin/vendors', label: 'Vendor Management', icon: <Store className="h-5 w-5" />, section: 'Users & Vendors' },
-  { path: '/admin/vendor-packages', label: 'Vendor Packages', icon: <Package className="h-5 w-5" />, section: 'Users & Vendors' },
-  { path: '/admin/customers', label: 'Customer Management', icon: <Users className="h-5 w-5" />, section: 'Users & Vendors' },
-  { path: '/admin/roles-permissions', label: 'Roles & Permissions', icon: <Shield className="h-5 w-5" />, section: 'Users & Vendors' },
-  { path: '/admin/kyc-verification', label: 'KYC Verification', icon: <Shield className="h-5 w-5" />, section: 'Users & Vendors' },
-  { path: '/admin/vendor-contracts', label: 'Vendor Contracts', icon: <FileCheck className="h-5 w-5" />, section: 'Users & Vendors' },
-  { path: '/admin/customer-contracts', label: 'Customer Contracts', icon: <FileText className="h-5 w-5" />, section: 'Users & Vendors' },
+  { path: '/admin/vendors', label: 'Vendor Management', icon: <Store className="h-5 w-5" />, section: 'Users & Vendors', permissionKey: 'vendors' },
+  { path: '/admin/vendor-packages', label: 'Vendor Packages', icon: <Package className="h-5 w-5" />, section: 'Users & Vendors', permissionKey: 'vendors' },
+  { path: '/admin/customers', label: 'Customer Management', icon: <Users className="h-5 w-5" />, section: 'Users & Vendors', permissionKey: 'customers' },
+  { path: '/admin/users', label: 'Admin Users', icon: <Shield className="h-5 w-5" />, section: 'Users & Vendors', permissionKey: 'roles' },
+  { path: '/admin/roles-permissions', label: 'Roles & Permissions', icon: <Shield className="h-5 w-5" />, section: 'Users & Vendors', permissionKey: 'roles' },
+  { path: '/admin/kyc-verification', label: 'KYC Verification', icon: <Shield className="h-5 w-5" />, section: 'Users & Vendors', permissionKey: 'kyc' },
+  { path: '/admin/vendor-contracts', label: 'Vendor Contracts', icon: <FileCheck className="h-5 w-5" />, section: 'Users & Vendors', permissionKey: 'vendors' },
+  { path: '/admin/customer-contracts', label: 'Customer Contracts', icon: <FileText className="h-5 w-5" />, section: 'Users & Vendors', permissionKey: 'customers' },
 
 
-  { path: '/admin/logistics', label: 'Logistics Overview', icon: <Globe className="h-5 w-5" />, section: 'Shipping & Logistics' },
-  { path: '/admin/shipping', label: 'Shipping Methods', icon: <BarChart3 className="h-5 w-5" />, section: 'Shipping & Logistics' },
-  { path: '/admin/delivery', label: 'Delivery Tracking', icon: <Truck className="h-5 w-5" />, section: 'Shipping & Logistics' },
-  { path: '/admin/logistic-contracts', label: 'Logistic Contracts', icon: <FileCheck className="h-5 w-5" />, section: 'Shipping & Logistics' },
+  { path: '/admin/logistics', label: 'Logistics Overview', icon: <Globe className="h-5 w-5" />, section: 'Shipping & Logistics', permissionKey: 'delivery' },
+  { path: '/admin/shipping', label: 'Shipping Methods', icon: <BarChart3 className="h-5 w-5" />, section: 'Shipping & Logistics', permissionKey: 'delivery' },
+  { path: '/admin/delivery', label: 'Delivery Tracking', icon: <Truck className="h-5 w-5" />, section: 'Shipping & Logistics', permissionKey: 'delivery' },
+  { path: '/admin/logistic-contracts', label: 'Logistic Contracts', icon: <FileCheck className="h-5 w-5" />, section: 'Shipping & Logistics', permissionKey: 'delivery' },
 
-  { path: '/admin/wallets', label: 'Wallet Management', icon: <DollarSign className="h-5 w-5" />, section: 'Financial' },
-  { path: '/admin/payment-gateways', label: 'Payment Gateways', icon: <CreditCard className="h-5 w-5" />, section: 'Financial' },
-  { path: '/admin/vat', label: 'Commission & VAT', icon: <Percent className="h-5 w-5" />, section: 'Financial' },
-  { path: '/admin/commissions', label: 'Commission Oversight', icon: <DollarSign className="h-5 w-5" />, section: 'Financial' },
-  { path: '/admin/refunds', label: 'Refund Management', icon: <RefreshCw className="h-5 w-5" />, section: 'Financial' },
-  { path: '/admin/payment-logs', label: 'Payment Logs', icon: <BookOpen className="h-5 w-5" />, section: 'Financial' },
-  { path: '/admin/ledger', label: 'Immutable Ledger', icon: <BookOpen className="h-5 w-5" />, section: 'Financial' },
+  { path: '/admin/wallets', label: 'Wallet Management', icon: <DollarSign className="h-5 w-5" />, section: 'Financial', permissionKey: 'financial' },
+  { path: '/admin/payment-gateways', label: 'Payment Gateways', icon: <CreditCard className="h-5 w-5" />, section: 'Financial', permissionKey: 'financial' },
+  { path: '/admin/vat', label: 'Commission & VAT', icon: <Percent className="h-5 w-5" />, section: 'Financial', permissionKey: 'financial' },
+  { path: '/admin/commissions', label: 'Commission Oversight', icon: <DollarSign className="h-5 w-5" />, section: 'Financial', permissionKey: 'financial' },
+  { path: '/admin/refunds', label: 'Refund Management', icon: <RefreshCw className="h-5 w-5" />, section: 'Financial', permissionKey: 'refunds' },
+  { path: '/admin/payment-logs', label: 'Payment Logs', icon: <BookOpen className="h-5 w-5" />, section: 'Financial', permissionKey: 'financial' },
+  { path: '/admin/ledger', label: 'Immutable Ledger', icon: <BookOpen className="h-5 w-5" />, section: 'Financial', permissionKey: 'financial' },
 
-  { path: '/admin/catalog', label: 'Catalog Management', icon: <Package className="h-5 w-5" />, section: 'Products & Orders' },
-  { path: '/admin/products', label: 'Products Management', icon: <Package className="h-5 w-5" />, section: 'Products & Orders' },
-  { path: '/admin/orders', label: 'Orders Management', icon: <ShoppingCart className="h-5 w-5" />, section: 'Products & Orders' },
+  { path: '/admin/catalog', label: 'Catalog Management', icon: <Package className="h-5 w-5" />, section: 'Products & Orders', permissionKey: 'products' },
+  { path: '/admin/products', label: 'Products Management', icon: <Package className="h-5 w-5" />, section: 'Products & Orders', permissionKey: 'products' },
+  { path: '/admin/orders', label: 'Orders Management', icon: <ShoppingCart className="h-5 w-5" />, section: 'Products & Orders', permissionKey: 'orders' },
 
-  { path: '/admin/currencies', label: 'Currency Management', icon: <DollarSign className="h-5 w-5" />, section: 'System' },
-  { path: '/admin/languages', label: 'Language Management', icon: <Globe className="h-5 w-5" />, section: 'System' },
-  { path: '/admin/sms-config', label: 'SMS Configuration', icon: <Mail className="h-5 w-5" />, section: 'System' },
-  { path: '/admin/email-config', label: 'Email Configuration', icon: <Mail className="h-5 w-5" />, section: 'System' },
-  { path: '/admin/triggers', label: 'Trigger Module', icon: <Bell className="h-5 w-5" />, section: 'System' },
-  { path: '/admin/settings', label: 'System Configurations', icon: <Settings className="h-5 w-5" />, section: 'System' },
+  { path: '/admin/currencies', label: 'Currency Management', icon: <DollarSign className="h-5 w-5" />, section: 'System', permissionKey: 'settings' },
+  { path: '/admin/languages', label: 'Language Management', icon: <Globe className="h-5 w-5" />, section: 'System', permissionKey: 'settings' },
+  { path: '/admin/sms-config', label: 'SMS Configuration', icon: <Mail className="h-5 w-5" />, section: 'System', permissionKey: 'settings' },
+  { path: '/admin/email-config', label: 'Email Configuration', icon: <Mail className="h-5 w-5" />, section: 'System', permissionKey: 'settings' },
+  { path: '/admin/triggers', label: 'Trigger Module', icon: <Bell className="h-5 w-5" />, section: 'System', permissionKey: 'settings' },
+  { path: '/admin/settings', label: 'System Configurations', icon: <Settings className="h-5 w-5" />, section: 'System', permissionKey: 'settings' },
   { path: '/admin/documentation', label: 'Documentation', icon: <BookOpen className="h-5 w-5" />, section: 'System' },
 
-  { path: '/admin/promotions', label: 'Promotion Management', icon: <Tag className="h-5 w-5" />, section: 'Marketing' },
-  { path: '/admin/ads', label: 'Ads Management', icon: <Megaphone className="h-5 w-5" />, section: 'Marketing' },
-  { path: '/admin/slider', label: 'Slider Management', icon: <ImageIcon className="h-5 w-5" />, section: 'Marketing' },
-  { path: '/admin/emails', label: 'Email Management', icon: <Mail className="h-5 w-5" />, section: 'Marketing' },
-  { path: '/admin/pre-registrations', label: 'Customer Pre-Registration', icon: <Users className="h-5 w-5" />, section: 'Marketing' },
+  { path: '/admin/promotions', label: 'Promotion Management', icon: <Tag className="h-5 w-5" />, section: 'Marketing', permissionKey: 'coupons' },
+  { path: '/admin/ads', label: 'Ads Management', icon: <Megaphone className="h-5 w-5" />, section: 'Marketing', permissionKey: 'notifications' },
+  { path: '/admin/slider', label: 'Slider Management', icon: <ImageIcon className="h-5 w-5" />, section: 'Marketing', permissionKey: 'settings' },
+  { path: '/admin/emails', label: 'Email Outreach', icon: <Mail className="h-5 w-5" />, section: 'Marketing', permissionKey: 'notifications' },
+  { path: '/admin/email-templates', label: 'Email Templates', icon: <FileText className="h-5 w-5" />, section: 'Marketing', permissionKey: 'notifications' },
+  { path: '/admin/pre-registrations', label: 'Customer Pre-Registration', icon: <Users className="h-5 w-5" />, section: 'Marketing', permissionKey: 'customers' },
+  { path: '/admin/vendor-pre-registrations', label: 'Vendor Pre-Registration', icon: <Store className="h-5 w-5" />, section: 'Marketing', permissionKey: 'vendors' },
 
-  { path: '/admin/notifications', label: 'Notifications', icon: <Bell className="h-5 w-5" />, section: 'Other' },
-  { path: '/admin/content', label: 'Content Management', icon: <FileText className="h-5 w-5" />, section: 'Other' },
-  { path: '/admin/vendor-analytics', label: 'Vendor Performance', icon: <TrendingUp className="h-5 w-5" />, section: 'Other' },
-  { path: '/admin/fraud-detection', label: 'Fraud Detection', icon: <AlertTriangle className="h-5 w-5" />, section: 'Other' },
+  { path: '/admin/notifications', label: 'Notifications', icon: <Bell className="h-5 w-5" />, section: 'Other', permissionKey: 'notifications' },
+  { path: '/admin/content', label: 'Content Management', icon: <FileText className="h-5 w-5" />, section: 'Other', permissionKey: 'settings' },
+  { path: '/admin/vendor-analytics', label: 'Vendor Performance', icon: <TrendingUp className="h-5 w-5" />, section: 'Other', permissionKey: 'analytics' },
+  { path: '/admin/fraud-detection', label: 'Fraud Detection', icon: <AlertTriangle className="h-5 w-5" />, section: 'Other', permissionKey: 'analytics' },
 ];
 
 const sections = Array.from(new Set(navItems.map(item => item.section)));
@@ -111,8 +117,10 @@ function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, profile } = useAuth();
+  const { can } = usePermissions();
   const { settings } = useSiteSettings();
   const { theme, toggleTheme } = useTheme();
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('admin-sidebar-collapsed');
@@ -237,7 +245,7 @@ function AdminLayout({ children }: AdminLayoutProps) {
   const collapsedWidth = 'w-20';
 
   return (
-    <div className={`min-h-screen ${bgColor} font-sans transition-colors duration-300`}>
+    <div className={`min-h-screen ${bgColor} font-roboto transition-colors duration-300`}>
 
       {/* Sidebar - FIXED LEFT FULL HEIGHT */}
       <aside
@@ -284,13 +292,14 @@ function AdminLayout({ children }: AdminLayoutProps) {
           {sections.map(section => (
             <div key={section} className="mb-8">
               {!sidebarCollapsed && (
-                <h3 className={`text-[10px] font-bold uppercase tracking-widest ${textSecondary} mb-3 px-4`}>
+                <h3 className={`text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-3 px-4`}>
                   {section}
                 </h3>
               )}
               <div className="space-y-1">
                 {navItems
                   .filter(item => item.section === section)
+                  .filter(item => !item.permissionKey || can(item.permissionKey, 'read'))
                   .map(item => {
                     const isActive = location.pathname === item.path;
                     return (

@@ -36,13 +36,7 @@ interface VendorShop {
   rating: number;
 }
 
-interface VendorAd {
-  id: string;
-  title: string;
-  image_url: string;
-  link_url: string;
-  ad_type: 'banner' | 'sidebar' | 'popup' | 'featured';
-}
+import { AdSpace } from '../components/AdSpace';
 
 
 
@@ -64,9 +58,7 @@ export function HomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
 
   const [vendorShops, setVendorShops] = useState<VendorShop[]>([]);
-  const [activeAds, setActiveAds] = useState<VendorAd[]>([]);
   const [homeSlides, setHomeSlides] = useState<HomeSlide[]>([]);
-  const [popupAd, setPopupAd] = useState<VendorAd | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -82,7 +74,7 @@ export function HomePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [productsRes, categoriesRes, vendorsRes, adsRes, slidesRes] = await Promise.all([
+        const [productsRes, categoriesRes, vendorsRes, slidesRes] = await Promise.all([
           supabase
             .from('products')
             .select('*, category:categories(slug)')
@@ -98,12 +90,6 @@ export function HomePage() {
             .select('*')
             .limit(6),
           supabase
-            .from('vendor_ads')
-            .select('*')
-            .eq('status', 'active')
-            .lte('start_date', new Date().toISOString())
-            .gte('end_date', new Date().toISOString()),
-          supabase
             .from('home_slides')
             .select('*')
             .eq('is_active', true)
@@ -114,28 +100,6 @@ export function HomePage() {
         if (categoriesRes.data) setCategories(categoriesRes.data);
         if (vendorsRes.data) setVendorShops(vendorsRes.data);
         if (slidesRes.data) setHomeSlides(slidesRes.data);
-
-        if (adsRes.data) {
-          setActiveAds(adsRes.data);
-
-          // Find a popup ad
-          const popup = adsRes.data.find(ad => ad.ad_type === 'popup');
-          if (popup) {
-            const hasShown = sessionStorage.getItem(`shown_popup_${popup.id}`);
-            if (!hasShown) {
-              setPopupAd(popup);
-              sessionStorage.setItem(`shown_popup_${popup.id}`, 'true');
-            }
-          }
-
-          // Record Impressions (Non-blocking)
-          const adIds = adsRes.data.map(ad => ad.id);
-          if (adIds.length > 0) {
-            supabase.rpc('increment_ad_impressions', { ad_ids: adIds }).then(({ error }) => {
-              if (error) console.error('Error recording impressions:', error);
-            });
-          }
-        }
       } catch (err) {
         console.error('HomePage data fetch error:', err);
       } finally {
@@ -148,10 +112,6 @@ export function HomePage() {
 
 
 
-  const handleAdClick = async (adId: string) => {
-    // Record click
-    await supabase.rpc('increment_ad_clicks', { ad_id: adId });
-  };
 
   return (
     <div className="min-h-screen transition-colors duration-300 dark:bg-slate-900">
@@ -384,37 +344,8 @@ export function HomePage() {
 
 
 
-      {
-        activeAds.find(ad => ad.ad_type === 'featured') && (
-          <section className="py-12 bg-white dark:bg-slate-900 transition-colors duration-300">
-            <div className="container mx-auto px-4">
-              {activeAds.filter(ad => ad.ad_type === 'featured').slice(0, 1).map(ad => (
-                <a
-                  key={ad.id}
-                  href={ad.link_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => handleAdClick(ad.id)}
-                  className="block relative rounded-[2rem] overflow-hidden group shadow-2xl hover:shadow-purple-900/20 transition-all duration-700"
-                >
-                  <div className="aspect-[21/9] md:aspect-[25/7] relative">
-                    <img src={ad.image_url} alt={ad.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/20 to-transparent flex items-center p-8 md:p-16">
-                      <div className="max-w-xl text-white">
-                        <span className="inline-block px-4 py-1 rounded-full bg-purple-600 text-[10px] font-black uppercase tracking-[0.2em] mb-4 shadow-lg animate-pulse">Special Offer</span>
-                        <h2 className="text-3xl md:text-5xl font-black mb-6 leading-tight drop-shadow-lg">{ad.title}</h2>
-                        <button className="bg-white text-gray-900 px-8 py-3 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-purple-600 hover:text-white transition-all shadow-xl active:scale-95">Discover More</button>
-                      </div>
-                    </div>
-                  </div>
-                </a>
-              ))}
-            </div>
-          </section>
-        )
-      }
 
-      <section className="py-24 bg-white dark:bg-slate-900 transition-colors duration-300" >
+      <section className="py-24 bg-white dark:bg-slate-900 transition-colors duration-300">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12">
             <div>
@@ -456,19 +387,31 @@ export function HomePage() {
         </div>
       </section >
 
+      <div className="container mx-auto px-4 py-12">
+        <AdSpace type="featured" limit={1} />
+      </div>
 
-      <section className="py-24 bg-gray-900 dark:bg-slate-950 text-white relative overflow-hidden transition-colors duration-300">
-        <div className="absolute top-0 right-0 -mt-24 -mr-24 w-96 h-96 bg-green-500/20 blur-[100px] rounded-full" />
-        <div className="absolute bottom-0 left-0 -mb-24 -ml-24 w-96 h-96 bg-green-500/10 blur-[100px] rounded-full" />
+      <div className="container mx-auto px-4 py-12">
+        <div className="mb-12">
+          <h2 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tight mb-2">Partner Promotions</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium uppercase tracking-widest">Exclusive deals from our trusted vendors</p>
+        </div>
+        <AdSpace type="banner" limit={2} />
+      </div>
+
+
+      <section className="py-24 bg-gradient-to-br from-green-600 to-green-800 dark:from-green-800 dark:to-green-950 text-white relative overflow-hidden transition-colors duration-300">
+        <div className="absolute top-0 right-0 -mt-24 -mr-24 w-96 h-96 bg-white/10 blur-[100px] rounded-full" />
+        <div className="absolute bottom-0 left-0 -mb-24 -ml-24 w-96 h-96 bg-blue-500/20 blur-[100px] rounded-full" />
 
         <div className="container mx-auto px-4 text-center relative z-10">
-          <h2 className="text-4xl md:text-5xl font-extrabold mb-6 leading-tight">Empower Your Business <br /> with ZimAIO.</h2>
-          <p className="text-lg mb-12 text-gray-400 max-w-2xl mx-auto leading-relaxed">
+          <h2 className="text-4xl md:text-5xl font-extrabold mb-6 leading-tight drop-shadow-sm">Empower Your Business <br /> with ZimAIO.</h2>
+          <p className="text-lg mb-12 text-green-50 max-w-2xl mx-auto leading-relaxed drop-shadow-sm">
             Join ZimAIO's curated ecosystem. Reach meaningful customers and scale your shop with professional tools.
           </p>
           <Link
             to="/vendor-signup"
-            className="premium-button bg-green-600 text-white hover:bg-green-700 shadow-2xl shadow-green-900/40 inline-flex"
+            className="premium-button bg-white text-green-700 hover:bg-gray-50 shadow-2xl shadow-green-900/40 inline-flex font-bold"
           >
             Open Your Shop Today
             <ArrowRight className="ml-2 h-5 w-5" />
@@ -476,38 +419,7 @@ export function HomePage() {
         </div>
       </section>
 
-      {
-        popupAd && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="relative max-w-lg w-full bg-white dark:bg-slate-800 rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-500 delay-200 border border-gray-100 dark:border-slate-700">
-              <button
-                onClick={() => setPopupAd(null)}
-                className="absolute top-4 right-4 z-20 p-2 bg-black/20 hover:bg-black/40 text-white rounded-full transition-all"
-              >
-                <X className="w-6 h-6" />
-              </button>
-              <a
-                href={popupAd.link_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => { handleAdClick(popupAd!.id); setPopupAd(null); }}
-                className="block group"
-              >
-                <div className="aspect-square relative overflow-hidden">
-                  <img src={popupAd.image_url} alt={popupAd.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-8">
-                    <span className="inline-block self-start px-3 py-1 bg-green-500 text-white text-[8px] font-black uppercase tracking-widest rounded-full mb-4">Limited Event</span>
-                    <h3 className="text-3xl font-black text-white mb-4 leading-tight uppercase tracking-tight">{popupAd.title}</h3>
-                    <div className="flex items-center gap-2 text-white/80 font-bold uppercase tracking-widest text-[10px]">
-                      Explore Now <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </div>
-                </div>
-              </a>
-            </div>
-          </div>
-        )
-      }
+      <AdSpace type="popup" limit={1} />
     </div >
   );
 }
