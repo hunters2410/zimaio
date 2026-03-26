@@ -3,12 +3,16 @@ import { supabase } from '../../lib/supabase';
 import { VendorPOS } from '../vendor/VendorPOS';
 import { AdminLayout } from '../../components/AdminLayout';
 import { Store, Search, ChevronRight, AlertCircle } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export function AdminPOS() {
     const [vendors, setVendors] = useState<any[]>([]);
     const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
 
     useEffect(() => {
         fetchVendors();
@@ -105,18 +109,18 @@ export function AdminPOS() {
     return (
         <AdminLayout>
             <div className="space-y-6">
-                <div className="flex items-center justify-between gap-4 bg-gray-900 p-6 rounded-[32px] text-white shadow-xl">
+                <div className={`flex items-center justify-between gap-4 p-6 rounded-[32px] shadow-xl border transition-all ${isDark ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-100 text-gray-900'}`}>
                     <div className="flex items-center gap-6">
                         <button
                             onClick={() => setSelectedVendorId(null)}
-                            className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center hover:bg-white/20 transition-all"
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDark ? 'bg-white/10 hover:bg-white/20' : 'bg-gray-100 hover:bg-gray-200 text-gray-400'}`}
                         >
                             <ChevronRight className="rotate-180" />
                         </button>
-                        <div className="h-10 w-px bg-white/10" />
+                        <div className={`h-10 w-px ${isDark ? 'bg-white/10' : 'bg-gray-100'}`} />
                         <div>
                             <h2 className="text-lg font-black uppercase tracking-tight">POS Terminal</h2>
-                            <p className="text-[10px] font-bold text-white/40">Serving: {vendors.find(v => v.id === selectedVendorId)?.shop_name}</p>
+                            <p className={`text-[10px] font-bold ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Serving: {vendors.find(v => v.id === selectedVendorId)?.shop_name}</p>
                         </div>
                     </div>
                     <div className="bg-cyan-500/10 text-cyan-400 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] border border-cyan-500/20">

@@ -25,7 +25,7 @@ export function LogisticSignupPage() {
         const fetchContracts = async () => {
             const { data } = await supabase.from('contracts')
                 .select('*')
-                .in('contract_type', ['logistic_terms', 'logistic_privacy'])
+                .in('contract_type', ['terms_and_conditions', 'privacy_policy'])
                 .eq('is_active', true);
             setContracts(data || []);
         };
@@ -62,8 +62,8 @@ export function LogisticSignupPage() {
         }
 
         if (data?.user) {
-            const termsContract = contracts.find(c => c.contract_type === 'logistic_terms');
-            const privacyContract = contracts.find(c => c.contract_type === 'logistic_privacy');
+            const termsContract = contracts.find(c => c.contract_type === 'terms_and_conditions');
+            const privacyContract = contracts.find(c => c.contract_type === 'privacy_policy');
 
             if (termsContract && privacyContract) {
                 await supabase.from('contract_acceptances').insert([
@@ -229,7 +229,7 @@ export function LogisticSignupPage() {
                                 />
                                 <label className="ml-2 text-sm text-slate-600 dark:text-slate-400">
                                     I agree to the{' '}
-                                    <Link to="/contract/logistic_terms" target="_blank" className="text-emerald-600 hover:text-emerald-700 font-bold hover:underline">
+                                    <Link to="/contract/terms_and_conditions" target="_blank" className="text-emerald-600 hover:text-emerald-700 font-bold hover:underline">
                                         Terms & Conditions
                                     </Link>
                                 </label>
@@ -245,7 +245,7 @@ export function LogisticSignupPage() {
                                 />
                                 <label className="ml-2 text-sm text-slate-600 dark:text-slate-400">
                                     I have read the{' '}
-                                    <Link to="/contract/logistic_privacy" target="_blank" className="text-emerald-600 hover:text-emerald-700 font-bold hover:underline">
+                                    <Link to="/contract/privacy_policy" target="_blank" className="text-emerald-600 hover:text-emerald-700 font-bold hover:underline">
                                         Privacy Policy
                                     </Link>
                                 </label>

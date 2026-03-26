@@ -256,7 +256,7 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
           ${sidebarCollapsed ? collapsedWidth : expandedWidth}
           ${sidebarBg} border-r ${borderColor}
           flex flex-col
-          transition-all duration-300 ease-in-out
+          transition-[width,transform] duration-300 ease-in-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           shadow-xl lg:shadow-none
         `}
@@ -267,7 +267,7 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
                     border-b ${borderColor}
                 `}>
                     <div className="flex items-center gap-3 overflow-hidden">
-                        <div className={`shrink-0 transition-all duration-300 ${sidebarCollapsed ? 'w-10 h-10' : 'w-40 h-12'} flex items-center justify-center`}>
+                        <div className={`shrink-0 transition-[width,height] duration-300 ${sidebarCollapsed ? 'w-10 h-10' : 'w-40 h-12'} flex items-center justify-center`}>
                             <img
                                 src={settings.site_logo}
                                 alt={settings.site_name}
@@ -377,7 +377,7 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
             {/* Main Content Area */}
             <div className={`
         min-h-screen flex flex-col
-        transition-all duration-300 ease-in-out
+        transition-[padding-left] duration-300 ease-in-out
         ${sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'}
       `}>
 
@@ -574,7 +574,7 @@ export function VendorLayout({ children, activeTab, onTabChange, hasPosAccess = 
 
                 {/* Page Content */}
                 <main className="flex-1 p-6 lg:p-10 overflow-x-hidden">
-                    <div className="max-w-[1600px] mx-auto animate-fadeIn space-y-6">
+                    <div className="max-w-[1600px] mx-auto space-y-6">
                         {subscriptionStatus === 'expired' && activeTab !== 'packages' && (
                             <div className="bg-rose-50 dark:bg-rose-900/10 border-2 border-rose-100 dark:border-rose-900/20 rounded-[2rem] p-8 flex flex-col md:flex-row items-center justify-between gap-6 mb-8 animate-in slide-in-from-top-4 duration-500 shadow-xl shadow-rose-900/5">
                                 <div className="flex items-center gap-6 text-center md:text-left">

@@ -19,6 +19,7 @@ import {
     ExternalLink
 } from 'lucide-react';
 import { Pagination } from '../../components/Pagination';
+import { useCurrency } from '../../contexts/CurrencyContext';
 
 interface OrderItem {
     id: string;
@@ -61,6 +62,7 @@ export function VendorOrderManagement() {
     const [totalItems, setTotalItems] = useState(0);
     const itemsPerPage = 10;
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const { formatPrice, getCurrencySymbol } = useCurrency();
 
     useEffect(() => {
         fetchOrders();
@@ -272,7 +274,7 @@ export function VendorOrderManagement() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
-                                                <span className="font-black text-slate-900 dark:text-white tabular-nums">${order.total.toFixed(2)}</span>
+                                                <span className="font-black text-slate-900 dark:text-white tabular-nums">{formatPrice(order.total, order.currency_code)}</span>
                                                 <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-widest">{order.payment_status}</span>
                                             </div>
                                         </td>
@@ -403,24 +405,24 @@ export function VendorOrderManagement() {
                                                             <span className="text-xs text-slate-900 dark:text-slate-200 uppercase line-clamp-1">{item.name}</span>
                                                         </div>
                                                     </td>
-                                                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">${item.price.toFixed(2)}</td>
+                                                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{formatPrice(item.price, selectedOrder.currency_code)}</td>
                                                     <td className="px-6 py-4 text-slate-600 dark:text-slate-400">x{item.quantity}</td>
-                                                    <td className="px-6 py-4 text-right text-slate-900 dark:text-white font-black tabular-nums">${(item.price * item.quantity).toFixed(2)}</td>
+                                                    <td className="px-6 py-4 text-right text-slate-900 dark:text-white font-black tabular-nums">{formatPrice(item.price * item.quantity, selectedOrder.currency_code)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                         <tfoot className="bg-slate-50/50 dark:bg-slate-900/30">
                                             <tr>
                                                 <td colSpan={3} className="px-6 py-3 text-right text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Subtotal</td>
-                                                <td className="px-6 py-3 text-right font-black text-slate-900 dark:text-white tabular-nums">${selectedOrder.subtotal?.toFixed(2) || (selectedOrder.total - selectedOrder.shipping_fee).toFixed(2)}</td>
+                                                <td className="px-6 py-3 text-right font-black text-slate-900 dark:text-white tabular-nums">{formatPrice(selectedOrder.subtotal || (selectedOrder.total - selectedOrder.shipping_fee), selectedOrder.currency_code)}</td>
                                             </tr>
                                             <tr>
                                                 <td colSpan={3} className="px-6 py-3 text-right text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Shipping</td>
-                                                <td className="px-6 py-3 text-right font-black text-slate-900 dark:text-white tabular-nums">${selectedOrder.shipping_fee?.toFixed(2) || '0.00'}</td>
+                                                <td className="px-6 py-3 text-right font-black text-slate-900 dark:text-white tabular-nums">{formatPrice(selectedOrder.shipping_fee || 0, selectedOrder.currency_code)}</td>
                                             </tr>
                                             <tr className="border-t border-slate-200 dark:border-slate-700">
                                                 <td colSpan={3} className="px-6 py-4 text-right text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">Grand Total</td>
-                                                <td className="px-6 py-4 text-right text-xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">${selectedOrder.total.toFixed(2)}</td>
+                                                <td className="px-6 py-4 text-right text-xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">{formatPrice(selectedOrder.total, selectedOrder.currency_code)}</td>
                                             </tr>
                                         </tfoot>
                                     </table>

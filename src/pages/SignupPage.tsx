@@ -14,8 +14,8 @@ export function SignupPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isHuman, setIsHuman] = useState(false);
-  const [acceptedCustomerTerms, setAcceptedCustomerTerms] = useState(false);
-  const [acceptedCustomerPrivacy, setAcceptedCustomerPrivacy] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [contracts, setContracts] = useState<any[]>([]);
   const { signUp } = useAuth();
   const { settings } = useSiteSettings();
@@ -30,7 +30,7 @@ export function SignupPage() {
       const { data, error } = await supabase
         .from('contracts')
         .select('*')
-        .in('contract_type', ['customer_terms', 'customer_privacy'])
+        .in('contract_type', ['terms_and_conditions', 'privacy_policy'])
         .eq('is_active', true);
 
       if (error) throw error;
@@ -51,8 +51,8 @@ export function SignupPage() {
       return;
     }
 
-    if (role === 'customer' && (!acceptedCustomerTerms || !acceptedCustomerPrivacy)) {
-      setError('Please accept both the Customer Terms & Conditions and Privacy Policy');
+    if (role === 'customer' && (!acceptedTerms || !acceptedPrivacy)) {
+      setError('Please accept both the Terms & Conditions and Privacy Policy');
       setLoading(false);
       return;
     }
@@ -64,20 +64,20 @@ export function SignupPage() {
       setLoading(false);
     } else {
       if (data?.user && role === 'customer') {
-        const customerTermsContract = contracts.find(c => c.contract_type === 'customer_terms');
-        const customerPrivacyContract = contracts.find(c => c.contract_type === 'customer_privacy');
+        const termsContract = contracts.find(c => c.contract_type === 'terms_and_conditions');
+        const privacyContract = contracts.find(c => c.contract_type === 'privacy_policy');
 
-        if (customerTermsContract && customerPrivacyContract) {
+        if (termsContract && privacyContract) {
           await supabase.from('contract_acceptances').insert([
             {
               user_id: data.user.id,
-              contract_id: customerTermsContract.id,
+              contract_id: termsContract.id,
               ip_address: '',
               user_agent: navigator.userAgent,
             },
             {
               user_id: data.user.id,
-              contract_id: customerPrivacyContract.id,
+              contract_id: privacyContract.id,
               ip_address: '',
               user_agent: navigator.userAgent,
             },
@@ -167,20 +167,20 @@ export function SignupPage() {
 
           {role === 'customer' && (
             <div className="space-y-3 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-700">
-              <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">Customer Agreements *</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">Agreements *</p>
 
               <div className="flex items-start">
                 <input
                   type="checkbox"
                   required
-                  checked={acceptedCustomerTerms}
-                  onChange={(e) => setAcceptedCustomerTerms(e.target.checked)}
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
                   className="rounded border-gray-300 dark:border-slate-600 text-cyan-600 focus:ring-cyan-500 bg-white dark:bg-slate-700 mt-1"
                 />
                 <label className="ml-2 text-sm text-gray-600 dark:text-gray-400">
                   I agree to the{' '}
-                  <Link to="/contract/customer_terms" target="_blank" className="text-cyan-600 hover:text-cyan-700 font-semibold underline">
-                    Customer Terms & Conditions
+                  <Link to="/contract/terms_and_conditions" target="_blank" className="text-cyan-600 hover:text-cyan-700 font-semibold underline">
+                    Terms & Conditions
                   </Link>
                 </label>
               </div>
@@ -189,14 +189,14 @@ export function SignupPage() {
                 <input
                   type="checkbox"
                   required
-                  checked={acceptedCustomerPrivacy}
-                  onChange={(e) => setAcceptedCustomerPrivacy(e.target.checked)}
+                  checked={acceptedPrivacy}
+                  onChange={(e) => setAcceptedPrivacy(e.target.checked)}
                   className="rounded border-gray-300 dark:border-slate-600 text-cyan-600 focus:ring-cyan-500 bg-white dark:bg-slate-700 mt-1"
                 />
                 <label className="ml-2 text-sm text-gray-600 dark:text-gray-400">
                   I have read and accept the{' '}
-                  <Link to="/contract/customer_privacy" target="_blank" className="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 font-semibold underline">
-                    Customer Privacy Policy
+                  <Link to="/contract/privacy_policy" target="_blank" className="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 font-semibold underline">
+                    Privacy Policy
                   </Link>
                 </label>
               </div>

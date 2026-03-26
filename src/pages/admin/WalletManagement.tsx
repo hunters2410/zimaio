@@ -172,23 +172,85 @@ export function WalletManagement() {
       // 2. Identify Admin and Vendor User Mapping
       const { data: adminProfile } = await supabase.from('profiles').select('id').eq('role', 'admin').limit(1).single();
       const { data: vProfiles } = await supabase.from('vendor_profiles').select('id, user_id');
+      const { data: walletsData } = await supabase.from('wallets').select('id, user_id');
 
       const vendorMap: Record<string, string> = {};
       vProfiles?.forEach(vp => vendorMap[vp.id] = vp.user_id);
 
-      // 3. Group by identities
-      const totals: Record<string, { earned: number, comm: number }> = {};
+      const walletMap: Record<string, string> = {};
+      walletsData?.forEach(w => walletMap[w.user_id] = w.id);
 
-      paidOrders.forEach(order => {
-        // Admin earned commission + vat
+      // 3. Process each order for the ledger
+      let syncedCount = 0;
+      for (const order of paidOrders) {
+        // A. Handle Admin Commission Logging
         if (adminProfile) {
-          const adminId = adminProfile.id;
-          if (!totals[adminId]) totals[adminId] = { earned: 0, comm: 0 };
-          totals[adminId].earned += (Number(order.commission_amount) || 0) + (Number(order.vat_amount) || 0);
-          totals[adminId].comm += (Number(order.commission_amount) || 0);
+          const commAmount = (Number(order.commission_amount) || 0) + (Number(order.vat_amount) || 0);
+          if (commAmount > 0) {
+            // Check for existing entry
+            const { data: existing } = await supabase
+              .from('transaction_ledger')
+              .select('id')
+              .eq('user_id', adminProfile.id)
+              .eq('reference_id', order.id)
+              .eq('transaction_type', 'commission')
+              .maybeSingle();
+
+            if (!existing) {
+              await supabase.from('transaction_ledger').insert({
+                user_id: adminProfile.id,
+                wallet_id: walletMap[adminProfile.id],
+                transaction_type: 'commission',
+                amount: commAmount,
+                currency_code: order.currency_code || 'USD',
+                reference_id: order.id,
+                description: `Commission earned from Order #${order.id.slice(0, 8)}`,
+                metadata: { order_id: order.id, sync_date: new Date().toISOString() }
+              });
+              syncedCount++;
+            }
+          }
         }
 
-        // Vendor earned subtotal
+        // B. Handle Vendor Payment Logging
+        const vendorUserId = vendorMap[order.vendor_id];
+        if (vendorUserId) {
+          const vendorAmount = (Number(order.subtotal) || 0);
+          if (vendorAmount > 0) {
+            const { data: existing } = await supabase
+              .from('transaction_ledger')
+              .select('id')
+              .eq('user_id', vendorUserId)
+              .eq('reference_id', order.id)
+              .eq('transaction_type', 'payment')
+              .maybeSingle();
+
+            if (!existing) {
+              await supabase.from('transaction_ledger').insert({
+                user_id: vendorUserId,
+                wallet_id: walletMap[vendorUserId],
+                transaction_type: 'payment',
+                amount: vendorAmount,
+                currency_code: order.currency_code || 'USD',
+                reference_id: order.id,
+                description: `Payment for Order #${order.id.slice(0, 8)}`,
+                metadata: { order_id: order.id, sync_date: new Date().toISOString() }
+              });
+              syncedCount++;
+            }
+          }
+        }
+      }
+
+      // 4. Update Wallets (Aggregated)
+      // Logic from 179-208 remained to keep wallets in sync
+      const totals: Record<string, { earned: number, comm: number }> = {};
+      paidOrders.forEach(order => {
+        if (adminProfile) {
+          if (!totals[adminProfile.id]) totals[adminProfile.id] = { earned: 0, comm: 0 };
+          totals[adminProfile.id].earned += (Number(order.commission_amount) || 0) + (Number(order.vat_amount) || 0);
+          totals[adminProfile.id].comm += (Number(order.commission_amount) || 0);
+        }
         const vendorUserId = vendorMap[order.vendor_id];
         if (vendorUserId) {
           if (!totals[vendorUserId]) totals[vendorUserId] = { earned: 0, comm: 0 };
@@ -196,10 +258,7 @@ export function WalletManagement() {
         }
       });
 
-      // 4. Update Wallets (Sequential)
       for (const [userId, stats] of Object.entries(totals)) {
-        if (!userId) continue;
-
         await supabase.from('wallets').upsert({
           user_id: userId,
           balance_usd: stats.earned,
@@ -207,7 +266,7 @@ export function WalletManagement() {
         }, { onConflict: 'user_id' });
       }
 
-      setMessage({ type: 'success', text: `Successfully synced ${paidOrders.length} orders into ledgers.` });
+      setMessage({ type: 'success', text: `Sync complete. Generated ${syncedCount} new ledger entries.` });
       fetchWallets();
     } catch (err: any) {
       console.error(err);
@@ -374,7 +433,7 @@ export function WalletManagement() {
 
       if (walletError) throw walletError;
 
-      // Log transaction
+      // Log transaction to detailed wallet history
       const { error: transactionError } = await supabase
         .from('wallet_transactions_detailed')
         .insert([{
@@ -390,6 +449,17 @@ export function WalletManagement() {
         }]);
 
       if (transactionError) throw transactionError;
+
+      // Also log to Immutable Fiscal Ledger
+      await supabase.from('transaction_ledger').insert([{
+        user_id: selectedWallet.user_id,
+        wallet_id: upsertedWallet.id,
+        transaction_type: 'adjustment',
+        amount: actualAdjustment,
+        currency_code: adjustCurrency,
+        description: adjustDescription || `Admin ${adjustType} adjustment`,
+        metadata: { source: 'admin_audit', adjusted_by: (await supabase.auth.getUser()).data.user?.id }
+      }]);
 
       setMessage({ type: 'success', text: `Successfully ${adjustType === 'deposit' ? 'added' : 'subtracted'} ${amount} ${adjustCurrency}` });
       setShowAdjustModal(false);
@@ -450,6 +520,18 @@ export function WalletManagement() {
           reference_type: 'withdrawal_request',
           description: `Withdrawal approved: ${request.amount} ${request.currency}`,
           created_by: (await supabase.auth.getUser()).data.user?.id,
+        });
+
+        // Also log to Immutable Ledger
+        await supabase.from('transaction_ledger').insert({
+          user_id: request.vendor_id,
+          wallet_id: walletData.id,
+          transaction_type: 'withdrawal',
+          amount: -request.amount,
+          currency_code: request.currency,
+          reference_id: requestId,
+          description: `Approved withdrawal payout for vendor`,
+          metadata: { request_id: requestId, processed_by: (await supabase.auth.getUser()).data.user?.id }
         });
       }
 

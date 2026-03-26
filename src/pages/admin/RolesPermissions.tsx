@@ -4,6 +4,7 @@ import { AdminLayout } from '../../components/AdminLayout';
 import { supabase } from '../../lib/supabase';
 import { Shield, Plus, Edit, Trash2, Users, X, AlertCircle, Search, LayoutGrid, List } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Pagination } from '../../components/Pagination';
 
 interface Role {
   id: string;
@@ -29,20 +30,33 @@ export function RolesPermissions() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRoles, setTotalRoles] = useState(0);
+  const itemsPerPage = 10;
+
   useEffect(() => {
     fetchRoles();
-  }, []);
+  }, [currentPage, searchTerm]);
 
   const fetchRoles = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('user_roles')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact' });
+
+      if (searchTerm) {
+        query = query.or(`role_name.ilike.%${searchTerm}%,role_description.ilike.%${searchTerm}%`);
+      }
+
+      const { data, error, count } = await query
+        .order('created_at', { ascending: false })
+        .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
 
       if (error) throw error;
       setRoles(data || []);
+      setTotalRoles(count || 0);
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message });
     } finally {
@@ -75,10 +89,8 @@ export function RolesPermissions() {
     setSelectedRole(null);
   };
 
-  const filteredRoles = roles.filter(role =>
-    role.role_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    role.role_description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Roles are now filtered on the server via query
+  const filteredRoles = roles;
 
   const cardBg = isDark ? 'bg-gray-800' : 'bg-white';
   const textPrimary = isDark ? 'text-gray-100' : 'text-gray-900';
@@ -136,7 +148,10 @@ export function RolesPermissions() {
             type="text"
             placeholder="Search roles..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
             className={`w-full pl-10 pr-4 py-2 border ${borderColor} rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isDark ? 'bg-gray-700 text-gray-100' : 'bg-white'}`}
           />
         </div>
@@ -324,6 +339,18 @@ export function RolesPermissions() {
         </div>
       )}
 
+      {!loading && totalRoles > itemsPerPage && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalRoles}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            isDark={isDark}
+          />
+        </div>
+      )}
+
       {showAssignModal && selectedRole && (
         <RoleAssignment
           role={selectedRole}
@@ -354,9 +381,14 @@ function RoleAssignment({ role, onClose, isDark }: RoleAssignmentProps) {
   const textSecondary = isDark ? 'text-gray-400' : 'text-gray-600';
   const borderColor = isDark ? 'border-gray-700' : 'border-gray-200';
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalAssignments, setTotalAssignments] = useState(0);
+  const itemsPerPage = 5; // Smaller for modal
+
   useEffect(() => {
     fetchUsersAndAssignments();
-  }, []);
+  }, [currentPage]);
 
   const fetchUsersAndAssignments = async () => {
     setLoading(true);
@@ -368,8 +400,10 @@ function RoleAssignment({ role, onClose, isDark }: RoleAssignmentProps) {
           .select(`
             *,
             user:profiles!user_role_assignments_user_id_fkey(id, email, full_name)
-          `)
-          .eq('role_id', role.id),
+          `, { count: 'exact' })
+          .eq('role_id', role.id)
+          .order('created_at', { ascending: false })
+          .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1),
       ]);
 
       if (usersData.error) throw usersData.error;
@@ -377,6 +411,7 @@ function RoleAssignment({ role, onClose, isDark }: RoleAssignmentProps) {
 
       setUsers(usersData.data || []);
       setAssignments(assignmentsData.data || []);
+      setTotalAssignments(assignmentsData.count || 0);
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message });
     } finally {
@@ -522,6 +557,18 @@ function RoleAssignment({ role, onClose, isDark }: RoleAssignmentProps) {
               </div>
             )}
           </div>
+
+          {!loading && totalAssignments > itemsPerPage && (
+            <div className="mt-6 border-t pt-4">
+              <Pagination
+                currentPage={currentPage}
+                totalItems={totalAssignments}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+                isDark={isDark}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

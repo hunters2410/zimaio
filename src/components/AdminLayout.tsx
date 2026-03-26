@@ -68,14 +68,12 @@ const navItems: NavItem[] = [
   { path: '/admin/users', label: 'Admin Users', icon: <Shield className="h-5 w-5" />, section: 'Users & Vendors', permissionKey: 'roles' },
   { path: '/admin/roles-permissions', label: 'Roles & Permissions', icon: <Shield className="h-5 w-5" />, section: 'Users & Vendors', permissionKey: 'roles' },
   { path: '/admin/kyc-verification', label: 'KYC Verification', icon: <Shield className="h-5 w-5" />, section: 'Users & Vendors', permissionKey: 'kyc' },
-  { path: '/admin/vendor-contracts', label: 'Vendor Contracts', icon: <FileCheck className="h-5 w-5" />, section: 'Users & Vendors', permissionKey: 'vendors' },
-  { path: '/admin/customer-contracts', label: 'Customer Contracts', icon: <FileText className="h-5 w-5" />, section: 'Users & Vendors', permissionKey: 'customers' },
+  { path: '/admin/vendor-contracts', label: 'Policies Management', icon: <FileCheck className="h-5 w-5" />, section: 'Users & Vendors', permissionKey: 'settings' },
 
 
   { path: '/admin/logistics', label: 'Logistics Overview', icon: <Globe className="h-5 w-5" />, section: 'Shipping & Logistics', permissionKey: 'delivery' },
   { path: '/admin/shipping', label: 'Shipping Methods', icon: <BarChart3 className="h-5 w-5" />, section: 'Shipping & Logistics', permissionKey: 'delivery' },
   { path: '/admin/delivery', label: 'Delivery Tracking', icon: <Truck className="h-5 w-5" />, section: 'Shipping & Logistics', permissionKey: 'delivery' },
-  { path: '/admin/logistic-contracts', label: 'Logistic Contracts', icon: <FileCheck className="h-5 w-5" />, section: 'Shipping & Logistics', permissionKey: 'delivery' },
 
   { path: '/admin/wallets', label: 'Wallet Management', icon: <DollarSign className="h-5 w-5" />, section: 'Financial', permissionKey: 'financial' },
   { path: '/admin/payment-gateways', label: 'Payment Gateways', icon: <CreditCard className="h-5 w-5" />, section: 'Financial', permissionKey: 'financial' },
@@ -254,7 +252,7 @@ function AdminLayout({ children }: AdminLayoutProps) {
           ${sidebarCollapsed ? collapsedWidth : expandedWidth}
           ${sidebarBg} border-r ${borderColor}
           flex flex-col
-          transition-all duration-300 ease-in-out
+          transition-[width,transform] duration-300 ease-in-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           shadow-xl lg:shadow-none
         `}
@@ -375,7 +373,7 @@ function AdminLayout({ children }: AdminLayoutProps) {
       {/* Main Content Area */}
       <div className={`
         min-h-screen flex flex-col
-        transition-all duration-300 ease-in-out
+        transition-[padding-left] duration-300 ease-in-out
         ${sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'}
       `}>
 
@@ -523,7 +521,7 @@ function AdminLayout({ children }: AdminLayoutProps) {
 
         {/* Page Content */}
         <main className="flex-1 p-6 lg:p-10 overflow-x-hidden">
-          <div className="max-w-[1600px] mx-auto animate-fadeIn">
+          <div className="max-w-[1600px] mx-auto">
             {children}
           </div>
         </main>

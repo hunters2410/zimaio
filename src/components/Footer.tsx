@@ -87,35 +87,22 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="text-gray-900 dark:text-white font-semibold mb-4">For Customers</h3>
+            <h3 className="text-gray-900 dark:text-white font-semibold mb-4">Legal</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link to="/contract/customer_terms" className="hover:text-blue-400 transition font-medium">
-                  Customer Terms & Conditions
+                <Link to="/contract/terms_and_conditions" className="hover:text-blue-400 transition font-medium">
+                  Terms & Conditions
                 </Link>
               </li>
               <li>
-                <Link to="/contract/customer_privacy" className="hover:text-blue-400 transition font-medium">
-                  Customer Privacy Policy
+                <Link to="/contract/privacy_policy" className="hover:text-blue-400 transition font-medium">
+                  Privacy Policy
                 </Link>
               </li>
             </ul>
           </div>
 
           <div>
-            <h3 className="text-gray-900 dark:text-white font-semibold mb-4">For Vendors</h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <Link to="/contract/vendor_terms" className="hover:text-blue-400 transition font-medium">
-                  Vendor Terms & Conditions
-                </Link>
-              </li>
-              <li>
-                <Link to="/contract/vendor_privacy" className="hover:text-blue-400 transition font-medium">
-                  Vendor Privacy Policy
-                </Link>
-              </li>
-            </ul>
             <div className="mt-4">
               <h4 className="text-gray-900 dark:text-white font-semibold mb-2 text-sm">Contact</h4>
               <ul className="space-y-2 text-xs">

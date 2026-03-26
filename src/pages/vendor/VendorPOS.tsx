@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCurrency } from '../../contexts/CurrencyContext';
 import { useSettings } from '../../contexts/SettingsContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import {
     Search,
     ShoppingCart,
@@ -43,8 +44,10 @@ interface VendorPOSProps {
 
 export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
     const { profile } = useAuth();
-    const { formatPrice } = useCurrency();
+    const { theme } = useTheme();
+    const { formatPrice, currency, setCurrency, currencies, getCurrencySymbol } = useCurrency();
     const { calculatePrice } = useSettings();
+    const isDark = theme === 'dark';
     const [products, setProducts] = useState<Product[]>([]);
     const [cart, setCart] = useState<CartItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -220,6 +223,7 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                 subtotal: orderBaseTotal,
                 commission_amount: orderCommTotal,
                 vat_amount: orderVatTotal,
+                currency_code: currency,
                 status: 'delivered',
                 payment_status: 'paid',
                 payment_method: paymentMethod,
@@ -294,36 +298,38 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
     );
 
     return (
-        <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden font-roboto text-slate-900 dark:text-slate-100">
+        <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden font-roboto text-slate-900 dark:text-slate-100 transition-colors duration-300">
             {/* Left Navigation Sidebar */}
-            <div className="w-20 md:w-24 bg-slate-900 flex flex-col items-center py-6 gap-8 z-20 shadow-xl">
-                <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+            <div className={`w-20 md:w-24 flex flex-col items-center py-6 gap-8 z-20 shadow-xl border-r ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} transition-all`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-all ${isDark ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-emerald-600 text-white shadow-emerald-600/20'}`}>
                     <Scan size={20} strokeWidth={3} />
                 </div>
 
                 <div className="flex flex-col gap-4 w-full px-3">
                     <button
                         onClick={() => setActiveTab('register')}
-                        className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${activeTab === 'register' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
+                        className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${activeTab === 'register' 
+                            ? (isDark ? 'bg-white/10 text-white' : 'bg-slate-100 text-emerald-600 border border-slate-200') 
+                            : 'text-slate-500 hover:text-emerald-600 hover:bg-slate-50 dark:hover:text-white dark:hover:bg-white/5'}`}
                     >
                         <ShoppingCart size={20} />
                         <span className="text-[9px] font-black uppercase tracking-wider">Sell</span>
                     </button>
                     <button
                         onClick={() => onTabChange && onTabChange('orders')}
-                        className="p-3 rounded-xl flex flex-col items-center gap-1 text-slate-500 hover:text-white hover:bg-white/5 transition-all"
+                        className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${isDark ? 'text-slate-500 hover:text-white hover:bg-white/5' : 'text-slate-500 hover:text-emerald-600 hover:bg-slate-50'}`}
                     >
                         <Package size={20} />
                         <span className="text-[9px] font-black uppercase tracking-wider">Orders</span>
                     </button>
-                    <button className="p-3 rounded-xl flex flex-col items-center gap-1 text-slate-500 hover:text-white hover:bg-white/5 transition-all">
+                    <button className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${isDark ? 'text-slate-500 hover:text-white hover:bg-white/5' : 'text-slate-500 hover:text-emerald-600 hover:bg-slate-50'}`}>
                         <User size={20} />
                         <span className="text-[9px] font-black uppercase tracking-wider">Cust.</span>
                     </button>
                 </div>
 
                 <div className="mt-auto flex flex-col gap-4 w-full px-3">
-                    <button className="p-3 rounded-xl flex flex-col items-center gap-1 text-slate-500 hover:text-white hover:bg-white/5 transition-all">
+                    <button className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${isDark ? 'text-slate-500 hover:text-white' : 'text-slate-500 hover:text-emerald-600'}`}>
                         <Printer size={20} />
                     </button>
                 </div>
@@ -350,6 +356,18 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                                 placeholder="Global Search..."
                                 className="bg-transparent border-none outline-none text-xs font-bold text-slate-700 dark:text-slate-200 w-48 placeholder:text-slate-400"
                             />
+                        </div>
+                        {/* Currency Switcher */}
+                        <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                            {currencies.map(c => (
+                                <button
+                                    key={c.code}
+                                    onClick={() => setCurrency(c.code)}
+                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${currency === c.code ? 'bg-white dark:bg-slate-800 text-emerald-600 shadow-sm border border-slate-100 dark:border-slate-700' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                                >
+                                    {c.code}
+                                </button>
+                            ))}
                         </div>
                         <div className="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-slate-700">
                             <div className="text-right hidden md:block">
@@ -464,7 +482,7 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                                         </div>
                                         <div className="flex justify-between text-xs text-slate-500">
                                             <span>Tax</span>
-                                            <span className="font-bold dark:text-slate-300">$0.00</span>
+                                            <span className="font-bold dark:text-slate-300">{getCurrencySymbol(currency)}0.00</span>
                                         </div>
                                         <div className="flex justify-between text-lg font-black text-slate-900 dark:text-white pt-2 border-t border-slate-200 dark:border-slate-700">
                                             <span>Total</span>
@@ -474,7 +492,7 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                                     <button
                                         disabled={cart.length === 0}
                                         onClick={() => setCheckoutModal(true)}
-                                        className="w-full py-4 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className={`w-full py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${isDark ? 'bg-slate-900 text-white hover:bg-black shadow-slate-950' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200'}`}
                                     >
                                         Checkout
                                     </button>
@@ -489,7 +507,7 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
             <div className="lg:hidden fixed bottom-6 right-6 z-50">
                 <button
                     onClick={() => setMobilePanel(mobilePanel === 'products' ? 'cart' : 'products')}
-                    className="relative w-14 h-14 bg-slate-900 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white rounded-2xl shadow-2xl shadow-slate-900/40 flex items-center justify-center active:scale-95 transition-all"
+                    className={`relative w-14 h-14 text-white rounded-2xl shadow-2xl flex items-center justify-center active:scale-95 transition-all ${isDark ? 'bg-slate-900 shadow-slate-900/40' : 'bg-emerald-600 shadow-emerald-500/40'}`}
                 >
                     {mobilePanel === 'products' ? <ShoppingCart size={22} /> : <Package size={22} />}
                     {mobilePanel === 'products' && cart.length > 0 && (
@@ -575,9 +593,9 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                                             <div key={idx} className="flex justify-between items-start text-xs font-bold text-slate-700">
                                                 <div className="flex flex-col">
                                                     <span>{item.name}</span>
-                                                    <span className="text-[10px] text-slate-400">x{item.quantity} @ {formatPrice(item.price)}</span>
+                                                    <span className="text-[10px] text-slate-400">x{item.quantity} @ {formatPrice(item.price, orderComplete.currency_code)}</span>
                                                 </div>
-                                                <span>{formatPrice(item.price * item.quantity)}</span>
+                                                <span>{formatPrice(item.price * item.quantity, orderComplete.currency_code)}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -586,11 +604,11 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
                                     <div className="border-t-2 border-dashed border-gray-200 pt-4 space-y-1">
                                         <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                             <span>Subtotal</span>
-                                            <span>{formatPrice(orderComplete.subtotal)}</span>
+                                            <span>{formatPrice(orderComplete.subtotal, orderComplete.currency_code)}</span>
                                         </div>
                                         <div className="flex justify-between text-base font-black text-slate-900 uppercase tracking-tight mt-2">
                                             <span>Total Paid</span>
-                                            <span>{formatPrice(orderComplete.total)}</span>
+                                            <span>{formatPrice(orderComplete.total, orderComplete.currency_code)}</span>
                                         </div>
                                     </div>
 
@@ -602,7 +620,7 @@ export function VendorPOS({ overrideVendorId, onTabChange }: VendorPOSProps) {
 
                                 {/* Actions */}
                                 <div className="grid grid-cols-2 gap-3 w-full">
-                                    <button onClick={handleDownloadReceipt} className="py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-black transition-all flex items-center justify-center gap-2">
+                                    <button onClick={handleDownloadReceipt} className={`py-3 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${isDark ? 'bg-slate-900 hover:bg-black' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
                                         <Download size={16} /> Save PDF
                                     </button>
                                     <button onClick={() => window.print()} className="py-3 bg-white border border-gray-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-gray-50 transition-all flex items-center justify-center gap-2">

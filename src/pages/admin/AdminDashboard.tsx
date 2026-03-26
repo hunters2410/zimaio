@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, Package, ShoppingCart, DollarSign, AlertTriangle, TrendingUp, BarChart3, Globe, Percent, Truck, Construction } from 'lucide-react';
+import { Users, Package, ShoppingCart, DollarSign, AlertTriangle, TrendingUp, BarChart3, Globe, Percent, Truck, Construction, Store } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { AdminLayout } from '../../components/AdminLayout';
@@ -23,7 +23,9 @@ export function AdminDashboard() {
     pendingVendors: 0,
     pendingKyc: 0,
     fraudAlerts: 0,
-    totalVisits: 0
+    totalVisits: 0,
+    customerPreReg: 0,
+    vendorPreReg: 0
   });
   const [loading, setLoading] = useState(true);
   const [analyticsData, setAnalyticsData] = useState<{
@@ -53,6 +55,8 @@ export function AdminDashboard() {
         pendingVendorsRes,
         pendingKycRes,
         fraudRes,
+        customerPreRegRes,
+        vendorPreRegRes,
         visitsRes
       ] = await Promise.all([
         supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'customer'),
@@ -62,7 +66,9 @@ export function AdminDashboard() {
         supabase.from('vendor_profiles').select('id', { count: 'exact', head: true }).eq('is_approved', false),
         supabase.from('vendor_profiles').select('id', { count: 'exact', head: true }).eq('kyc_status', 'pending'),
         supabase.from('fraud_detections').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        Promise.resolve({ count: 0 }) // supabase.from('site_visits').select('id', { count: 'exact', head: true })
+        supabase.from('customer_pre_registrations').select('id', { count: 'exact', head: true }),
+        supabase.from('vendor_pre_registrations').select('id', { count: 'exact', head: true }),
+        supabase.from('site_visits').select('id', { count: 'exact', head: true })
       ]);
 
       const totalRevenue = (ordersRes.data || []).reduce((sum, order) => sum + Number(order.total), 0);
@@ -80,6 +86,8 @@ export function AdminDashboard() {
         pendingKyc: pendingKycRes.count || 0,
         fraudAlerts: fraudRes.count || 0,
         totalVisits: visitsRes.count || 0,
+        customerPreReg: customerPreRegRes.count || 0,
+        vendorPreReg: vendorPreRegRes.count || 0,
         vatCollected: totalVat,
         handlingFees: totalHandling,
         logisticsEarnings: totalLogistics
@@ -128,7 +136,7 @@ export function AdminDashboard() {
       </div>
 
       <div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-6 mb-8">
           <div className={`${cardBg} rounded-lg shadow-sm p-6`}>
             <div className="flex items-center justify-between mb-4">
               <div className="bg-blue-100 p-3 rounded-lg">
@@ -184,6 +192,28 @@ export function AdminDashboard() {
             </div>
             <div className={`text-3xl font-bold ${textPrimary}`}>{stats.totalVisits.toLocaleString()}</div>
             <p className="text-sm text-indigo-600 mt-2">Total page visits</p>
+          </div>
+
+          <div className={`${cardBg} rounded-lg shadow-sm p-6`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="bg-orange-100 p-3 rounded-lg">
+                <Users className="h-6 w-6 text-orange-600" />
+              </div>
+              <span className={`text-sm ${textSecondary}`}>Customer Pre-Reg</span>
+            </div>
+            <div className={`text-3xl font-bold ${textPrimary}`}>{stats.customerPreReg}</div>
+            <p className="text-sm text-orange-600 mt-2">Early interest leads</p>
+          </div>
+
+          <div className={`${cardBg} rounded-lg shadow-sm p-6`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="bg-amber-100 p-3 rounded-lg">
+                <Store className="h-6 w-6 text-amber-600" />
+              </div>
+              <span className={`text-sm ${textSecondary}`}>Vendor Pre-Reg</span>
+            </div>
+            <div className={`text-3xl font-bold ${textPrimary}`}>{stats.vendorPreReg}</div>
+            <p className="text-sm text-amber-600 mt-2">Prospective vendors</p>
           </div>
         </div>
 

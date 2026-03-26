@@ -10,16 +10,21 @@ export function ContractPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchContract();
+    let effectiveType = type;
+    // Map old types to new unified types
+    if (type?.includes('terms')) effectiveType = 'terms_and_conditions';
+    if (type?.includes('privacy')) effectiveType = 'privacy_policy';
+    
+    fetchContract(effectiveType);
   }, [type]);
-
-  const fetchContract = async () => {
+ 
+  const fetchContract = async (renderType: string | undefined) => {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('contracts')
         .select('*')
-        .eq('contract_type', type)
+        .eq('contract_type', renderType)
         .eq('is_active', true)
         .single();
 

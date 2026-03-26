@@ -465,7 +465,7 @@ export default function VendorPackages() {
       {/* Modal Code remains largely the same logic but structurally kept for CRUD */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className={`${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white'} rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto transform transition-all border`}>
+          <div className={`${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white'} rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border`}>
             <div className={`p-8 border-b ${borderColor} flex items-center justify-between sticky top-0 ${isDark ? 'bg-slate-800/95' : 'bg-white/95'} backdrop-blur-md z-10`}>
               <div>
                 <h2 className={`text-2xl font-bold ${textPrimary}`}>

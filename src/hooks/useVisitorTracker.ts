@@ -28,20 +28,18 @@ export function useVisitorTracker() {
                 // Method 1: Insert a new visit record (best for detailed analytics)
                 // Table: site_visits (id, created_at, page_url, user_agent)
 
-                // Temporarily disabled: 'site_visits' table does not exist
-                // const { error } = await supabase
-                //     .from('site_visits')
-                //     .insert([
-                //         {
-                //             page_url: window.location.pathname,
-                //             user_agent: navigator.userAgent
-                //         }
-                //     ]);
+                const { error } = await supabase
+                    .from('site_visits')
+                    .insert([
+                        {
+                            page_url: window.location.pathname,
+                            user_agent: navigator.userAgent
+                        }
+                    ]);
 
-                // if (!error) {
-                //     sessionStorage.setItem(SESSION_KEY, 'true');
-                // }
-                sessionStorage.setItem(SESSION_KEY, 'true');
+                if (!error) {
+                    sessionStorage.setItem(SESSION_KEY, 'true');
+                }
 
             } catch (err) {
                 // console.error("Error recording visit", err);

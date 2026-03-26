@@ -1,72 +1,89 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { Shield, Lock, Eye, Calendar } from 'lucide-react';
+
 export function PrivacyPage() {
+  const [contract, setContract] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchContract();
+  }, []);
+
+  const fetchContract = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('contracts')
+        .select('*')
+        .eq('contract_type', 'privacy_policy')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) throw error;
+      setContract(data);
+    } catch (error) {
+      console.error('Error fetching privacy policy:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-slate-950 flex items-center justify-center transition-colors">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+      </div>
+    );
+  }
+
+  if (!contract) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-slate-950 flex items-center justify-center transition-colors px-4 text-center">
+        <div className="max-w-md">
+          <h1 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-4">Privacy Void</h1>
+          <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">The Privacy Policy document could not be located in the current database registry.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300 py-12">
+    <div className="min-h-screen bg-white dark:bg-slate-950 py-12 transition-colors duration-300">
       <div className="container mx-auto px-4 max-w-4xl">
-        <div className="bg-white dark:bg-slate-800 rounded-[2rem] shadow-2xl shadow-slate-900/5 p-8 md:p-12 border-2 border-slate-50 dark:border-slate-700">
-          <div className="mb-10">
-            <h1 className="text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Privacy Policy</h1>
-            <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-2 px-1">Last updated: {new Date().toLocaleDateString()}</p>
+        <div className="mb-12 text-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-emerald-50 dark:bg-emerald-900/20 rounded-3xl mb-6 border-2 border-emerald-100 dark:border-emerald-800 shadow-xl shadow-emerald-500/10">
+            <Shield className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <h1 className="text-5xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-4">{contract.title}</h1>
+          <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.4em]">
+            Operational Protocol v{contract.version} • Updated {new Date(contract.updated_at).toLocaleDateString()}
+          </p>
+        </div>
+
+        <div className="bg-slate-50 dark:bg-slate-900/30 rounded-[3rem] p-8 md:p-12 border-2 border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-900/5">
+          <div className="prose prose-emerald dark:prose-invert max-w-none">
+            <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
+              {contract.content}
+            </div>
           </div>
 
-          <div className="space-y-10">
-            <section>
-              <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight mb-4 flex items-center gap-3">
-                <span className="w-8 h-8 rounded-lg bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center text-xs">01</span>
-                Information We Collect
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
-                We collect information that you provide directly to us, including when you create an account,
-                make a purchase, or communicate with us. This may include your name, email address, phone number,
-                shipping address, and payment information.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight mb-4 flex items-center gap-3">
-                <span className="w-8 h-8 rounded-lg bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center text-xs">02</span>
-                How We Use Your Information
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300 leading-relaxed font-medium mb-4">
-                We use the information we collect to:
-              </p>
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 ml-2">
-                {[
-                  'Process and fulfill your orders',
-                  'Communicate regarding account status',
-                  'Provide specialized customer support',
-                  'Distribution of marketing materials',
-                  'Platform performance optimization',
-                  'Fraud detection and prevention'
-                ].map((item, i) => (
-                  <li key={i} className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
-                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-500"></div>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight mb-4 flex items-center gap-3">
-                <span className="w-8 h-8 rounded-lg bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center text-xs">03</span>
-                Information Sharing
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
-                We share your information with vendors when you make a purchase, with service providers who help
-                us operate our platform, and when required by law. We do not sell your personal information to
-                third parties.
-              </p>
-            </section>
-
-            <section className="pt-10 border-t-2 border-slate-50 dark:border-slate-700">
-              <h2 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest mb-4">Contact Protocol</h2>
-              <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl border-2 border-slate-100 dark:border-slate-800">
-                <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest leading-loose">
-                  If you have any questions about this Privacy Policy, please contact us at <span className="text-cyan-600 dark:text-cyan-400">privacy@zimaio.com</span>
-                  or through our official support channels.
-                </p>
+          <div className="mt-16 pt-10 border-t-2 border-slate-100 dark:border-slate-800 text-center">
+            <div className="flex flex-wrap justify-center gap-6 mb-8 mt-2">
+              <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700">
+                <Lock className="w-4 h-4 text-emerald-500" />
+                <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">End-to-End Encryption</span>
               </div>
-            </section>
+              <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700">
+                <Eye className="w-4 h-4 text-cyan-500" />
+                <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Minimal Data Collection</span>
+              </div>
+            </div>
+            <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em]">
+              Security Concerns? <span className="text-emerald-600 dark:text-emerald-400 ml-2">security@zimaio.com</span>
+            </p>
           </div>
         </div>
       </div>

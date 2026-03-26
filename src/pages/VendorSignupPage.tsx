@@ -71,7 +71,7 @@ export function VendorSignupPage() {
       const { data, error } = await supabase
         .from('contracts')
         .select('*')
-        .in('contract_type', ['vendor_terms', 'vendor_privacy'])
+        .in('contract_type', ['terms_and_conditions', 'privacy_policy'])
         .eq('is_active', true);
 
       if (error) throw error;
@@ -134,20 +134,20 @@ export function VendorSignupPage() {
           console.error('Error creating subscription:', subscriptionError);
         }
 
-        const vendorTermsContract = contracts.find(c => c.contract_type === 'vendor_terms');
-        const vendorPrivacyContract = contracts.find(c => c.contract_type === 'vendor_privacy');
+        const termsContract = contracts.find(c => c.contract_type === 'terms_and_conditions');
+        const privacyContract = contracts.find(c => c.contract_type === 'privacy_policy');
 
-        if (vendorTermsContract && vendorPrivacyContract) {
+        if (termsContract && privacyContract) {
           await supabase.from('contract_acceptances').insert([
             {
               user_id: data.user.id,
-              contract_id: vendorTermsContract.id,
+              contract_id: termsContract.id,
               ip_address: '',
               user_agent: navigator.userAgent,
             },
             {
               user_id: data.user.id,
-              contract_id: vendorPrivacyContract.id,
+              contract_id: privacyContract.id,
               ip_address: '',
               user_agent: navigator.userAgent,
             },
@@ -395,7 +395,7 @@ export function VendorSignupPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        const contract = contracts.find(c => c.contract_type === 'vendor_terms');
+                        const contract = contracts.find(c => c.contract_type === 'terms_and_conditions');
                         setModalTitle('Vendor Terms & Conditions');
                         setModalContent(contract?.content || 'Contract content not found.');
                         setShowModal(true);
@@ -420,7 +420,7 @@ export function VendorSignupPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        const contract = contracts.find(c => c.contract_type === 'vendor_privacy');
+                        const contract = contracts.find(c => c.contract_type === 'privacy_policy');
                         setModalTitle('Vendor Privacy Policy');
                         setModalContent(contract?.content || 'Contract content not found.');
                         setShowModal(true);

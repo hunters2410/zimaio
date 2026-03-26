@@ -147,7 +147,7 @@ export function LogisticLayout({ children }: LogisticLayoutProps) {
             </aside>
 
             {/* Main Content Area */}
-            <div className={`flex-1 flex flex-col transition-all duration-500 ease-in-out ${isSidebarOpen ? 'lg:pl-72' : 'lg:pl-20'}`}>
+            <div className={`flex-1 flex flex-col transition-[padding-left] duration-500 ease-in-out ${isSidebarOpen ? 'lg:pl-72' : 'lg:pl-20'}`}>
                 {/* Header */}
                 <header className={`sticky top-0 z-40 backdrop-blur-xl border-b transition-colors duration-300 bg-white/80 border-slate-200`}>
                     <div className="h-20 px-8 flex items-center justify-between">

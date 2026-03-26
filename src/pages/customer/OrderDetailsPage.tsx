@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 import {
     Package,
     MapPin,
     ArrowLeft,
     DollarSign,
     RotateCcw,
-    Truck
+    Truck,
+    CheckCircle,
+    XCircle,
+    X
 } from 'lucide-react';
 
 interface OrderItem {
@@ -34,15 +38,25 @@ interface Order {
     };
 }
 
+type ToastType = { type: 'success' | 'error'; message: string } | null;
+
 export function OrderDetailsPage() {
     const { id } = useParams<{ id: string }>();
     const location = useLocation();
+    const { user } = useAuth();
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
     const [refundModalOpen, setRefundModalOpen] = useState(false);
     const [refundReason, setRefundReason] = useState('');
     const [refundAmount, setRefundAmount] = useState<number>(0);
     const [submittingRefund, setSubmittingRefund] = useState(false);
+    const [toast, setToast] = useState<ToastType>(null);
+
+    const showToast = (type: 'success' | 'error', message: string) => {
+        setToast({ type, message });
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => setToast(null), 5000);
+    };
 
     useEffect(() => {
         if (id) fetchOrder();
@@ -75,19 +89,19 @@ export function OrderDetailsPage() {
                 .from('order_refunds')
                 .insert({
                     order_id: order.id,
-                    customer_id: (await supabase.auth.getUser()).data.user?.id,
-                    vendor_id: order.vendor_id, // Assuming orders table has vendor_id, otherwise need to fetch from items/products
+                    customer_id: user?.id, // Read from AuthContext — no extra network call
+                    vendor_id: order.vendor_id,
                     reason: refundReason,
                     amount: refundAmount,
                     status: 'pending'
                 });
 
             if (error) throw error;
-            alert('Refund request submitted successfully');
             setRefundModalOpen(false);
+            showToast('success', 'Refund request submitted successfully. Awaiting vendor review.');
         } catch (error: any) {
             console.error('Error submitting refund:', error);
-            alert('Failed to submit refund request: ' + error.message);
+            showToast('error', 'Failed to submit refund request: ' + error.message);
         } finally {
             setSubmittingRefund(false);
         }
@@ -124,6 +138,25 @@ export function OrderDetailsPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-slate-900 py-12 transition-colors duration-300">
+
+            {/* In-page Toast Notification */}
+            {toast && (
+                <div className={`fixed top-6 right-6 z-[200] max-w-sm w-full animate-in slide-in-from-right-4 duration-300 flex items-start gap-3 p-4 rounded-2xl shadow-2xl border ${
+                    toast.type === 'success'
+                        ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300'
+                        : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700 text-red-800 dark:text-red-300'
+                }`}>
+                    {toast.type === 'success'
+                        ? <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                        : <XCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    }
+                    <p className="text-sm font-bold flex-1 leading-snug">{toast.message}</p>
+                    <button onClick={() => setToast(null)} className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
+
             <div className="container mx-auto px-4 max-w-4xl">
                 <Link to="/dashboard" className="inline-flex items-center text-[10px] font-black text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-8 uppercase tracking-[0.2em] group transition-all">
                     <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
@@ -304,6 +337,7 @@ export function OrderDetailsPage() {
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 }
